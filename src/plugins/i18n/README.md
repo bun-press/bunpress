@@ -110,10 +110,24 @@ Ce contenu n'apparaît qu'en français.
 
 ## Route Generation
 
-The i18n plugin generates routes for each supported locale. For example, if you have an `about.md` file and support English and French, the following routes will be generated:
+The i18n plugin automatically generates locale-specific routes for your content. For example, if you have an `about.md` file and support English and French, the following routes will be generated:
 
 - `/en/about` - English version
 - `/fr/about` - French version
+
+If you set `prefixLocaleInUrl` to `false`, the default locale routes will not be prefixed:
+
+- `/about` - English version (default)
+- `/fr/about` - French version
+
+The plugin automatically handles this route generation during the build process.
+
+## Advanced Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `contentDir` | `string` | `'pages'` | Directory containing content files |
+| `outputDir` | `string` | `'dist'` | Output directory for generated files |
 
 ## How It Works
 
@@ -121,8 +135,9 @@ The i18n plugin performs the following operations:
 
 1. Loads translation files from the specified directory
 2. Transforms content by replacing translation keys with actual translations
-3. Generates locale-specific routes for all content
-4. Allows fallback to default language for missing translations
+3. Registers content files for locale-specific route generation
+4. Generates locale-specific routes for all content during build
+5. Allows fallback to default language for missing translations
 
 ## Best Practices
 

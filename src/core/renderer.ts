@@ -32,14 +32,27 @@ export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: 
   // Prepare rendering parameters for React components
   const layoutParams = JSON.stringify({
     frontmatter,
+    content: html,
     navItems,
     sidebarItems,
-    tocItems
+    tocItems,
+    themeType: activeTheme.type || 'default',
+    config
   });
+  
+  // Check if a special layout is requested in frontmatter
+  const requestedLayout = frontmatter.layout || '';
+  const useDocsTheme = frontmatter.useDocsTheme === true || 
+                       requestedLayout === 'doc' || 
+                       requestedLayout === 'home' || 
+                       requestedLayout === 'page';
+
+  // Determine the appropriate theme class
+  const themeClass = useDocsTheme ? 'docs-theme' : 'default-theme';
   
   // Render with theme
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="${themeClass}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

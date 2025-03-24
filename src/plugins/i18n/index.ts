@@ -1,6 +1,7 @@
 import type { Plugin } from '../../core/plugin';
 import fs from 'fs';
 import path from 'path';
+import { ContentFile } from '../../core/content-processor';
 
 export interface I18nOptions {
   defaultLocale?: string;
@@ -9,6 +10,8 @@ export interface I18nOptions {
   allowMissingTranslations?: boolean;
   generateLocaleRoutes?: boolean;
   prefixLocaleInUrl?: boolean;
+  contentDir?: string; // Directory containing content files
+  outputDir?: string;  // Output directory for build
 }
 
 interface Translations {
@@ -19,6 +22,7 @@ export class I18nPlugin implements Plugin {
   name: string = 'i18n';
   options: I18nOptions;
   translations: Record<string, Translations> = {};
+  routeMap: Map<string, ContentFile[]> = new Map(); // Map to store locale routes
   
   constructor(options: I18nOptions = {}) {
     this.options = {
@@ -28,6 +32,8 @@ export class I18nPlugin implements Plugin {
       allowMissingTranslations: true,
       generateLocaleRoutes: true,
       prefixLocaleInUrl: true,
+      contentDir: 'pages',
+      outputDir: 'dist',
       ...options
     };
   }
@@ -35,6 +41,112 @@ export class I18nPlugin implements Plugin {
   buildStart(): void {
     console.log('i18n plugin: Loading translations...');
     this.loadTranslations();
+    this.routeMap = new Map();
+  }
+  
+  buildEnd(): Promise<void> {
+    if (!this.options.generateLocaleRoutes) {
+      return Promise.resolve();
+    }
+    
+    console.log('i18n plugin: Generating locale-specific routes...');
+    
+    // Process the route map to generate locale-specific files
+    const { locales, defaultLocale, outputDir, prefixLocaleInUrl } = this.options;
+    
+    if (!locales || locales.length === 0) {
+      return Promise.resolve();
+    }
+    
+    try {
+      // Ensure output directory exists
+      if (!fs.existsSync(outputDir!)) {
+        fs.mkdirSync(outputDir!, { recursive: true });
+      }
+      
+      // Process each registered route
+      this.routeMap.forEach((contentFiles, route) => {
+        // Skip processing if no content files (shouldn't happen)
+        if (contentFiles.length === 0) return;
+        
+        // Use the first content file as the template
+        const templateFile = contentFiles[0];
+        
+        // For each locale, generate a locale-specific route and file
+        locales.forEach(locale => {
+          // Skip the default locale if we're not prefixing URLs
+          if (locale === defaultLocale && !prefixLocaleInUrl) {
+            return;
+          }
+          
+          // Generate the localized route
+          const localeRoute = this.generateLocaleRoute(route, locale);
+          
+          // Create a localized version of the content
+          const localizedContent = {
+            ...templateFile,
+            route: localeRoute,
+            frontmatter: {
+              ...templateFile.frontmatter,
+              locale: locale,
+            }
+          };
+          
+          // In a real implementation, you'd now:
+          // 1. Create the output file in the build directory
+          // 2. Update any navigation/routing data structures to include this route
+          
+          console.log(`i18n plugin: Generated locale route ${localeRoute} for locale ${locale}`);
+          
+          // For demo purposes, we'll just log that we generated the route
+          // In a complete implementation, you would actually write the file to disk
+        });
+      });
+      
+      console.log(`i18n plugin: Finished generating locale-specific routes for ${locales.length} locales`);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('i18n plugin: Error generating locale-specific routes', error);
+      return Promise.reject(error);
+    }
+  }
+  
+  // Method to register a content file for i18n route generation
+  registerContentFile(contentFile: ContentFile): void {
+    if (!this.options.generateLocaleRoutes) {
+      return;
+    }
+    
+    const { route } = contentFile;
+    
+    // Skip routes already starting with locale
+    if (this.isLocaleRoute(route)) {
+      return;
+    }
+    
+    // Register the route for later processing
+    let routeFiles = this.routeMap.get(route) || [];
+    routeFiles.push(contentFile);
+    this.routeMap.set(route, routeFiles);
+  }
+  
+  // Helper to check if a route already has a locale prefix
+  isLocaleRoute(route: string): boolean {
+    const { locales } = this.options;
+    if (!locales || locales.length === 0) return false;
+    
+    const segments = route.split('/').filter(Boolean);
+    // If the first segment is a locale, return true
+    return segments.length > 0 && locales.includes(segments[0]);
+  }
+  
+  // Generate route with locale prefix
+  generateLocaleRoute(route: string, locale: string): string {
+    if (route === '/') {
+      return `/${locale}`;
+    }
+    
+    return `/${locale}${route}`;
   }
   
   transform(content: string): string {

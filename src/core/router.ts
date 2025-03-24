@@ -1,7 +1,7 @@
 import { readdirSync, statSync } from 'fs';
 import path from 'path';
 import { ContentProcessor, ContentFile, processMarkdownContent } from './content-processor';
-import { DefaultPluginManager } from './plugin';
+import { DefaultPluginManager, Plugin } from './plugin';
 
 interface Routes {
   [key: string]: ContentFile;
@@ -37,9 +37,17 @@ export function generateRoutes(pagesDir: string): Routes {
 }
 
 // Async version for future use
-export async function generateRoutesAsync(pagesDir: string): Promise<Routes> {
+export async function generateRoutesAsync(pagesDir: string, plugins: Plugin[] = []): Promise<Routes> {
   const routes: Routes = {};
-  const processor = new ContentProcessor({ plugins: new DefaultPluginManager() });
+  const pluginManager = new DefaultPluginManager();
+  
+  // Add all plugins to the manager
+  plugins.forEach(plugin => pluginManager.addPlugin(plugin));
+  
+  const processor = new ContentProcessor({ plugins: pluginManager });
+  
+  // Find i18n plugin if it exists
+  const i18nPlugin = pluginManager.getPlugin('i18n');
   
   // Helper function to process files recursively
   async function processDirectory(directory: string) {
@@ -56,6 +64,11 @@ export async function generateRoutesAsync(pagesDir: string): Promise<Routes> {
         // Process markdown files with plugin support
         const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
         routes[contentFile.route] = contentFile;
+        
+        // Register the content file with i18n plugin if available
+        if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
+          (i18nPlugin as any).registerContentFile(contentFile);
+        }
       }
     }
   }

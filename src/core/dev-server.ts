@@ -1,5 +1,5 @@
-import { serve } from 'bun';
-import { watch } from 'chokidar';
+import { serve, Server } from 'bun';
+import { watch, FSWatcher } from 'chokidar';
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import type { BunPressConfig } from '../../bunpress.config';
@@ -7,7 +7,12 @@ import path from 'path';
 import fs from 'fs';
 import { PluginManager } from './plugin';
 
-export function startDevServer(config: BunPressConfig, pluginManager?: PluginManager) {
+export interface DevServerResult {
+  server: Server;
+  watcher: FSWatcher;
+}
+
+export function startDevServer(config: BunPressConfig, pluginManager?: PluginManager): DevServerResult {
   // Get workspace root
   const workspaceRoot = process.cwd();
   console.log(`Workspace root: ${workspaceRoot}`);

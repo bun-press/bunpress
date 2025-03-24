@@ -7,6 +7,8 @@ export interface BunPressConfig {
   themeConfig: {
     name: string;
     options?: Record<string, any>;
+    type?: 'default' | 'docs';
+    defaultLayout?: 'doc' | 'page' | 'home';
   };
   plugins: Array<{
     name: string;
@@ -40,6 +42,16 @@ export interface BunPressConfig {
     active?: boolean;
     external?: boolean;
   }>;
+  // Advanced documentation options
+  documentation?: {
+    editLinkBase?: string;
+    showEditLink?: boolean;
+    showLastUpdated?: boolean;
+    showNavigation?: boolean;
+    showTOC?: boolean;
+    showSidebar?: boolean;
+    tocLevels?: [number, number];
+  };
 }
 
 // Default configuration
@@ -50,7 +62,8 @@ const defaultConfig: BunPressConfig = {
   pagesDir: './pages',
   outputDir: './dist',
   themeConfig: {
-    name: 'default'
+    name: 'default',
+    defaultLayout: 'doc'
   },
   plugins: [
     {
@@ -123,7 +136,16 @@ const defaultConfig: BunPressConfig = {
         { title: 'Plugins', href: '/docs/guides/plugins/' }
       ]
     }
-  ]
+  ],
+  // Default documentation options
+  documentation: {
+    showEditLink: true,
+    showLastUpdated: true,
+    showNavigation: true,
+    showTOC: true,
+    showSidebar: true,
+    tocLevels: [2, 3]
+  }
 };
 
 export default defaultConfig; 
