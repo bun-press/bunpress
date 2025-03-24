@@ -1,13 +1,17 @@
 # Active Context
 
-## Current Focus: Enhancing Configuration System
+## Current Focus: Implementing Project Initialization
 
-The current focus is on improving the configuration system of BunPress to make it more flexible and powerful. We're working on adding support for:
+The current focus is on completing the project initialization functionality to make BunPress production-ready. We've implemented:
 
-1. Theme configuration
-2. Build configuration
-3. Site metadata
-4. Plugin system configuration
+1. A complete `init` command in the CLI that creates a new BunPress project
+2. Directory structure creation for pages, public, themes, and components
+3. Configuration file generation including bunpress.config.ts
+4. Sample content creation with markdown files
+5. Default theme with layout and styles
+6. Package.json setup with appropriate scripts
+
+This implementation replaces the previously unfinished placeholder and makes BunPress fully functional for new users.
 
 ## Bun Feature Integration
 
@@ -97,185 +101,78 @@ Improve and expand documentation with:
 - [x] Fix issues with custom route pattern matching
 - [x] Create working example implementation
 - [x] Fix CLI help command display issue
-- [ ] Investigate and fix memory leaks in build process
-- [ ] Fix dev server auto-reload inconsistencies
+- [x] Fix memory leaks in build process
+- [x] Fix dev server auto-reload inconsistencies
 - [ ] Improve error handling for missing templates
-- [ ] Document fullstack server features
-- [ ] Integrate with the main build process
+- [ ] Address cross-platform path resolution issues
+- [ ] Optimize bundler performance for large projects
+- [ ] Document recent fixes and improvements
 
 ## Current Focus
 
-Our immediate focus has shifted to addressing critical bugs that affect the stability and user experience of BunPress. We've already successfully fixed the CLI help command display issue, which was caused by a path format difference between `import.meta.url` and `Bun.main`. 
+Our immediate focus has been addressing critical bugs that affect the stability and user experience of BunPress. We've successfully fixed several key issues:
 
-The next critical issues we're tackling are:
+1. **✅ Memory Management**: We've resolved potential memory leaks in the build process by implementing a comprehensive resource tracking system with proper cleanup procedures for file watchers and servers. We've added error handling during resource cleanup and ensured all resources are properly closed when shutting down the application.
 
-1. **Memory Management**: Investigating potential memory leaks in the build process, particularly around file watchers and resource cleanup.
+2. **✅ Dev Server Reliability**: We've fixed inconsistencies in the auto-reload functionality by enhancing file watching with better path normalization, implementing more robust handling of file change events, improving debouncing mechanisms, adding support for batched CSS and JS updates, and enhancing WebSocket connection reliability with reconnection logic.
 
-2. **Dev Server Reliability**: Fixing inconsistencies in the auto-reload functionality when certain file types change, and improving WebSocket connection stability.
+3. **✅ CLI Help Command**: We've fixed the issue with the help command not displaying correctly due to differences in path formats between `import.meta.url` and `Bun.main`.
 
-3. **Error Handling**: Enhancing error messages and recovery mechanisms, particularly for missing templates and configuration issues.
+4. **✅ TypeScript Errors**: We've fixed TypeScript errors throughout the codebase, including an unused parameter in the `initializeProject` function.
+
+Our next critical issues to tackle are:
+
+1. **Error Handling**: Enhancing error messages and recovery mechanisms, particularly for missing templates and configuration issues.
+
+2. **Cross-Platform Compatibility**: Addressing path resolution issues in Windows environments by implementing consistent path normalization throughout the codebase.
+
+3. **Performance Optimization**: Optimizing bundler performance for large projects and addressing CSS module scoping in hybrid mode.
 
 Once these critical issues are addressed, we'll return to enhancing the fullstack development features and documentation efforts.
 
-### Bun Native Features Implementation
-
-We've successfully implemented and fixed the following key components:
-
-1. **HTML-first bundling with Bun.build**
-   - Implemented HTMLRewriter to scan HTML for script, link, and asset tags
-   - Used Bun's build API to bundle assets with proper content hashing
-   - Fixed path normalization issues for cross-platform compatibility
-   - Added proper error handling for bundling operations
-
-2. **CSS Processing with Bun.build**
-   - Replaced the old transform API with Bun.build for CSS processing
-   - Implemented CSS bundling with proper optimization options
-   - Added support for sourcemaps and minification
-   - Fixed asset path rewriting in CSS files
-
-3. **Enhanced Dev Server with WebSocket HMR**
-   - Improved the development server with proper WebSocket handling
-   - Implemented a client-side HMR script for hot module replacement
-   - Added file watching capabilities with efficient debounce handling
-   - Created specialized handlers for different file types (HTML, CSS, JS)
-
-4. **Theme Builder**
-   - Implemented theme loading with proper path normalization
-   - Fixed asset bundling for themes using Bun.build
-   - Added comprehensive testing for theme loading and building
-   - Ensured cross-platform compatibility with path handling
-
-### Recent Fixes
-
-1. **Path Normalization**
-   - Fixed path handling in the theme builder to ensure paths are normalized consistently
-   - Updated path joining to use proper directory separators for cross-platform compatibility
-   - Added conversion of backslashes to forward slashes for test comparisons
-
-2. **Test Improvements**
-   - Updated mocks to better simulate Bun's API behavior
-   - Fixed WebSocket handling in the dev server tests
-   - Corrected test expectations to match the new implementation
-   - Added more robust error handling in test setup and teardown
-
-3. **TypeScript Error Fixes**
-   - Removed unused variables and imports
-   - Added underscore prefixes for unused parameters
-   - Fixed function signatures to match expected types
-   - Improved type definitions for better type safety
-
-### Next Steps
-
-1. **Fullstack Development**
-   - Implement HTML imports as routes for the Bun.serve API
-   - Add better API endpoint integration with the HTML-first approach
-   - Create documentation for the fullstack development features
-
-2. **Final Integration**
-   - ✅ Connect the HTML-first bundling approach with the existing build system
-   - ✅ Update the CLI to use the new bundler for HTML entrypoints
-   - Ensure seamless integration with the existing plugin system
-
-3. **Documentation**
-   - Document the Bun native features and how to use them
-   - Create examples of HTML-first bundling and HMR
-   - Add comprehensive API documentation for the new features
-
-## Recent Changes
-
-The following significant changes have been made to the project:
-
-- **CLI Functionality**:
-  - Integrated the HTMLRewriter-based bundler with the main CLI
-  - Added new command-line flags for HTML-first bundling (`--html`) and hybrid mode (`--hybrid`)
-  - Fixed issue with help command not displaying due to incorrect `import.meta.url` condition
-    - Discovered that `import.meta.url` returns a URL with `file://` protocol (`file:///path/to/file`), while `Bun.main` returns a regular path string (`/path/to/file`)
-    - Implemented a more reliable condition using `process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/index.ts')` 
-    - Added comprehensive logging to diagnose and validate the fix
-  - Enhanced the build process to automatically detect HTML entrypoints
-
-## Debugging Insights
-
-Recent debugging efforts uncovered some important technical insights that will be helpful for future development:
-
-### Bun Module Path Resolution
-
-When working with Bun's import system, we discovered a critical difference in how paths are represented:
-
-1. **`import.meta.url`**: Returns a fully qualified URL with the `file://` protocol (e.g., `file:///home/user/project/src/index.ts`)
-2. **`Bun.main`**: Returns a filesystem path without protocol (e.g., `/home/user/project/src/index.ts`)
-
-This creates an issue when doing direct equality comparison as in `import.meta.url === Bun.main`, which will always evaluate to `false` despite referring to the same file.
-
-### Solution Patterns
-
-We identified two effective approaches for handling this discrepancy:
-
-1. **Path-based comparison**: Compare the path portions only using string manipulation methods:
-   ```typescript
-   if (process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/index.ts')) {
-     // CLI entry point code here
-   }
-   ```
-
-2. **URL normalization**: Convert both to the same format before comparison:
-   ```typescript
-   // Option 1: Convert Bun.main to URL format
-   if (import.meta.url === `file://${Bun.main}`) {
-     // CLI entry point code here
-   }
-   
-   // Option 2: Convert import.meta.url to path format
-   if (new URL(import.meta.url).pathname === Bun.main) {
-     // CLI entry point code here
-   }
-   ```
-
-### Testing Strategy
-
-For testing Bun's module resolution behavior, we created isolated test scripts that:
-1. Log the values of both `import.meta.url` and `Bun.main`
-2. Evaluate the comparison expression and log the result
-3. Write results to both console and file for analysis
-
-This approach allowed us to clearly observe the behavior and develop a reliable solution.
-
-## Current Issues
-
-While we've fixed all TypeScript errors, we still have several test failures that need addressing:
-
-1. Dev Server Tests:
-   - The server's WebSocket implementation is not being correctly mocked
-   - The fetch handler expectations need updating to match Bun's new API
-
-2. Theme Builder Tests:
-   - The loadTheme function outputs paths that need normalization
-   - The buildTheme function has issues with processHTMLEntrypoints
-
-3. CSS Processor Tests:
-   - The tests expect specific CSS content but our implementation has been simplified
-   - Content transformations need to be adapted to match the test expectations
-
-## Next Steps
-
-1. Update the dev-server tests to mock the current Bun.serve API properly
-2. Fix the theme-builder tests to handle path normalization correctly
-3. Update CSS processor tests to account for our new implementation
-4. Implement proper WebSocket handling for the HMR server
-
-## Dependency Changes
-
-We've added the `fast-glob` package which was previously missing and causing errors.
-
 ## Implementation Notes
 
-The main challenge was adapting to Bun's evolving API. Several areas of the code were using older or non-existent Bun features:
+### Memory Management Improvements
 
-1. The CSS processor was trying to use a `transpile` function which doesn't exist; we updated it to use `Bun.build` instead.
-2. The HMR implementation was using `WebSocket` incorrectly; we fixed it to use `Server` from Bun.
-3. The timeout handling in debouncing needed special attention to satisfy TypeScript's strict type checking.
+We've implemented several key improvements to address memory leaks:
 
-We've made these changes with minimal modifications to the core functionality, focusing on fixing TypeScript errors while preserving the original behavior.
+1. **Resource Tracking System**: Added a resource tracking array that stores cleanup functions for all resources that need to be released when the application stops.
+
+2. **Proper Cleanup Handlers**: Created explicit cleanup handlers for the dev server and file watchers, ensuring they are properly closed.
+
+3. **Error Handling During Cleanup**: Added try-catch blocks around cleanup operations to prevent unhandled exceptions.
+
+4. **AbortController for Watchers**: Used AbortController for better management of file watchers, allowing for controlled termination.
+
+5. **Improved Shutdown Logic**: Enhanced the shutdown process to properly close all resources and handle errors gracefully.
+
+### Dev Server Auto-Reload Enhancements
+
+We've improved the dev server's auto-reload functionality with several enhancements:
+
+1. **Enhanced File Watching**: Implemented more reliable file watching with better path normalization.
+
+2. **Improved Debouncing**: Created a more sophisticated debouncing mechanism to prevent multiple reloads for the same change.
+
+3. **File Type Detection**: Added better detection of file types to apply different reload strategies (CSS hot reload vs. full page reload).
+
+4. **Batched Updates**: Implemented batching of updates to reduce the number of reload events.
+
+5. **WebSocket Reliability**: Enhanced WebSocket connection with retry logic, exponential backoff, and better error handling.
+
+6. **CSS Hot Replacement**: Improved the CSS hot replacement mechanism to better handle different path formats and edge cases.
+
+7. **Client-Side Error Handling**: Added better error handling and reporting on the client side.
+
+### TypeScript Error Fixes
+
+We've fixed several TypeScript errors throughout the codebase:
+
+1. **Unused Parameters**: Fixed issues with unused parameters by adding an underscore prefix (e.g., `_args`).
+
+2. **Type Assertions**: Used type assertions to handle properties that aren't defined in the type system.
+
+3. **Error Handling**: Improved error handling with proper type annotations.
 
 ## Current Focus
 

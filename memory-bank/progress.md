@@ -6,7 +6,7 @@
    - Plugin system
    - Router
    - Theme manager
-   - CLI commands
+   - CLI commands (including full `init` project creation)
 2. Plugins:
    - Image optimizer
    - SEO
@@ -43,6 +43,7 @@
    - Custom route pattern matching in fullstack server
    - Mocking issues with Bun.serve in test environment
    - Error handling in route handlers
+   - Project initialization functionality fully implemented
 2. In Progress:
    - WebSocket support for fullstack server
    - Documentation for fullstack features
@@ -465,8 +466,8 @@ The project is making good progress with TypeScript errors resolved. The next fo
 - [x] Fix CSS processor stylesheet tracking
 - [x] Fix HMR websocket connection
 - [x] Fix import.meta.url condition in CLI causing help command to not display correctly - The issue was that `import.meta.url === Bun.main` was evaluating to false because the formats differ (`file:///path` vs `/path`). Fixed by using a more reliable path-based check that handles format differences.
-- [ ] Fix potential memory leaks in build process
-- [ ] Fix dev server auto-reload on certain file changes
+- [x] Fix potential memory leaks in build process - Fixed by implementing a resource tracking system with proper cleanup for file watchers and servers, adding error handling during cleanup operations, and ensuring all resources are properly closed when shutting down.
+- [x] Fix dev server auto-reload inconsistencies - Enhanced file watching with better path normalization, implemented more robust handling of file change events, improved debouncing of change events, added better handling of CSS and JS updates, and enhanced WebSocket connection reliability with reconnection logic.
 - [ ] Improve error handling for missing templates
 - [ ] Fix path resolution issues in Windows environments
 - [ ] Address CSS module scoping in hybrid mode
@@ -474,37 +475,9 @@ The project is making good progress with TypeScript errors resolved. The next fo
 
 ## Planned Bug Fixes
 
-### Memory Leaks in Build Process
+### Improve Error Handling for Missing Templates
 
-The potential memory leaks in the build process appear to be related to:
-1. File watchers not being properly closed when the build process completes
-2. Large file buffers not being efficiently garbage collected
-3. Event listeners possibly accumulating across multiple builds
-
-Planned approach:
-- Add explicit cleanup of file watchers using `watcher.close()`
-- Implement a resource tracking system for build operations
-- Add memory usage monitoring during the build process
-- Refactor file operations to use streaming where appropriate
-- Implement proper cleanup in the build task's finally blocks
-
-### Dev Server Auto-Reload Issues
-
-The dev server sometimes fails to trigger auto-reload when certain files change. This appears to be related to:
-1. Event debouncing not working correctly for some file types
-2. Path normalization issues causing some file change events to be missed
-3. WebSocket connections possibly disconnecting under certain conditions
-
-Planned approach:
-- Review and enhance the file watching logic with better path normalization
-- Improve WebSocket reconnection handling
-- Add more granular file type detection for different reload strategies
-- Implement better logging of file change events
-- Add client-side fallback reconnection logic
-
-### Missing Template Error Handling
-
-Error handling for missing templates is currently inadequate:
+The error handling for missing templates is currently inadequate:
 1. Cryptic error messages when templates are not found
 2. Lack of suggestions for possible alternatives
 3. No graceful fallback to default templates
@@ -515,3 +488,102 @@ Planned approach:
 - Create a fallback mechanism to use default templates
 - Improve error messages with clear instructions
 - Add template validation step during initialization
+
+### Path Resolution in Windows Environments
+
+Path resolution issues in Windows environments need to be addressed:
+1. Inconsistent use of path separators causing route mismatches
+2. Issues with absolute vs. relative path resolution
+3. Case sensitivity differences between Windows and Unix systems
+
+Planned approach:
+- Implement consistent path normalization throughout the codebase
+- Use path.normalize() and path.resolve() for all path operations
+- Convert backslashes to forward slashes for route paths
+- Add tests specifically for Windows path handling
+- Create a cross-platform path utility for unified path operations
+
+### CSS Module Scoping in Hybrid Mode
+
+CSS module scoping in hybrid mode has the following issues:
+1. CSS from HTML and Markdown content can conflict
+2. Class name collisions between different components
+3. Lack of proper isolation between theme styles and content styles
+
+Planned approach:
+- Implement proper CSS module hashing for hybrid mode
+- Create scope isolation between theme styles and content styles
+- Add namespacing for automatically generated class names
+- Implement a style deduplication mechanism for common styles
+- Document best practices for CSS organization in hybrid projects
+
+### Bundler Performance Optimization
+
+Performance issues with the bundler for large projects:
+1. Excessive memory usage during large builds
+2. Slow performance when processing many assets
+3. Inefficient file watching causing high CPU usage
+
+Planned approach:
+- Implement incremental building for faster rebuilds
+- Add asset caching to avoid reprocessing unchanged files
+- Use more efficient algorithms for dependency graph generation
+- Implement parallel processing where appropriate
+- Add performance metrics and monitoring
+
+## Recent Improvements
+
+### Memory Management
+
+We've significantly improved memory management in the build process:
+- Implemented a resource tracking system to ensure proper cleanup of file watchers, servers, and other resources
+- Added comprehensive error handling during resource cleanup to prevent unhandled exceptions
+- Created proper cleanup procedures for all async operations
+- Improved shutdown logic for the dev server
+- Added resource tracking and cleanup during build process
+- Implemented proper AbortController usage for watchers
+
+### Dev Server Auto-Reload
+
+We've enhanced the development server's auto-reload functionality:
+- Improved file watching with better path normalization
+- Enhanced detection of file changes with more reliable event handling
+- Implemented improved debouncing to prevent multiple reloads for the same change
+- Added support for batched CSS and JS updates
+- Implemented robust WebSocket reconnection logic with exponential backoff
+- Enhanced CSS hot replacement without full page reloads
+- Improved client-side error handling and reporting
+
+### Code Quality Improvements
+
+We've also made several code quality improvements:
+- Fixed TypeScript errors throughout the codebase
+- Added proper type annotations and fixed type mismatches
+- Enhanced error handling with more informative error messages
+- Fixed various minor bugs that could cause instability
+- Improved code organization and documentation
+- Added better parameter validation to prevent runtime errors
+
+## Next Steps
+
+Our focus for the next phase will be:
+
+1. **Error Handling Improvements**
+   - Implement better error handling for missing templates
+   - Add graceful fallbacks for common error scenarios
+   - Enhance debugging capabilities and error reporting
+
+2. **Cross-Platform Compatibility**
+   - Fix path resolution issues in Windows environments
+   - Ensure consistent behavior across different operating systems
+   - Implement comprehensive cross-platform testing
+
+3. **Performance Optimizations**
+   - Address CSS module scoping in hybrid mode
+   - Optimize bundler performance for large projects
+   - Implement asset caching and incremental builds
+
+4. **Documentation**
+   - Update documentation with information about the fixed issues
+   - Add troubleshooting guides based on common problems
+   - Create more comprehensive examples demonstrating best practices

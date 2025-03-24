@@ -202,14 +202,15 @@ export async function setupHMR(
   server: Server,
   config: BunPressConfig,
   options: WatchOptions = {}
-): Promise<void> {
+): Promise<() => void> {
   const watchDir = config.outputDir;
   
   // Default options
   const watchOptions: WatchOptions = {
     ignored: [
       '**/node_modules/**',
-      '**/.git/**'
+      '**/.git/**',
+      '**/dist/assets/**/*.map' // Ignore source maps to prevent double reloads
     ],
     debounce: 100,
     ...options
@@ -217,86 +218,138 @@ export async function setupHMR(
   
   console.log(`Watching directory: ${watchDir}`);
   
-  // Setup state for debounced changes
-  const pendingChanges = new Set<string>();
+  // Improved state tracking for debounced changes
+  const pendingChanges = new Map<string, {
+    type: string;
+    path: string;
+    timestamp: number;
+  }>();
+  
   let changeTimeout: ReturnType<typeof setTimeout> | null = null;
   
-  // Define handler for changes
+  // Define a more robust handler for changes
   const handleChanges = () => {
     // Update timeout
     changeTimeout = null;
     
+    // Group changes by type to handle them more efficiently
+    const cssChanges: string[] = [];
+    const jsChanges: string[] = [];
+    let needsFullReload = false;
+    
     // Process all pending changes
-    for (const filePath of pendingChanges) {
+    pendingChanges.forEach((change, filePath) => {
       const ext = path.extname(filePath).toLowerCase();
+      const relativePath = path.relative(watchDir, filePath).replace(/\\/g, '/');
+      const publicPath = '/' + relativePath;
       
-      console.log(`File changed: ${filePath}`);
+      console.log(`File changed (${change.type}): ${filePath}`);
       
       if (ext === '.css') {
-        // For CSS files, send a style reload message
-        const relativePath = path.relative(watchDir, filePath);
-        const publicPath = '/' + relativePath.replace(/\\/g, '/');
-        
+        cssChanges.push(publicPath);
+      } else if (['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
+        jsChanges.push(publicPath);
+      } else {
+        // HTML changes or unknown file types require a full reload
+        needsFullReload = true;
+      }
+    });
+    
+    // Clear pending changes after processing
+    pendingChanges.clear();
+    
+    // Send updates based on file types
+    if (needsFullReload) {
+      // For HTML or other files, reload the page
+      reloadPage(server);
+    } else {
+      // Handle CSS updates
+      if (cssChanges.length > 0) {
         server.publish('hmr', JSON.stringify({
           type: 'css-update',
-          path: publicPath,
+          paths: cssChanges,
           timestamp: Date.now()
         }));
-      } else if (['.js', '.ts', '.jsx', '.tsx'].includes(ext)) {
-        // For JS files, send a script reload message
-        const relativePath = path.relative(watchDir, filePath);
-        const publicPath = '/' + relativePath.replace(/\\/g, '/');
-        
+      }
+      
+      // Handle JS updates - for now, we just do a full reload for JS changes
+      if (jsChanges.length > 0) {
         server.publish('hmr', JSON.stringify({
           type: 'js-update',
-          path: publicPath,
+          paths: jsChanges,
           timestamp: Date.now()
         }));
-      } else if (ext === '.html') {
-        // For HTML files, reload the page
-        reloadPage(server);
-      } else {
-        // For other files, reload the page
-        reloadPage(server);
       }
     }
-    
-    // Clear pending changes
-    pendingChanges.clear();
   };
   
-  // Use Bun's watch API to monitor file changes
-  try {
-    const watcher = fs.watch(watchDir, { recursive: true }, (_eventType, filename) => {
-      if (!filename) return;
-      
-      const filePath = path.join(watchDir, filename);
-      
-      // Skip ignored paths
-      if (watchOptions.ignored?.some(pattern => {
-        return minimatch(filePath, pattern);
-      })) {
-        return;
-      }
-      
-      // Add to pending changes
-      pendingChanges.add(filePath);
-      
-      // Debounce changes
-      if (changeTimeout) {
-        clearTimeout(changeTimeout);
-      }
-      
-      changeTimeout = setTimeout(handleChanges, watchOptions.debounce);
+  // Improved file change handler with better debouncing
+  const handleFileChange = (filePath: string, eventType: string) => {
+    // Normalize path to use forward slashes consistently
+    filePath = filePath.replace(/\\/g, '/');
+    
+    // Check if file should be ignored
+    if (watchOptions.ignored && watchOptions.ignored.some(pattern => minimatch(filePath, pattern))) {
+      return;
+    }
+    
+    // Check if file exists (for modify events)
+    if (eventType === 'modify' && !fs.existsSync(filePath)) {
+      return;
+    }
+    
+    // Add to pending changes
+    pendingChanges.set(filePath, {
+      type: eventType,
+      path: filePath,
+      timestamp: Date.now()
     });
     
-    // Handle watcher errors
-    watcher.on('error', (error) => {
-      console.error('Error watching files:', error);
-    });
-  } catch (error) {
-    console.error('Failed to set up file watcher:', error);
+    // Setup debounce
+    if (changeTimeout) {
+      clearTimeout(changeTimeout);
+    }
+    
+    changeTimeout = setTimeout(handleChanges, watchOptions.debounce);
+  };
+
+  // Use AbortController for better cleanup
+  const abortController = new AbortController();
+  const { signal } = abortController;
+
+  try {
+    // Watch the directory recursively
+    const watcher = watch(watchDir, { recursive: true, signal });
+    
+    // Process events from the watcher
+    (async () => {
+      try {
+        for await (const event of watcher) {
+          // FileChangeInfo object contains { filename, eventType }
+          const filename = event.filename || '';
+          const eventType = event.eventType || 'modify';
+          const filePath = path.join(watchDir, filename);
+          handleFileChange(filePath, eventType);
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Error watching files:', err);
+        }
+      }
+    })();
+  } catch (err: any) {
+    console.error('Failed to set up file watcher:', err);
   }
+  
+  // Return a cleanup function
+  return () => {
+    abortController.abort();
+    if (changeTimeout) {
+      clearTimeout(changeTimeout);
+      changeTimeout = null;
+    }
+    pendingChanges.clear();
+  };
 }
 
 /**
@@ -340,6 +393,8 @@ const hmrClientScript = `
   const socketUrl = 'ws://' + location.host;
   let socket;
   let reconnectTimer;
+  let reconnectAttempts = 0;
+  const MAX_RECONNECT_ATTEMPTS = 5;
   const clientId = Math.random().toString(36).substring(2, 10);
   
   function connect() {
@@ -349,6 +404,7 @@ const hmrClientScript = `
     socket.addEventListener('open', () => {
       console.log('[HMR] Connected');
       clearTimeout(reconnectTimer);
+      reconnectAttempts = 0;
       socket.send(JSON.stringify({ type: 'connect', id: clientId }));
     });
     
@@ -362,8 +418,14 @@ const hmrClientScript = `
           break;
           
         case 'css-update':
-          console.log('[HMR] Updating CSS', data.path);
-          updateCSS(data.path);
+          console.log('[HMR] Updating CSS', data.paths || data.path);
+          
+          // Handle multiple CSS updates
+          if (data.paths && Array.isArray(data.paths)) {
+            data.paths.forEach(path => updateCSS(path));
+          } else if (data.path) {
+            updateCSS(data.path);
+          }
           break;
           
         case 'js-update':
@@ -378,7 +440,16 @@ const hmrClientScript = `
     socket.addEventListener('close', () => {
       console.log('[HMR] Disconnected. Attempting to reconnect...');
       clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(connect, 1000);
+      
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 10000);
+        console.log('[HMR] Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')...');
+        reconnectTimer = setTimeout(connect, delay);
+      } else {
+        console.log('[HMR] Maximum reconnection attempts reached. Reloading page...');
+        setTimeout(() => window.location.reload(), 1000);
+      }
     });
     
     socket.addEventListener('error', (err) => {
@@ -389,23 +460,42 @@ const hmrClientScript = `
   
   // Update a CSS file without refreshing the page
   function updateCSS(path) {
+    if (!path) return;
+    
+    // Ensure we have the correct path format with leading slash
+    if (path.charAt(0) !== '/') {
+      path = '/' + path;
+    }
+    
     // Find existing link element for this stylesheet
     const links = document.getElementsByTagName('link');
     let found = false;
     
     for (let i = 0; i < links.length; i++) {
       const link = links[i];
-      if (link.rel === 'stylesheet' && link.href.includes(path)) {
-        // Update with a cache-busting query parameter
-        const newHref = link.href.split('?')[0] + '?t=' + Date.now();
-        link.href = newHref;
-        found = true;
-        break;
+      if (link.rel === 'stylesheet') {
+        // Match the path considering query parameters and different URL formats
+        const href = link.getAttribute('href');
+        if (!href) continue;
+        
+        const linkPath = new URL(href, window.location.href).pathname;
+        const comparePath = path.split('?')[0]; // Remove query parameters
+        
+        if (linkPath === comparePath || linkPath.endsWith(comparePath)) {
+          // Update with a cache-busting query parameter
+          const timestamp = Date.now();
+          const newHref = href.split('?')[0] + '?t=' + timestamp;
+          console.log('[HMR] Updating CSS link: ' + href + ' -> ' + newHref);
+          link.href = newHref;
+          found = true;
+          break;
+        }
       }
     }
     
     // If not found, append a new link element
     if (!found) {
+      console.log('[HMR] Adding new CSS link: ' + path);
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.type = 'text/css';

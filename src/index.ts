@@ -50,362 +50,95 @@ const version = (() => {
   }
 })();
 
-async function main() {
-  try {
-    console.log("DEBUG: main function called");
-    console.log(chalk.bold(`\n${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} ${chalk.gray(`v${version}`)}`));
-    
-    // Check for command-line arguments
-    const args = process.argv.slice(2);
-    const command = args[0];
-    
-    console.log("DEBUG: Command:", command, "Args:", args);
-    
-    // Handle help command
-    if (command === 'help' || args.includes('--help') || args.includes('-h')) {
-      console.log("DEBUG: Calling printHelp");
-      printHelp();
-      return;
-    }
-    
-    // Handle version command
-    if (command === 'version' || args.includes('--version') || args.includes('-v')) {
-      console.log(`v${version}`);
-      return;
-    }
-    
-    // Handle init command first
-    if (command === 'init') {
-      await initProject(args.slice(1));
-      return;
-    }
-    
-    // Load configuration and plugins for other commands
-    let config, pluginManager;
-    try {
-      const result = await loadConfig();
-      config = result.config;
-      pluginManager = result.pluginManager;
-    } catch (error: any) {
-      console.error(chalk.red('\n❌ Configuration Error:'), error.message);
-      console.log(chalk.yellow('\nTip: If you\'re starting a new project, run:'));
-      console.log(chalk.cyan('  bunpress init\n'));
-      process.exit(1);
-    }
-    
-    // Log loaded plugins with chalk styling
-    console.log(chalk.blue.bold(`\n📚 Project: ${chalk.green(config.title || 'Untitled')}`));
-    console.log(chalk.blue(`🔌 Loaded ${chalk.yellow(pluginManager.plugins.length.toString())} plugins:`));
-    
-    if (pluginManager.plugins.length === 0) {
-      console.log(chalk.gray('  No plugins loaded'));
-    } else {
-      pluginManager.plugins.forEach(plugin => {
-        console.log(chalk.green(`  • ${plugin.name || 'Unnamed Plugin'}`));
-      });
-    }
-    
-    // Execute different commands based on input
-    if (command === 'build') {
-      // Check for bundling mode
-      const useHtmlFirstBundling = args.includes('--html');
-      const useHybridMode = args.includes('--hybrid');
-      
-      // Build site with enhanced listr2 tasks
-      const tasks = new Listr<any>(
-        [
-          {
-            title: 'Initializing build process',
-            task: async (task) => {
-              task.output = 'Setting up build environment...';
-              await pluginManager.executeBuildStart();
-              task.output = 'Build environment ready!';
-            },
-            rendererOptions: { persistentOutput: true }
-          },
-          {
-            title: 'Processing content files',
-            task: async (task) => {
-              // This is a placeholder for the actual content processing tracking
-              // In a real implementation, we would track the number of files processed
-              task.output = 'Scanning content directories...';
-              await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
-              task.output = 'Processing markdown files...';
-              await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
-              task.output = 'Applying plugin transformations...';
-              await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
-              
-              return task.newListr([
-                {
-                  title: 'Generating routes',
-                  task: async () => {
-                    // Simulate route generation work
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                  }
-                },
-                {
-                  title: 'Optimizing assets',
-                  task: async () => {
-                    // Simulate asset optimization work
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                  }
-                }
-              ], { concurrent: false });
-            },
-            rendererOptions: { persistentOutput: true }
-          },
-          {
-            title: useHtmlFirstBundling ? 'Building with HTML-first bundling' : (useHybridMode ? 'Building in hybrid mode' : 'Building site'),
-            task: async (task) => {
-              if (useHtmlFirstBundling || useHybridMode) {
-                task.output = 'Finding HTML entrypoints...';
-                // Find HTML files in the project
-                const globSync = await import('fast-glob');
-                const htmlFiles = await globSync.default(['**/*.html', '!**/node_modules/**', '!**/dist/**'], {
-                  cwd: process.cwd(),
-                  absolute: true
-                });
-                
-                if (htmlFiles.length === 0) {
-                  task.output = 'No HTML entrypoints found. ' + (useHybridMode ? 'Proceeding with markdown only.' : 'Falling back to standard build...');
-                  await buildSite(config, pluginManager);
-                } else {
-                  task.output = `Found ${htmlFiles.length} HTML entrypoints. Processing...`;
-                  // Process HTML entrypoints
-                  const outputDir = path.resolve(process.cwd(), config.outputDir);
-                  await processHTMLEntrypoints(
-                    htmlFiles,
-                    outputDir,
-                    config,
-                    {
-                      minify: process.env.NODE_ENV === 'production',
-                      sourcemap: process.env.NODE_ENV !== 'production',
-                      target: 'browser',
-                      splitting: true
-                    }
-                  );
-                  task.output = 'HTML entrypoints processed successfully!';
-                  
-                  // In hybrid mode, also process markdown
-                  if (useHybridMode) {
-                    task.output = 'Processing markdown content...';
-                    await buildSite(config, pluginManager);
-                    task.output = 'Markdown content processed successfully!';
-                  }
-                }
-              } else {
-                task.output = 'Generating HTML files...';
-                await buildSite(config, pluginManager);
-                task.output = 'Site built successfully!';
-              }
-            },
-            rendererOptions: { persistentOutput: true }
-          },
-          {
-            title: 'Finalizing build',
-            task: async (ctx, task) => {
-              task.output = 'Running plugin buildEnd hooks...';
-              await pluginManager.executeBuildEnd();
-              
-              // Calculate site statistics
-              const outputDir = path.resolve(process.cwd(), config.outputDir);
-              let fileCount = 0;
-              let totalSize = 0;
-              
-              try {
-                const countFiles = (dir: string) => {
-                  const files = fs.readdirSync(dir, { withFileTypes: true });
-                  for (const file of files) {
-                    const fullPath = path.join(dir, file.name);
-                    if (file.isDirectory()) {
-                      countFiles(fullPath);
-                    } else {
-                      fileCount++;
-                      totalSize += fs.statSync(fullPath).size;
-                    }
-                  }
-                };
-                
-                countFiles(outputDir);
-                
-                // Format sizes
-                const formatSize = (size: number) => {
-                  if (size < 1024) return `${size} B`;
-                  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-                  return `${(size / 1024 / 1024).toFixed(2)} MB`;
-                };
-                
-                ctx.stats = {
-                  fileCount,
-                  totalSize: formatSize(totalSize),
-                  outputDir
-                };
-              } catch (error) {
-                console.error('Error calculating stats:', error);
-              }
-              
-              task.output = 'Build finalized!';
-            },
-            rendererOptions: { persistentOutput: true }
-          }
-        ],
-        { 
-          renderer: 'default',
-          rendererOptions: { 
-            collapseSubtasks: false,
-            showSubtasks: true,
-            formatOutput: 'wrap' 
-          }
-        }
-      );
-      
-      const ctx = await tasks.run();
-      
-      console.log(
-        chalk.green.bold('\n✨ Build completed successfully!\n') +
-        chalk.blue(`📊 Stats: ${chalk.yellow(ctx.stats?.fileCount || 'unknown')} files (${chalk.yellow(ctx.stats?.totalSize || 'unknown')})\n`) +
-        chalk.blue(`📂 Output: ${chalk.yellow(ctx.stats?.outputDir || config.outputDir)}\n`)
-      );
-      
-    } else if (command === 'dev' || !command) {
-      // Start the development server with improved feedback
-      console.log(chalk.yellow('\n🚀 Starting development server...\n'));
-      
-      // Execute build start hooks
-      await pluginManager.executeBuildStart();
-      
-      try {
-        // Get the IP address for network access
-        const ipAddress = getLocalIpAddress();
-        
-        // Start the development server
-        const { watcher } = startDevServer(config, pluginManager);
-        
-        // Show server startup message with local and network URLs
-        const port = 3000; // This should match the port in startDevServer
-        console.log(chalk.green('\n🌐 Server running at:'));
-        console.log(`  ${chalk.cyan(`➜ Local:   http://localhost:${port}`)}`);
-        if (ipAddress) {
-          console.log(`  ${chalk.cyan(`➜ Network: http://${ipAddress}:${port}`)}`);
-        }
-        console.log(chalk.yellow('\n🔥 Hot Module Replacement enabled'));
-        console.log(chalk.blue('\n👀 Watching for changes...'));
-        
-        // Handle server shutdown
-        process.on('SIGINT', async () => {
-          console.log(chalk.yellow('\n🛑 Shutting down...'));
-          
-          // Execute build end hooks
-          await pluginManager.executeBuildEnd();
-          
-          // Close watcher
-          watcher.close();
-          
-          // Exit process
-          console.log(chalk.green('✅ Server stopped. Goodbye! 👋\n'));
-          process.exit(0);
-        });
-      } catch (error) {
-        console.error(chalk.red('\n❌ Failed to start development server:'), error);
-        process.exit(1);
+// Add function to find HTML files recursively
+function findHtmlFiles(dir: string, exclude: string[] = ['node_modules', 'dist']): string[] {
+  const htmlFiles: string[] = [];
+  
+  const processDir = (directory: string) => {
+    const files = fs.readdirSync(directory, { withFileTypes: true });
+    for (const file of files) {
+      // Skip excluded directories
+      if (file.isDirectory() && exclude.includes(file.name)) {
+        continue;
       }
-    } else {
-      console.log(chalk.red(`\n❌ Unknown command: ${command}`));
-      printHelp();
+      
+      const fullPath = path.join(directory, file.name);
+      if (file.isDirectory()) {
+        processDir(fullPath);
+      } else if (file.name.endsWith('.html')) {
+        htmlFiles.push(fullPath);
+      }
     }
+  };
+  
+  try {
+    processDir(dir);
   } catch (error) {
-    console.error(chalk.red('\n❌ Error:'), error);
-    process.exit(1);
-  }
-}
-
-function printHelp() {
-  // Using console.error to see if output is being redirected
-  console.error(chalk.blue.bold(`
-${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} - A modern static site generator built with Bun
-
-${chalk.white('Usage:')}
-  ${chalk.green('bunpress')} ${chalk.yellow('<command>')} ${chalk.gray('[options]')}
-
-${chalk.white('Commands:')}
-  ${chalk.green('init [dir]')}      Initialize a new BunPress project
-  ${chalk.green('dev')}             Start the development server
-  ${chalk.green('build')}           Build the site for production
-  ${chalk.green('help')}            Display this help message
-  ${chalk.green('version')}         Display version information
-
-${chalk.white('Build Options:')}
-  ${chalk.yellow('--html')}           Use HTML-first bundling (experimental)
-  ${chalk.yellow('--hybrid')}         Process both HTML and markdown (experimental)
-  ${chalk.yellow('--minify')}         Minify the output (default in production)
-  ${chalk.yellow('--no-minify')}      Disable minification
-
-${chalk.white('Examples:')}
-  ${chalk.green('bunpress init my-site')}     Create a new project in the my-site directory
-  ${chalk.green('bunpress dev')}              Start the development server
-  ${chalk.green('bunpress build')}            Build the site for production
-  ${chalk.green('bunpress build --html')}     Use HTML-first bundling for build
-  ${chalk.green('bunpress build --hybrid')}   Process both HTML and markdown
-
-${chalk.white('Documentation:')}
-  ${chalk.cyan('https://github.com/bunpress/bunpress')}
-`));
-}
-
-// Export the printHelp function for testing
-export { printHelp };
-
-async function initProject(args: string[] = []) {
-  const projectDir = args[0] || '.';
-  const absoluteProjectDir = path.resolve(process.cwd(), projectDir);
-  
-  console.log(chalk.blue.bold(`\n🚀 Initializing a new BunPress project in ${chalk.cyan(absoluteProjectDir)}`));
-  
-  // Create directory if it doesn't exist
-  if (projectDir !== '.' && !fs.existsSync(absoluteProjectDir)) {
-    fs.mkdirSync(absoluteProjectDir, { recursive: true });
-    console.log(chalk.green(`✅ Created project directory: ${projectDir}`));
+    console.error('Error scanning for HTML files:', error);
   }
   
-  const tasks = new Listr<any>(
-    [
-      {
-        title: 'Creating project structure',
-        task: (task) => {
-          // Create directories
-          const createDir = (dir: string) => {
-            const fullPath = path.join(absoluteProjectDir, dir);
-            if (!fs.existsSync(fullPath)) {
-              fs.mkdirSync(fullPath, { recursive: true });
-              task.output = `Created ${dir} directory`;
-            } else {
-              task.output = `Directory ${dir} already exists`;
-            }
-          };
-          
-          createDir('pages');
-          createDir('public');
-          createDir('themes');
-          createDir('themes/default');
-          createDir('components');
-          
-          return 'Project structure created';
-        },
-        rendererOptions: { persistentOutput: true }
-      },
-      {
-        title: 'Creating configuration file',
-        task: (task) => {
-          // Create config file
-          const configPath = path.join(absoluteProjectDir, 'bunpress.config.ts');
-          
-          if (fs.existsSync(configPath)) {
-            task.output = 'Configuration file already exists, skipping';
-            return;
-          }
-          
-          const configContent = `import { defineConfig } from 'bunpress';
-import { markdownItPlugin, prismPlugin } from 'bunpress/plugins';
+  return htmlFiles;
+}
+
+// Rename help function for consistency
+function showHelp() {
+  console.log(chalk.bold(`\n${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} ${chalk.gray(`v${version}`)}`));
+  console.log('\nUsage:');
+  console.log('  bunpress [command] [options]');
+  console.log('\nCommands:');
+  console.log('  init               Initialize a new BunPress project');
+  console.log('  dev                Start development server');
+  console.log('  build              Build site for production');
+  console.log('  help               Show help information');
+  console.log('\nOptions:');
+  console.log('  --help, -h         Show help information');
+  console.log('  --version, -v      Show version information');
+  console.log('  --html             Use HTML-first bundling (with build command)');
+  console.log('  --hybrid           Use hybrid bundling (HTML + Markdown with build command)');
+  console.log('\nExamples:');
+  console.log('  bunpress init      Initialize a new project');
+  console.log('  bunpress dev       Start development server');
+  console.log('  bunpress build     Build for production');
+  console.log('');
+}
+
+// Rename init function for consistency
+async function initializeProject(_args: string[] = []) {
+  console.log(chalk.bold(`\n${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} ${chalk.gray(`v${version}`)}`));
+  console.log(chalk.green('\n📚 Initializing new BunPress project...\n'));
+  
+  // Extract directory from args or use current directory
+  const targetDir = _args[0] || '.';
+  const absoluteTargetDir = path.resolve(process.cwd(), targetDir);
+  
+  // Create directory structure if needed
+  if (targetDir !== '.' && !fs.existsSync(absoluteTargetDir)) {
+    fs.mkdirSync(absoluteTargetDir, { recursive: true });
+    console.log(chalk.green(`✅ Created project directory: ${targetDir}`));
+  }
+  
+  // Define project structure
+  const directories = [
+    'pages',
+    'public',
+    'themes/default',
+    'components'
+  ];
+  
+  // Create directories
+  for (const dir of directories) {
+    const fullPath = path.join(absoluteTargetDir, dir);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+      console.log(chalk.green(`✅ Created directory: ${dir}`));
+    }
+  }
+  
+  // Create configuration file
+  const configPath = path.join(absoluteTargetDir, 'bunpress.config.ts');
+  if (!fs.existsSync(configPath)) {
+    const configContent = `import { defineConfig } from 'bunpress';
+import { markdownItPlugin, prismPlugin, seoPlugin } from 'bunpress/plugins';
 
 export default defineConfig({
   title: 'My BunPress Site',
@@ -427,51 +160,23 @@ export default defineConfig({
     }),
     prismPlugin({
       theme: 'dark',
-      languages: ['javascript', 'typescript'],
+      languages: ['javascript', 'typescript', 'html', 'css'],
+    }),
+    seoPlugin({
+      generateSitemap: true,
+      robotsTxt: true,
     }),
   ],
 });
 `;
-          fs.writeFileSync(configPath, configContent);
-          task.output = 'Created configuration file: bunpress.config.ts';
-          
-          // Also create tsconfig.json if it doesn't exist
-          const tsconfigPath = path.join(absoluteProjectDir, 'tsconfig.json');
-          if (!fs.existsSync(tsconfigPath)) {
-            const tsconfigContent = `{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "outDir": "dist"
-  },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
-}`;
-            fs.writeFileSync(tsconfigPath, tsconfigContent);
-            task.output = 'Created tsconfig.json';
-          }
-        },
-        rendererOptions: { persistentOutput: true }
-      },
-      {
-        title: 'Creating sample content',
-        task: (task) => {
-          // Create a sample page
-          const indexPath = path.join(absoluteProjectDir, 'pages', 'index.md');
-          
-          if (fs.existsSync(indexPath)) {
-            task.output = 'Sample content already exists, skipping';
-            return;
-          }
-          
-          const indexContent = `---
+    fs.writeFileSync(configPath, configContent);
+    console.log(chalk.green(`✅ Created configuration file: bunpress.config.ts`));
+  }
+  
+  // Create sample content
+  const indexPath = path.join(absoluteTargetDir, 'pages', 'index.md');
+  if (!fs.existsSync(indexPath)) {
+    const indexContent = `---
 title: Welcome to BunPress
 description: A modern static site generator built with Bun
 ---
@@ -502,53 +207,44 @@ function hello() {
 1. Edit the \`pages/index.md\` file
 2. Run \`bunpress dev\` to see your changes
 3. Build for production with \`bunpress build\`
-
-[Learn more](https://github.com/bunpress/bunpress)
 `;
-          fs.writeFileSync(indexPath, indexContent);
-          task.output = 'Created sample page: pages/index.md';
-          
-          // Create a sample about page
-          const aboutPath = path.join(absoluteProjectDir, 'pages', 'about.md');
-          const aboutContent = `---
-title: About BunPress
-description: Learn more about BunPress static site generator
----
-
-# About BunPress
-
-BunPress is a modern static site generator built on top of Bun. It's designed to be fast, flexible, and easy to use.
-
-## Why BunPress?
-
-- **Built on Bun**: Takes advantage of Bun's speed and modern features
-- **Simple to Use**: Get started quickly with minimal configuration
-- **Extensible**: Powerful plugin system to add functionality
-- **Developer Experience**: Great DX with hot reloading and intuitive APIs
-
-## The Team
-
-BunPress is an open source project maintained by a community of developers.
-
-## Contributing
-
-We welcome contributions from everyone! Check out our GitHub repository to get started.
-`;
-          fs.writeFileSync(aboutPath, aboutContent);
-          task.output = 'Created sample page: pages/about.md';
-          
-          // Create a default theme layout
-          const themeLayoutPath = path.join(absoluteProjectDir, 'themes', 'default', 'index.html');
-          if (!fs.existsSync(themeLayoutPath)) {
-            const layoutContent = `<!DOCTYPE html>
+    fs.writeFileSync(indexPath, indexContent);
+    console.log(chalk.green(`✅ Created sample page: pages/index.md`));
+  }
+  
+  // Create package.json if it doesn't exist
+  const packageJsonPath = path.join(absoluteTargetDir, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    const projectName = path.basename(absoluteTargetDir).toLowerCase().replace(/\s+/g, '-');
+    const packageJson = {
+      name: projectName,
+      version: '0.1.0',
+      type: 'module',
+      private: true,
+      scripts: {
+        dev: 'bunpress dev',
+        build: 'bunpress build'
+      },
+      dependencies: {
+        bunpress: 'latest'
+      }
+    };
+    
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    console.log(chalk.green(`✅ Created package.json`));
+  }
+  
+  // Create a default theme
+  const themeFile = path.join(absoluteTargetDir, 'themes/default/layout.html');
+  if (!fs.existsSync(themeFile)) {
+    const themeContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{title}} | {{siteTitle}}</title>
   <meta name="description" content="{{description}}">
-  <link rel="stylesheet" href="/styles/main.css">
-  <script src="/scripts/main.js" defer></script>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header>
@@ -572,15 +268,21 @@ We welcome contributions from everyone! Check out our GitHub repository to get s
   </footer>
 </body>
 </html>`;
-            fs.mkdirSync(path.dirname(themeLayoutPath), { recursive: true });
-            fs.writeFileSync(themeLayoutPath, layoutContent);
-            task.output = 'Created default theme layout';
-          }
-          
-          // Create CSS file
-          const stylesDir = path.join(absoluteProjectDir, 'themes', 'default', 'styles');
-          fs.mkdirSync(stylesDir, { recursive: true });
-          fs.writeFileSync(path.join(stylesDir, 'main.css'), `* {
+    fs.writeFileSync(themeFile, themeContent);
+    console.log(chalk.green(`✅ Created default theme layout`));
+  }
+  
+  // Create stylesheet
+  const stylePath = path.join(absoluteTargetDir, 'public/styles.css');
+  if (!fs.existsSync(stylePath)) {
+    const cssContent = `/* Basic styles for BunPress */
+:root {
+  --primary-color: #3b82f6;
+  --text-color: #333;
+  --bg-color: #fff;
+}
+
+* {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -589,9 +291,8 @@ We welcome contributions from everyone! Check out our GitHub repository to get s
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.6;
-  color: #333;
-  max-width: 100vw;
-  overflow-x: hidden;
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
 
 .container {
@@ -610,16 +311,13 @@ nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
 }
 
 .logo {
   font-size: 1.5rem;
   font-weight: bold;
   text-decoration: none;
-  color: #0d6efd;
+  color: var(--primary-color);
 }
 
 .links a {
@@ -629,7 +327,7 @@ nav {
 }
 
 .links a:hover {
-  color: #0d6efd;
+  color: var(--primary-color);
 }
 
 main {
@@ -638,28 +336,6 @@ main {
 
 h1 {
   margin-bottom: 20px;
-  color: #212529;
-}
-
-h2 {
-  margin: 30px 0 15px;
-  color: #212529;
-}
-
-p {
-  margin-bottom: 15px;
-}
-
-ul, ol {
-  margin: 15px 0;
-  padding-left: 30px;
-}
-
-code {
-  background-color: #f8f9fa;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 pre {
@@ -670,18 +346,8 @@ pre {
   margin: 20px 0;
 }
 
-pre code {
-  background-color: transparent;
-  padding: 0;
-}
-
-a {
-  color: #0d6efd;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
+code {
+  font-family: monospace;
 }
 
 footer {
@@ -701,171 +367,330 @@ footer {
     margin-left: 10px;
   }
 }
-`);
-          task.output = 'Created CSS styles';
-          
-          // Create JS file
-          const scriptsDir = path.join(absoluteProjectDir, 'themes', 'default', 'scripts');
-          fs.mkdirSync(scriptsDir, { recursive: true });
-          fs.writeFileSync(path.join(scriptsDir, 'main.js'), `// Add your JavaScript here
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('BunPress is running!');
-});`);
-          task.output = 'Created JavaScript file';
-        },
-        rendererOptions: { persistentOutput: true }
-      },
-      {
-        title: 'Setting up package files',
-        task: async (task) => {
-          const packageJsonPath = path.join(absoluteProjectDir, 'package.json');
-          
-          if (fs.existsSync(packageJsonPath)) {
-            // Update existing package.json
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-            let modified = false;
-            
-            if (!packageJson.scripts) {
-              packageJson.scripts = {};
-              modified = true;
-            }
-            
-            if (!packageJson.scripts.dev) {
-              packageJson.scripts.dev = 'bunpress dev';
-              modified = true;
-            }
-            
-            if (!packageJson.scripts.build) {
-              packageJson.scripts.build = 'bunpress build';
-              modified = true;
-            }
-            
-            if (!packageJson.dependencies) {
-              packageJson.dependencies = {};
-              modified = true;
-            }
-            
-            if (!packageJson.dependencies.bunpress) {
-              packageJson.dependencies.bunpress = 'latest';
-              modified = true;
-            }
-            
-            if (modified) {
-              fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-              task.output = 'Updated package.json with BunPress scripts';
-            } else {
-              task.output = 'package.json already has BunPress configuration';
-            }
-          } else {
-            // Create new package.json
-            const packageJson = {
-              name: path.basename(absoluteProjectDir),
-              version: '0.1.0',
-              type: 'module',
-              private: true,
-              scripts: {
-                dev: 'bunpress dev',
-                build: 'bunpress build'
-              },
-              dependencies: {
-                bunpress: 'latest'
-              }
-            };
-            
-            fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-            task.output = 'Created package.json';
-          }
-          
-          // Create .gitignore if it doesn't exist
-          const gitignorePath = path.join(absoluteProjectDir, '.gitignore');
-          if (!fs.existsSync(gitignorePath)) {
-            fs.writeFileSync(gitignorePath, `# Build output
-dist/
-.bunpress-cache/
-
-# Dependencies
-node_modules/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Editor directories and files
-.idea/
-.vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS specific
-.DS_Store
-Thumbs.db
-`);
-            task.output = 'Created .gitignore';
-          }
-          
-          // Create README.md if it doesn't exist
-          const readmePath = path.join(absoluteProjectDir, 'README.md');
-          if (!fs.existsSync(readmePath)) {
-            fs.writeFileSync(readmePath, `# ${path.basename(absoluteProjectDir)}
-
-A static site built with BunPress.
-
-## Development
-
-To start the development server, run:
-
-\`\`\`
-bun run dev
-\`\`\`
-
-## Build
-
-To build the site for production, run:
-
-\`\`\`
-bun run build
-\`\`\`
-
-The output will be in the \`dist\` directory.
-
-## Documentation
-
-For more information about BunPress, check out the [documentation](https://github.com/bunpress/bunpress).
-`);
-            task.output = 'Created README.md';
-          }
-        },
-        rendererOptions: { persistentOutput: true }
-      }
-    ],
-    { 
-      renderer: 'default',
-      rendererOptions: { 
-        collapseSubtasks: false,
-        showSubtasks: true,
-        formatOutput: 'wrap' 
-      }
-    }
-  );
-  
-  await tasks.run();
-  
-  console.log(chalk.green.bold('\n✨ Project initialized successfully!'));
-  console.log(chalk.blue(`\n📝 Next steps:\n`));
-  
-  if (projectDir !== '.') {
-    console.log(chalk.cyan(`  cd ${projectDir}`));
+`;
+    fs.writeFileSync(stylePath, cssContent);
+    console.log(chalk.green(`✅ Created stylesheet: public/styles.css`));
   }
   
-  console.log(chalk.cyan(`  bun install`));
-  console.log(chalk.cyan(`  bun run dev\n`));
+  console.log(chalk.green.bold('\n✨ Project initialization complete!\n'));
+  console.log(chalk.blue('Next steps:'));
   
-  console.log(chalk.yellow(`The development server will start at `) + chalk.green(`http://localhost:3000`) + chalk.yellow(`\n`));
+  if (targetDir !== '.') {
+    console.log(chalk.cyan(`1. cd ${targetDir}`));
+  }
+  
+  console.log(chalk.cyan('2. bun install'));
+  console.log(chalk.cyan('3. bun run dev'));
+  
+  console.log(chalk.yellow('\nDevelopment server will start at ') + chalk.green('http://localhost:3000'));
+}
+
+async function main() {
+  try {
+    // Track resources that need to be cleaned up
+    const resources: Array<() => void> = [];
+    
+    // Process command-line arguments
+    const args = process.argv.slice(2);
+    const command = args[0];
+    
+    // Handle help, version, and init commands first
+    if (command === 'help' || args.includes('--help') || args.includes('-h')) {
+      showHelp();
+      return;
+    }
+    
+    if (args.includes('--version') || args.includes('-v')) {
+      console.log(`v${version}`);
+      return;
+    }
+    
+    if (command === 'init') {
+      await initializeProject(args.slice(1));
+      return;
+    }
+    
+    // Load configuration and plugins for other commands
+    const { config, pluginManager } = await loadConfig();
+    
+    // Resolve base paths
+    const cwd = process.cwd();
+    config.pagesDir = path.resolve(cwd, config.pagesDir || 'pages');
+    config.outputDir = path.resolve(cwd, config.outputDir || 'dist');
+    
+    try {
+      // Execute different commands based on input
+      if (command === 'build') {
+        // Check for bundling mode
+        const useHtmlFirstBundling = args.includes('--html');
+        const useHybridMode = args.includes('--hybrid');
+        
+        // Build site with enhanced listr2 tasks
+        const tasks = new Listr<any>(
+          [
+            {
+              title: 'Initializing build process',
+              task: async (task) => {
+                task.output = 'Setting up build environment...';
+                await pluginManager.executeBuildStart();
+                task.output = 'Build environment ready!';
+              },
+              rendererOptions: { persistentOutput: true }
+            },
+            {
+              title: 'Processing content files',
+              task: async (task) => {
+                // This is a placeholder for the actual content processing tracking
+                // In a real implementation, we would track the number of files processed
+                task.output = 'Scanning content directories...';
+                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
+                task.output = 'Processing markdown files...';
+                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
+                task.output = 'Applying plugin transformations...';
+                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
+                
+                return task.newListr([
+                  {
+                    title: 'Generating routes',
+                    task: async () => {
+                      // Simulate route generation work
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                  },
+                  {
+                    title: 'Optimizing assets',
+                    task: async () => {
+                      // Simulate asset optimization work
+                      await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                  }
+                ], { concurrent: false });
+              },
+              rendererOptions: { persistentOutput: true }
+            },
+            {
+              title: 'Building site',
+              task: async (task) => {
+                if (useHtmlFirstBundling || useHybridMode) {
+                  task.output = 'Scanning for HTML entrypoints...';
+                  // Scan for HTML files
+                  let htmlFiles: string[] = [];
+                  
+                  try {
+                    const entrypoints = (config as any).entrypoints || ['index.html', 'src/index.html'];
+                    
+                    for (const entrypoint of entrypoints) {
+                      const resolvedPath = path.resolve(process.cwd(), entrypoint);
+                      if (fs.existsSync(resolvedPath)) {
+                        htmlFiles.push(resolvedPath);
+                      }
+                    }
+                    
+                    if (htmlFiles.length === 0) {
+                      task.output = 'No HTML entrypoints found in specified locations. Scanning for all HTML files...';
+                      htmlFiles = findHtmlFiles(process.cwd());
+                    }
+                  } catch (err: any) {
+                    task.output = 'Error scanning for HTML files: ' + err.message;
+                    throw err;
+                  }
+                  
+                  if (htmlFiles.length === 0) {
+                    task.output = 'No HTML entrypoints found. Falling back to standard build.';
+                    await buildSite(config, pluginManager);
+                  } else {
+                    task.output = `Found ${htmlFiles.length} HTML entrypoints. Processing...`;
+                    // Process HTML entrypoints
+                    const outputDir = path.resolve(process.cwd(), config.outputDir);
+                    await processHTMLEntrypoints(
+                      htmlFiles,
+                      outputDir,
+                      config,
+                      {
+                        minify: process.env.NODE_ENV === 'production',
+                        sourcemap: process.env.NODE_ENV !== 'production',
+                        target: 'browser',
+                        splitting: true
+                      }
+                    );
+                    task.output = 'HTML entrypoints processed successfully!';
+                    
+                    // In hybrid mode, also process markdown
+                    if (useHybridMode) {
+                      task.output = 'Processing markdown content...';
+                      await buildSite(config, pluginManager);
+                      task.output = 'Markdown content processed successfully!';
+                    }
+                  }
+                } else {
+                  task.output = 'Generating HTML files...';
+                  await buildSite(config, pluginManager);
+                  task.output = 'Site built successfully!';
+                }
+              },
+              rendererOptions: { persistentOutput: true }
+            },
+            {
+              title: 'Finalizing build',
+              task: async (ctx, task) => {
+                task.output = 'Running plugin buildEnd hooks...';
+                await pluginManager.executeBuildEnd();
+                
+                // Calculate site statistics
+                const outputDir = path.resolve(process.cwd(), config.outputDir);
+                let fileCount = 0;
+                let totalSize = 0;
+                
+                try {
+                  const countFiles = (dir: string) => {
+                    const files = fs.readdirSync(dir, { withFileTypes: true });
+                    for (const file of files) {
+                      const fullPath = path.join(dir, file.name);
+                      if (file.isDirectory()) {
+                        countFiles(fullPath);
+                      } else {
+                        fileCount++;
+                        const stats = fs.statSync(fullPath);
+                        totalSize += stats.size;
+                      }
+                    }
+                  };
+                  
+                  countFiles(outputDir);
+                  
+                  // Format sizes
+                  const formatSize = (size: number) => {
+                    if (size < 1024) return `${size} B`;
+                    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
+                    return `${(size / 1024 / 1024).toFixed(2)} MB`;
+                  };
+                  
+                  ctx.stats = {
+                    fileCount,
+                    totalSize: formatSize(totalSize),
+                    outputDir
+                  };
+                } catch (error) {
+                  console.error('Error calculating stats:', error);
+                }
+                
+                task.output = 'Build finalized!';
+              },
+              rendererOptions: { persistentOutput: true }
+            }
+          ],
+          { 
+            renderer: 'default',
+            rendererOptions: { 
+              collapseSubtasks: false,
+              showSubtasks: true,
+              formatOutput: 'wrap' 
+            }
+          }
+        );
+        
+        const ctx = await tasks.run();
+        
+        console.log(
+          chalk.green.bold('\n✨ Build completed successfully!\n') +
+          chalk.blue(`📊 Stats: ${chalk.yellow(ctx.stats?.fileCount || 'unknown')} files (${chalk.yellow(ctx.stats?.totalSize || 'unknown')})\n`) +
+          chalk.blue(`📂 Output: ${chalk.yellow(ctx.stats?.outputDir || config.outputDir)}\n`)
+        );
+        
+      } else if (command === 'dev' || !command) {
+        // Start the development server with improved feedback
+        console.log(chalk.yellow('\n🚀 Starting development server...\n'));
+        
+        // Execute build start hooks
+        await pluginManager.executeBuildStart();
+        
+        try {
+          // Get the IP address for network access
+          const ipAddress = getLocalIpAddress();
+          
+          // Start the development server
+          const { watcher, server } = startDevServer(config, pluginManager);
+          
+          // Add cleanup handler for the watcher
+          resources.push(() => {
+            if (watcher && typeof watcher.close === 'function') {
+              watcher.close();
+            }
+          });
+          
+          // Add cleanup handler for the server
+          resources.push(() => {
+            if (server && typeof server.stop === 'function') {
+              server.stop();
+            }
+          });
+          
+          // Show server startup message with local and network URLs
+          const port = 3000; // This should match the port in startDevServer
+          console.log(chalk.green('\n🌐 Server running at:'));
+          console.log(`  ${chalk.cyan(`➜ Local:   http://localhost:${port}`)}`);
+          if (ipAddress) {
+            console.log(`  ${chalk.cyan(`➜ Network: http://${ipAddress}:${port}`)}`);
+          }
+          console.log(chalk.yellow('\n🔥 Hot Module Replacement enabled'));
+          console.log(chalk.blue('\n👀 Watching for changes...'));
+          
+          // Handle server shutdown
+          process.on('SIGINT', async () => {
+            console.log(chalk.yellow('\n🛑 Shutting down...'));
+            
+            // Execute build end hooks
+            await pluginManager.executeBuildEnd();
+            
+            // Clean up resources
+            for (const cleanup of resources) {
+              try {
+                cleanup();
+              } catch (err) {
+                console.error('Error during cleanup:', err);
+              }
+            }
+            
+            // Exit process
+            console.log(chalk.green('✅ Server stopped. Goodbye! 👋\n'));
+            process.exit(0);
+          });
+        } catch (error) {
+          console.error('Failed to start development server:', error);
+          // Clean up any resources that were created
+          for (const cleanup of resources) {
+            try {
+              cleanup();
+            } catch (err) {
+              console.error('Error during cleanup:', err);
+            }
+          }
+          process.exit(1);
+        }
+      } else {
+        console.error(`Unknown command: ${command}`);
+        showHelp();
+        process.exit(1);
+      }
+    } catch (error) {
+      // Handle errors from commands and clean up resources
+      console.error('Error executing command:', error);
+      
+      // Clean up resources
+      for (const cleanup of resources) {
+        try {
+          cleanup();
+        } catch (err) {
+          console.error('Error during cleanup:', err);
+        }
+      }
+      
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('Failed to start BunPress:', error);
+    process.exit(1);
+  }
 }
 
 // Helper function to get the local IP address for network access
@@ -938,7 +763,7 @@ if (process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/i
   
   if (args.includes('help') || args.includes('--help') || args.includes('-h')) {
     console.log("Displaying help...");
-    printHelp();
+    showHelp();
     process.exit(0); // Ensure we exit after displaying help
   } else {
     main();
