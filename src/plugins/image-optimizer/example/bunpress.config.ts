@@ -1,10 +1,16 @@
-import { defineConfig } from '../../../core/config';
+import { defineConfig } from '../../../../src/config';
 import imageOptimizerPlugin from '../index';
 
 export default defineConfig({
-  title: 'My BunPress Site',
-  description: 'A site with optimized images',
-  
+  title: 'Image Optimizer Example',
+  description: 'An example site showing image optimization',
+  siteUrl: 'https://example.com',
+  pagesDir: 'content',
+  outputDir: 'dist',
+  themeConfig: {
+    name: 'default',
+    options: {}
+  },
   // Configure plugins
   plugins: [
     // Basic usage with defaults

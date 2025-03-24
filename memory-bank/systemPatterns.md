@@ -427,3 +427,259 @@ graph TD
 3. Type-safe plugin options
 4. Unique plugin names
 5. Extensible plugin interface 
+
+## Overall Architecture
+
+BunPress follows a modular architecture with a strong emphasis on extensibility through plugins. The core system handles content processing, routing, and build pipeline, while plugins extend functionality through well-defined hooks.
+
+```mermaid
+flowchart TD
+    User[User Content] --> ContentProcessor[Content Processor]
+    ContentProcessor --> Router[Router]
+    Router --> Builder[Builder]
+    Builder --> Output[Output Site]
+    
+    Plugins[Plugin System] --> ContentProcessor
+    Plugins --> Router
+    Plugins --> Builder
+    
+    Config[Configuration] --> ContentProcessor
+    Config --> Router
+    Config --> Builder
+    Config --> Plugins
+```
+
+## Core Components
+
+### Content Processor
+
+Responsible for processing Markdown files:
+- Reads files from the `content` directory
+- Parses frontmatter metadata
+- Renders Markdown content to HTML
+- Applies plugin transformations
+
+```mermaid
+flowchart TD
+    ReadFile[Read File] --> ParseFrontmatter[Parse Frontmatter]
+    ParseFrontmatter --> RenderMarkdown[Render Markdown]
+    RenderMarkdown --> ApplyTransforms[Apply Plugin Transforms]
+    ApplyTransforms --> OutputContent[Content Object]
+```
+
+### Router
+
+Handles the creation of routes based on the file structure:
+- Maps content files to routes
+- Supports nested routing
+- Handles dynamic routes
+- Integrates with the content processor
+
+```mermaid
+flowchart TD
+    ScanDir[Scan Directory] --> MapRoutes[Map to Routes]
+    MapRoutes --> GenerateTreeStructure[Generate Route Tree]
+    GenerateTreeStructure --> Output[Route Objects]
+```
+
+### Builder
+
+Manages the build process:
+- Initializes plugin system
+- Coordinates build lifecycle
+- Transforms content with plugins
+- Generates final output
+
+```mermaid
+flowchart TD
+    Init[Initialize] --> BuildStart[Build Start]
+    BuildStart --> ProcessContent[Process Content]
+    ProcessContent --> ApplyTransforms[Apply Transforms]
+    ApplyTransforms --> GenerateOutput[Generate Output]
+    GenerateOutput --> BuildEnd[Build End]
+```
+
+## Plugin System
+
+The plugin system is the primary extension mechanism for BunPress. Plugins can interact with the system at various points in the content lifecycle.
+
+### Plugin Lifecycle Hooks
+
+```mermaid
+flowchart TD
+    configureServer[configureServer] --> buildStart[buildStart]
+    buildStart --> transform[transform]
+    transform --> buildEnd[buildEnd]
+```
+
+1. **configureServer**: Set up development server functionality
+2. **buildStart**: Initialize at the beginning of a build
+3. **transform**: Transform content during processing
+4. **buildEnd**: Finalize at the end of a build process
+
+### Plugin Interface
+
+```typescript
+interface Plugin {
+  name: string;
+  configureServer?: (server: any) => void;
+  buildStart?: (options: BuildOptions) => void | Promise<void>;
+  transform?: (content: ContentFile) => ContentFile | Promise<ContentFile>;
+  buildEnd?: (options: BuildOptions) => void | Promise<void>;
+}
+```
+
+## Implemented Plugins
+
+### Markdown-It Plugin
+
+A basic plugin that configures the Markdown-It renderer with various options.
+
+```mermaid
+flowchart TD
+    Config[Plugin Config] --> BuildStart[Build Start]
+    BuildStart --> ConfigureMdIt[Configure Markdown-It]
+    ConfigureMdIt --> SetOptions[Set Options/Extensions]
+```
+
+### Image Optimizer Plugin
+
+Optimizes images during the build process:
+
+```mermaid
+flowchart TD
+    BuildStart[Build Start] --> ScanImages[Scan Images]
+    ScanImages --> ProcessImages[Process Images]
+    ProcessImages --> OptimizeImages[Optimize Images]
+    OptimizeImages --> SaveImages[Save Optimized Images]
+    
+    Transform[Transform] --> UpdateImagePaths[Update Image Paths]
+```
+
+### SEO Plugin
+
+Enhances content with SEO metadata:
+
+```mermaid
+flowchart TD
+    BuildStart[Build Start] --> InitializeOptions[Initialize Options]
+    
+    Transform[Transform] --> AddMetaTags[Add Meta Tags]
+    AddMetaTags --> AddOpenGraph[Add OpenGraph]
+    AddOpenGraph --> AddTwitterCards[Add Twitter Cards]
+    AddTwitterCards --> AddCanonical[Add Canonical URL]
+    
+    BuildEnd[Build End] --> GenerateRobotsTxt[Generate robots.txt]
+    GenerateRobotsTxt --> GenerateSitemap[Generate sitemap.xml]
+```
+
+### Prism.js Plugin
+
+Adds syntax highlighting to code blocks:
+
+```mermaid
+flowchart TD
+    BuildStart[Build Start] --> LoadPrism[Load Prism]
+    LoadPrism --> ConfigurePrism[Configure Prism]
+    
+    Transform[Transform] --> IdentifyCodeBlocks[Identify Code Blocks]
+    IdentifyCodeBlocks --> ApplySyntaxHighlighting[Apply Syntax Highlighting]
+```
+
+### RSS Feed Plugin
+
+Generates RSS feeds for content syndication:
+
+```mermaid
+flowchart TD
+    BuildStart[Build Start] --> InitializeOptions[Initialize Options]
+    InitializeOptions --> ValidateOptions[Validate Required Options]
+    
+    BuildEnd[Build End] --> CollectContent[Collect Content]
+    CollectContent --> SortContent[Sort Content]
+    SortContent --> GenerateItems[Generate Feed Items]
+    GenerateItems --> CreateXML[Create XML Feed]
+    CreateXML --> WriteFile[Write Feed File]
+```
+
+The RSS Feed plugin architecture:
+- Uses the buildEnd hook to generate feed after all content is processed
+- Maintains a collection of content files during the build process
+- Generates XML feed with configurable options
+- Exposes test helpers through a `__test__` property for testability
+- Handles XML escaping and content excerpt generation
+
+## Data Flow
+
+```mermaid
+flowchart TD
+    Content[Content Files] --> Parser[Parser]
+    Parser --> ProcessedContent[Processed Content]
+    ProcessedContent --> Transformer[Plugin Transformers]
+    Transformer --> TransformedContent[Transformed Content]
+    TransformedContent --> Builder[Builder]
+    Builder --> OutputFiles[Output Files]
+```
+
+## Configuration System
+
+BunPress uses a TypeScript-based configuration system that allows users to:
+- Configure site metadata
+- Set build options
+- Register and configure plugins
+- Define theme customization
+
+```typescript
+interface BunPressConfig {
+  // Site metadata
+  title: string;
+  description?: string;
+  siteUrl?: string;
+  
+  // Build configuration
+  srcDir?: string;
+  outDir?: string;
+  contentDir?: string;
+  
+  // Theme configuration
+  theme?: ThemeConfig;
+  
+  // Plugins
+  plugins?: Plugin[];
+}
+```
+
+## Testing Patterns
+
+BunPress implements several testing patterns:
+
+1. **Component Testing**: Isolating components for unit testing
+2. **Mock File System**: Using mock implementations for file system operations
+3. **Integration Testing**: Testing the interaction between components
+4. **Plugin Testing**: Testing plugin functionality with mocks
+
+For plugins that generate content, we use a test helper pattern:
+
+```typescript
+interface PluginWithTestHelpers extends Plugin {
+  __test__: {
+    // Methods that allow testing internal plugin functionality
+    addContentFile: (file: ContentFile) => void;
+    clearContentFiles: () => void;
+    getContentFiles: () => ContentFile[];
+    generateOutput: () => string | Buffer;
+  }
+}
+```
+
+This pattern allows tests to control and inspect plugin behavior without relying on file system operations or running the entire build process.
+
+## Common Design Patterns
+
+1. **Factory Pattern**: Used for creating content and route objects
+2. **Observer Pattern**: Used in the plugin system for lifecycle hooks
+3. **Strategy Pattern**: Used for different processing strategies
+4. **Chain of Responsibility**: Used in the transform pipeline
+5. **Singleton**: Used for the configuration object
+6. **Adapter**: Used to normalize plugin interfaces
+7. **Facade**: Used to simplify complex subsystems to plugins 

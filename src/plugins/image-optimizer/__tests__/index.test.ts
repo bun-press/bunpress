@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'bun:test';
-import imageOptimizerPlugin from '../../src/plugins/image-optimizer';
+import imageOptimizerPlugin from '../index';
 
-describe('Image Optimizer Plugin - Simple Tests', () => {
+describe('Image Optimizer Plugin', () => {
   test('should create plugin with default options', () => {
     const plugin = imageOptimizerPlugin();
     expect(plugin.name).toBe('image-optimizer');

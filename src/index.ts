@@ -9,7 +9,6 @@ export { defineConfig, definePlugin } from './config';
 // CLI code
 import { startDevServer } from './core/dev-server';
 import { loadConfig } from './core/config-loader';
-import { ContentProcessor } from './core/content-processor';
 import { buildSite } from './core/builder';
 import path from 'path';
 import fs from 'fs';
@@ -29,9 +28,6 @@ async function main() {
     // Load configuration and plugins for other commands
     const { config, pluginManager } = await loadConfig();
     
-    // Initialize content processor with plugins
-    const contentProcessor = new ContentProcessor({ plugins: pluginManager });
-    
     // Log loaded plugins
     console.log(`Loaded ${pluginManager.plugins.length} plugins:`);
     pluginManager.plugins.forEach(plugin => {
@@ -48,7 +44,7 @@ async function main() {
       await pluginManager.executeBuildStart();
       
       // Start the development server
-      const { server, watcher } = startDevServer(config, pluginManager);
+      const { watcher } = startDevServer(config, pluginManager);
       
       // Handle server shutdown
       process.on('SIGINT', async () => {

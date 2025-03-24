@@ -21,7 +21,7 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
       // For now, we'll just add a CSS class to code blocks to indicate
       // they should be highlighted by Prism.js on the client side
       const regex = /```(\w+)?([^`]+)```/g;
-      const transformed = content.replace(regex, (match, language, code) => {
+      const transformed = content.replace(regex, (_match, language, code) => {
         const lang = language || 'text';
         return `\`\`\`${lang} class="language-${lang}" data-prism="true"${code}\`\`\``;
       });
@@ -40,7 +40,7 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
       console.log('Prism.js plugin: build complete');
     },
     
-    configureServer: async (server: any) => {
+    configureServer: async (_server: any) => {
       console.log('Prism.js plugin: configuring server');
       // In a real implementation, we would:
       // 1. Add middleware to the server to serve Prism.js assets

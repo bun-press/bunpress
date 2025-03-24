@@ -166,7 +166,7 @@ export default function imageOptimizerPlugin(options: ImageOptimizerOptions = {}
         
         return content.replace(
           /!\[(.*?)\]\((.*?)(\.jpg|\.jpeg|\.png)(\s+["'].*?["'])?\)/gi,
-          (match, alt, src, ext, title) => {
+          (_match, alt, src, _ext, title) => {
             // Construct the new URL with the preferred format
             return `![${alt}](${src}.${preferredFormat}${title || ''})`;
           }
