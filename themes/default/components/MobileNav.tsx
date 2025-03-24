@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { cn } from '../../../src/lib/utils';
 import { NavItem } from './Header';
+import { ThemeToggle } from './ThemeToggle';
 
 interface MobileNavProps {
   items: NavItem[];
@@ -88,6 +89,12 @@ export function MobileNav({ items, title, logo }: MobileNavProps) {
               ))}
             </div>
           </ScrollArea>
+          <div className="mt-6 px-6 py-2 border-t">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Theme</div>
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

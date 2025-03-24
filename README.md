@@ -11,10 +11,22 @@ A modern static site generator built with Bun's native capabilities for blazing-
 - 🚀 **Built for Bun**: Leverages Bun's native tools for maximum performance
 - 🔌 **Plugin System**: Extend functionality with a powerful plugin architecture
 - 📄 **Markdown Support**: First-class support for Markdown content
-- 🎨 **Theme System**: Customize your site with flexible theming (coming soon)
+- 🎨 **Theme System**: Customize your site with flexible theming
 - 🧩 **React Components**: Use React components in your content with MDX
 - 💻 **Dev Server**: Fast development server with hot module replacement
 - 📦 **Static Output**: Generate static sites for deployment anywhere
+- 🌗 **Dark/Light Mode**: Integrated theme toggle with system preference detection
+
+## Bun Optimizations
+
+BunPress leverages Bun's powerful built-in features:
+
+- **HTML-first Bundling**: BunPress uses Bun's HTML-first bundling approach for optimal performance
+- **Automatic CSS Processing**: CSS imports are automatically bundled and optimized
+- **Hot Module Replacement**: Fast development with Bun's built-in HMR support
+- **TypeScript/JSX Support**: First-class support for TypeScript and JSX without configuration
+- **Plugin System**: Tailwind CSS and other plugins work seamlessly
+- **Fast Server**: Bun's fast HTTP server powers the development environment
 
 ## Installation
 

@@ -6,16 +6,13 @@ import { renderHtml } from './renderer';
 import { PluginManager } from './plugin';
 
 export async function buildSite(config: BunPressConfig, pluginManager?: PluginManager) {
-  console.log('Building site...');
-  
   // Get workspace root
   const workspaceRoot = process.cwd();
-  console.log(`Workspace root: ${workspaceRoot}`);
   
-  // Execute plugin buildStart hooks
-  if (pluginManager) {
+  // Execute plugin buildStart hooks if not already done by CLI
+  if (pluginManager && !process.env.BUNPRESS_BUILD_STARTED) {
     await pluginManager.executeBuildStart();
-    console.log('Executed plugin buildStart hooks');
+    process.env.BUNPRESS_BUILD_STARTED = 'true';
   }
   
   // Make sure output directory exists
@@ -45,25 +42,21 @@ export async function buildSite(config: BunPressConfig, pluginManager?: PluginMa
     
     // Write HTML file
     writeFileSync(outputPath, html);
-    console.log(`Generated: ${outputPath}`);
   }
   
   // Copy static assets from public directory
   if (existsSync('public')) {
     copyDirectory('public', path.join(config.outputDir, 'public'));
-    console.log('Copied public assets');
   }
   
   // Generate sitemap.xml
   generateSitemap(routes, config);
   
-  // Execute plugin buildEnd hooks
-  if (pluginManager) {
+  // Execute plugin buildEnd hooks if not already done by CLI
+  if (pluginManager && !process.env.BUNPRESS_BUILD_ENDED) {
     await pluginManager.executeBuildEnd();
-    console.log('Executed plugin buildEnd hooks');
+    process.env.BUNPRESS_BUILD_ENDED = 'true';
   }
-  
-  console.log('Build completed successfully!');
 }
 
 /**
@@ -81,7 +74,6 @@ ${Object.keys(routes)
 </urlset>`;
   
   writeFileSync(path.join(config.outputDir, 'sitemap.xml'), sitemap);
-  console.log('Generated: sitemap.xml');
 }
 
 /**

@@ -2,17 +2,23 @@
 
 ## Current Focus
 
-We are continuing the development of BunPress with a focus on fixing issues and improving documentation. Recent updates include:
+We are continuing the development of BunPress with a focus on fixing issues and improving developer experience and documentation. Recent updates include:
 
-1. **Fixed TypeScript Errors**: Resolved TypeScript errors in the theme layouts (DocLayout, HomeLayout, and PageLayout) by removing unused `description` variable declarations.
+1. **Improved CLI Experience**: Enhanced the command-line interface with:
+   - Added `listr2` for beautiful task lists with progress indicators
+   - Implemented `chalk` for colored terminal output
+   - Improved feedback during build and initialization processes
+   - Enhanced visual organization of console output
 
-2. **Documentation Improvements**:
+2. **Fixed TypeScript Errors**: Resolved TypeScript errors in the theme layouts (DocLayout, HomeLayout, and PageLayout) by removing unused `description` variable declarations.
+
+3. **Documentation Improvements**:
    - Updated CHANGELOG.md with version information and recent changes
    - Enhanced CONTRIBUTING.md with more detailed project structure and development workflow
    - Improved README.md with detailed usage instructions and examples
    - Created a comprehensive user guide (bunpress-user-guide.md) in the memory bank
 
-3. **Next Steps**:
+4. **Next Steps**:
    - Complete the internationalization (i18n) plugin implementation
    - Add more comprehensive test coverage for CLI commands
    - Enhance the theme system with more customization options
@@ -166,7 +172,15 @@ The plugin is configurable, allowing users to specify:
 
 ## Recent Changes
 
-1. Fixed TypeScript errors across test files:
+1. Improved CLI experience:
+   - Added listr2 for interactive task lists with progress indicators
+   - Implemented chalk for colored terminal output
+   - Enhanced user feedback during build and initialization processes
+   - Improved visual organization of console output
+   - Removed redundant console.log messages from builder.ts
+   - Updated builder to use environment variables to track plugin execution state
+
+2. Fixed TypeScript errors across test files:
    - Added proper type annotations to function parameters
    - Fixed issues with mock implementations
    - Removed unused imports and variables
@@ -176,45 +190,45 @@ The plugin is configurable, allowing users to specify:
    - Added proper type declarations for Record objects
    - Skipped problematic tests to maintain CI/CD pipeline health
    
-2. Fixed the i18n plugin tests:
+3. Fixed the i18n plugin tests:
    - Properly mocked the file system operations
    - Manually set up translations for testing
    - Used module mocks instead of direct property assignments
    - Skipped file system dependent tests
    
-3. Fixed the ThemeManager tests:
+4. Fixed the ThemeManager tests:
    - Used proper mock implementations
    - Skipped tests that required complex file system mocking
    - Fixed mock return types to match expected values
    - Added TypeScript type annotations to function parameters
 
-4. Started implementation of the internationalization (i18n) plugin
+5. Started implementation of the internationalization (i18n) plugin
 
-5. Fixed the i18n plugin to correctly implement the Plugin interface's transform method
-6. Fixed failing tests by skipping problematic content processor test temporarily
-7. Added CLI test file with basic functionality tests
-8. Fixed test infrastructure to ensure all tests pass
-9. Implemented the analytics plugin with support for multiple providers
-10. Fixed TypeScript errors in the renderer and other components
-11. Fixed content processor test by properly mocking gray-matter
-12. Implemented the theme system with Shadcn UI integration
-13. Created ThemeManager class for managing themes
-14. Updated renderer to use theme styles and layout
-15. Added proper tests for theme system
-16. Implemented the RSS feed plugin with configurable options and proper testing
-17. Fixed testing isolation issues between router tests and other components
-18. Added type declarations for plugin test helpers to ensure type safety
-19. Updated the plugins index and configuration example with RSS feed plugin
-20. Implemented comprehensive tests for all plugins
-21. Fixed issues with content processor testing
-22. Improved plugin type definitions for better developer experience
+6. Fixed the i18n plugin to correctly implement the Plugin interface's transform method
+7. Fixed failing tests by skipping problematic content processor test temporarily
+8. Added CLI test file with basic functionality tests
+9. Fixed test infrastructure to ensure all tests pass
+10. Implemented the analytics plugin with support for multiple providers
+11. Fixed TypeScript errors in the renderer and other components
+12. Fixed content processor test by properly mocking gray-matter
+13. Implemented the theme system with Shadcn UI integration
+14. Created ThemeManager class for managing themes
+15. Updated renderer to use theme styles and layout
+16. Added proper tests for theme system
+17. Implemented the RSS feed plugin with configurable options and proper testing
+18. Fixed testing isolation issues between router tests and other components
+19. Added type declarations for plugin test helpers to ensure type safety
+20. Updated the plugins index and configuration example with RSS feed plugin
+21. Implemented comprehensive tests for all plugins
+22. Fixed issues with content processor testing
+23. Improved plugin type definitions for better developer experience
 
 ## Current Decisions
 
 1. **Plugin First Approach**: We're emphasizing a plugin-based architecture to make BunPress highly extensible.
 2. **Modern Image Formats**: The image optimizer defaults to WebP for better web performance.
 3. **Bun-First Development**: All tools and plugins are optimized for Bun's runtime.
-4. **Developer Experience**: Focusing on making plugins intuitive to use with sensible defaults.
+4. **Developer Experience**: Focusing on making plugins intuitive to use with sensible defaults and improving CLI feedback with listr2 and chalk.
 5. **Combined Functionality**: Some plugins like SEO combine multiple related features (e.g., meta tags, sitemap, robots.txt).
 6. **Test Isolation**: Using proper mocking techniques to ensure tests don't interfere with each other.
 7. **Test Helpers**: Exposing test helpers through a `__test__` property for plugins that generate content.

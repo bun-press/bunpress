@@ -12,6 +12,8 @@ import { loadConfig } from './core/config-loader';
 import { buildSite } from './core/builder';
 import path from 'path';
 import fs from 'fs';
+import chalk from 'chalk';
+import { Listr } from 'listr2';
 
 async function main() {
   try {
@@ -28,27 +30,56 @@ async function main() {
     // Load configuration and plugins for other commands
     const { config, pluginManager } = await loadConfig();
     
-    // Log loaded plugins
-    console.log(`Loaded ${pluginManager.plugins.length} plugins:`);
+    // Log loaded plugins with chalk styling
+    console.log(chalk.blue.bold(`\nBunPress: ${chalk.green(config.title || 'Untitled')}`));
+    console.log(chalk.blue(`Loaded ${chalk.yellow(pluginManager.plugins.length.toString())} plugins:`));
     pluginManager.plugins.forEach(plugin => {
-      console.log(`- ${plugin.name}`);
+      console.log(chalk.green(`• ${plugin.name}`));
     });
+    console.log(''); // Empty line for spacing
     
     // Execute different commands based on input
     if (command === 'build') {
-      // Build site
-      await buildSite(config, pluginManager);
+      // Build site with listr2 tasks
+      const tasks = new Listr(
+        [
+          {
+            title: 'Initializing build process',
+            task: async (_, task) => {
+              task.output = 'Setting up build environment...';
+              await pluginManager.executeBuildStart();
+            },
+          },
+          {
+            title: 'Building site',
+            task: async () => {
+              await buildSite(config, pluginManager);
+            },
+          },
+        ],
+        { 
+          renderer: 'default',
+          rendererOptions: { 
+            collapseSubtasks: false,
+            formatOutput: 'wrap' 
+          }
+        }
+      );
+      
+      await tasks.run();
+      console.log(chalk.green.bold('\n✨ Build completed successfully!\n'));
+      
     } else if (command === 'dev' || !command) {
-      // Default to dev server
       // Execute build start hooks
       await pluginManager.executeBuildStart();
       
       // Start the development server
+      console.log(chalk.yellow('Starting development server...\n'));
       const { watcher } = startDevServer(config, pluginManager);
       
       // Handle server shutdown
       process.on('SIGINT', async () => {
-        console.log('\nShutting down...');
+        console.log(chalk.yellow('\nShutting down...'));
         
         // Execute build end hooks
         await pluginManager.executeBuildEnd();
@@ -57,41 +88,52 @@ async function main() {
         watcher.close();
         
         // Exit process
+        console.log(chalk.green('Server stopped. Goodbye! 👋\n'));
         process.exit(0);
       });
     } else {
-      console.log(`Unknown command: ${command}`);
+      console.log(chalk.red(`\n❌ Unknown command: ${command}`));
       printHelp();
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error(chalk.red('\n❌ Error:'), error);
     process.exit(1);
   }
 }
 
 function printHelp() {
-  console.log(`
+  console.log(chalk.blue.bold(`
 BunPress - A static site generator built with Bun
 
-Usage:
-  bunpress init          Initialize a new BunPress project
-  bunpress dev           Start the development server (default)
-  bunpress build         Build the site for production
-  bunpress help          Display this help message
+${chalk.white('Usage:')}
+  ${chalk.green('bunpress init')}          Initialize a new BunPress project
+  ${chalk.green('bunpress dev')}           Start the development server (default)
+  ${chalk.green('bunpress build')}         Build the site for production
+  ${chalk.green('bunpress help')}          Display this help message
 
-For more information, visit: https://github.com/bunpress/bunpress
-`);
+For more information, visit: ${chalk.cyan('https://github.com/bunpress/bunpress')}
+`));
 }
 
 async function initProject() {
-  console.log('Initializing a new BunPress project...');
+  console.log(chalk.blue.bold('\nInitializing a new BunPress project...'));
   
-  // Create directories
-  fs.mkdirSync('pages', { recursive: true });
-  fs.mkdirSync('public', { recursive: true });
-  
-  // Create config file
-  const configContent = `import { defineConfig } from 'bunpress';
+  const tasks = new Listr(
+    [
+      {
+        title: 'Creating project structure',
+        task: () => {
+          // Create directories
+          fs.mkdirSync('pages', { recursive: true });
+          fs.mkdirSync('public', { recursive: true });
+          return 'Created project directories';
+        },
+      },
+      {
+        title: 'Creating configuration file',
+        task: () => {
+          // Create config file
+          const configContent = `import { defineConfig } from 'bunpress';
 import { markdownItPlugin, prismPlugin } from 'bunpress/plugins';
 
 export default defineConfig({
@@ -119,10 +161,15 @@ export default defineConfig({
   ],
 });
 `;
-  fs.writeFileSync('bunpress.config.ts', configContent);
-  
-  // Create a sample page
-  const indexContent = `---
+          fs.writeFileSync('bunpress.config.ts', configContent);
+          return 'Created configuration file';
+        },
+      },
+      {
+        title: 'Creating sample content',
+        task: () => {
+          // Create a sample page
+          const indexContent = `---
 title: Welcome to BunPress
 ---
 
@@ -144,9 +191,23 @@ function hello() {
 }
 \`\`\`
 `;
-  fs.writeFileSync(path.join('pages', 'index.md'), indexContent);
+          fs.writeFileSync(path.join('pages', 'index.md'), indexContent);
+          return 'Created sample page';
+        },
+      },
+    ],
+    { 
+      renderer: 'default',
+      rendererOptions: { 
+        collapseSubtasks: false,
+        formatOutput: 'wrap' 
+      }
+    }
+  );
   
-  console.log('Project initialized successfully! Run "bunpress dev" to start the development server.');
+  await tasks.run();
+  console.log(chalk.green.bold('\n✨ Project initialized successfully!'));
+  console.log(chalk.blue(`\nRun ${chalk.yellow('bunpress dev')} to start the development server.\n`));
 }
 
 // Only run the CLI code if this file is executed directly (not imported)

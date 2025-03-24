@@ -1,0 +1,24 @@
+# BunPress configuration
+
+# Static file serving configuration
+[serve.static]
+# Enable CSS chunking (bundles all CSS imports into a single CSS file per entry point)
+css_chunking = true
+
+# Enable plugins for the bundler
+plugins = ["bun-plugin-tailwind"]
+
+# Development settings
+[dev]
+# Enable hot module replacement for fast development
+hmr = true
+# Don't clear the console on reloads for better debugging
+clearScreen = false
+# Watch for file changes automatically
+watch = true
+
+# Specify plugins and extensions Bun should handle
+[bunfig]
+framework = "react"
+target = "browser"
+entrypoints = ["themes/*/index.html"] 

@@ -27,6 +27,7 @@ interface HeroSection {
 interface HomeLayoutProps {
   children?: React.ReactNode;
   title: string;
+  description?: string;
   navItems?: NavItem[];
   hero?: HeroSection;
   features?: Feature[];
@@ -37,12 +38,45 @@ interface HomeLayoutProps {
 export function HomeLayout({
   children,
   title,
+  description,
   navItems = [],
   hero,
   features,
   hideNav = false,
   hideFooter = false,
 }: HomeLayoutProps) {
+  // If description is provided, update the meta tags
+  React.useEffect(() => {
+    if (description) {
+      // Update meta description tag
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', description);
+      
+      // Update Open Graph description
+      let ogDesc = document.querySelector('meta[property="og:description"]');
+      if (!ogDesc) {
+        ogDesc = document.createElement('meta');
+        ogDesc.setAttribute('property', 'og:description');
+        document.head.appendChild(ogDesc);
+      }
+      ogDesc.setAttribute('content', description);
+      
+      // Update Twitter description
+      let twitterDesc = document.querySelector('meta[name="twitter:description"]');
+      if (!twitterDesc) {
+        twitterDesc = document.createElement('meta');
+        twitterDesc.setAttribute('name', 'twitter:description');
+        document.head.appendChild(twitterDesc);
+      }
+      twitterDesc.setAttribute('content', description);
+    }
+  }, [description]);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <div className="min-h-screen bg-background flex flex-col">
