@@ -1,0 +1,11 @@
+{
+  "navigation": {
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "home": {
+    "title": "Welcome to my site",
+    "description": "This is a BunPress site with i18n support"
+  }
+}

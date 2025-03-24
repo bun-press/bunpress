@@ -1,7 +1,6 @@
-import { describe, test, expect, spyOn, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'bun:test';
 import rssFeedPlugin from '../index';
-import * as fs from 'fs';
-import * as path from 'path';
+import path from 'path';
 import type { Plugin } from '../../../core/plugin';
 import type { ContentFile } from '../../../core/content-processor';
 
@@ -139,7 +138,7 @@ describe('RSS Feed Plugin', () => {
     const customFilename = 'custom-feed.xml';
     let writtenFilename = '';
     
-    mockFs.writeFileSync = (filePath) => {
+    mockFs.writeFileSync = (filePath: string) => {
       writtenFilename = path.basename(filePath);
     };
     
@@ -160,7 +159,7 @@ describe('RSS Feed Plugin', () => {
   
   test('should respect sortItems option', () => {
     // Create a custom sort function that sorts by title alphabetically
-    const customSortItems = (a, b) => {
+    const customSortItems = (a: any, b: any) => {
       return a.frontmatter.title.localeCompare(b.frontmatter.title);
     };
     

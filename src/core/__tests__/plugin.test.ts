@@ -69,7 +69,7 @@ describe('Plugin System', () => {
     
     const plugin = {
       name: 'test-plugin',
-      configureServer: async (server: any) => {
+      configureServer: async (_server: unknown) => {
         serverConfigCalls.push('configured');
       },
     };

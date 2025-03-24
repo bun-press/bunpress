@@ -1,11 +1,11 @@
-import { describe, expect, test, beforeEach, spyOn, mock } from 'bun:test';
+import { describe, expect, test, spyOn, mock } from 'bun:test';
 import { generateRoutes, generateRoutesAsync } from '../router';
 import * as fs from 'fs';
 import { PathLike } from 'fs';
-import * as path from 'path';
 import * as contentProcessor from '../content-processor';
 
 // Create mock data
+/* Commented out as these are not directly used but are helpful for reference
 const mockFiles = {
   '/mock/pages': ['index.md', 'about.md', 'blog'],
   '/mock/pages/blog': ['index.md', 'post1.md', 'post2.md'],
@@ -21,9 +21,10 @@ const mockStats = {
   '/mock/pages/blog/post2.md': { isDirectory: () => false, isFile: () => true },
   '/mock/pages/component.mdx': { isDirectory: () => false, isFile: () => true }
 };
+*/
 
 // Mock content files corresponding to each file
-const mockContentFiles = {
+const mockContentFiles: Record<string, any> = {
   '/mock/pages/index.md': {
     route: '/',
     frontmatter: { title: 'Mock title for /' },
@@ -90,14 +91,14 @@ describe('Router', () => {
     }) as any);
     
     // Configure mock behavior for processMarkdownContent
-    mockProcessMarkdownContent.mockImplementation((filePath, rootDir) => {
+    mockProcessMarkdownContent.mockImplementation((filePath: string, _rootDir?: string) => {
       return mockContentFiles[filePath.toString()];
     });
     
     // Mock the content processor module
     mock.module('../content-processor', () => {
       const mockProcessor = {
-        async processMarkdownContent(filePath, rootDir) {
+        async processMarkdownContent(filePath: string, _rootDir?: string) {
           return mockContentFiles[filePath.toString()];
         }
       };
@@ -202,7 +203,7 @@ describe('Router', () => {
     // Mock the content processor module
     mock.module('../content-processor', () => {
       const mockProcessor = {
-        async processMarkdownContent(filePath, rootDir) {
+        async processMarkdownContent(filePath: string, _rootDir?: string) {
           return mockContentFiles[filePath.toString()];
         }
       };
@@ -249,7 +250,7 @@ describe('Router', () => {
       return { isDirectory: () => false, isFile: () => true } as fs.Stats;
     }) as any);
     
-    mockProcessMarkdownContent.mockImplementation((filePath, rootDir) => {
+    mockProcessMarkdownContent.mockImplementation((filePath: string, _rootDir?: string) => {
       return mockContentFiles[filePath.toString()];
     });
     

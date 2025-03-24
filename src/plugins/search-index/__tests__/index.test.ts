@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'bun:test';
 import searchIndexPlugin from '../index';
 import type { Plugin } from '../../../core/plugin';
 import type { ContentFile } from '../../../core/content-processor';
@@ -30,7 +30,7 @@ describe('Search Index Plugin', () => {
     // Reset mocks
     mockFs.existsSync = () => true;
     mockFs.mkdirSync = (() => {}) as any;
-    mockFs.writeFileSync = ((path, content) => {
+    mockFs.writeFileSync = ((path: string, content: string) => {
       mockWritePath = path;
       mockWriteContent = content;
     }) as any;
