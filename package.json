@@ -69,6 +69,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@shadcn/ui": "^0.0.4",
     "@types/markdown-it": "^14.1.2",
+    "@types/sharp": "^0.32.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
@@ -78,6 +79,7 @@
     "next-themes": "^0.4.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sharp": "^0.33.5",
     "tailwind-merge": "^3.0.2"
   },
   "engines": {

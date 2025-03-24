@@ -1,11 +1,69 @@
 # Active Context
 
 ## Current Focus
-- Implementing the plugin system with core interfaces and manager
-- Creating example plugins to demonstrate extensibility
-- Integrating the plugin system with the content processor and build system
-- Preparing the project for npm publishing
-- Cleaning up project structure
+
+We are currently expanding the BunPress plugin ecosystem to provide valuable functionality for users. The focus is on developing useful plugins that demonstrate the flexibility and power of the plugin system.
+
+### Image Optimization Plugin
+
+We just implemented an image optimization plugin for BunPress that:
+
+1. Converts images to modern formats (WebP, AVIF) for better performance
+2. Generates multiple sizes for responsive images
+3. Reduces file size while maintaining quality
+4. Automatically updates image references in content
+
+This plugin demonstrates how BunPress plugins can:
+- Hook into the build process (buildStart, buildEnd)
+- Transform content (markdown/HTML)
+- Process assets
+- Provide helpful user feedback
+
+The plugin is configurable, allowing users to specify:
+- Input/output directories
+- Image formats and quality settings
+- Size variants to generate
+- File extensions to process
+- Whether to keep original files
+
+### Recent Changes
+
+1. Created the core plugin system with interfaces and lifecycle hooks
+2. Implemented the default plugin manager
+3. Created the image optimization plugin using sharp
+4. Added plugin documentation and examples
+5. Created tests for the plugin
+6. Updated the plugin registry
+
+### Current Decisions
+
+1. **Plugin First Approach**: We're emphasizing a plugin-based architecture to make BunPress highly extensible.
+2. **Modern Image Formats**: The image optimizer defaults to WebP for better web performance.
+3. **Bun-First Development**: All tools and plugins are optimized for Bun's runtime.
+4. **Developer Experience**: Focusing on making plugins intuitive to use with sensible defaults.
+
+## Next Steps
+
+1. Develop more essential plugins:
+   - SEO optimization plugin
+   - Sitemap generation
+   - RSS feed generator
+   - Search functionality
+
+2. Improve plugin documentation:
+   - Create a plugin development guide
+   - Add more examples
+   - Document best practices
+
+3. Enhance plugin system:
+   - Add plugin dependency resolution
+   - Implement validation and error handling
+   - Create plugin conflict detection
+
+4. User Experience:
+   - Improve CLI commands for working with plugins
+   - Add plugin discovery and installation commands
+   - Create interactive plugin configuration tools
 
 ## Current Status
 - Plugin system core implementation completed
@@ -41,14 +99,6 @@
 4. **Plugin Dependencies**: Managing dependencies between plugins
 5. **Error Handling**: Graceful handling of plugin failures
 6. **NPM Package**: Ensuring the package is optimized for Bun-first usage
-
-## Next Steps
-1. Create more example plugins (image optimization, SEO, sitemap)
-2. Add plugin validation and error handling
-3. Implement plugin dependency resolution
-4. Create comprehensive plugin documentation with examples
-5. Add more tests for build system with plugins
-6. Publish to npm
 
 ## Blockers and Challenges
 - Need to ensure plugin execution order is maintained for content transformations

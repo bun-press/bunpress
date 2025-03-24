@@ -70,84 +70,113 @@ import { markdownItPlugin, prismPlugin } from 'bunpress/plugins';
 ## Plugin System Architecture
 
 ### Core Components
-1. Plugin Interface
-   ```typescript
-   interface Plugin {
-     name: string;
-     options?: Record<string, unknown>;
-     transform?: (content: string) => string | Promise<string>;
-     buildStart?: () => Promise<void>;
-     buildEnd?: () => Promise<void>;
-     configureServer?: (server: any) => Promise<void>;
-   }
-   ```
+1. **Plugin Interface**: Defines the contract for plugins
+   - `name`: Unique identifier for the plugin
+   - `options`: Configuration options
+   - Lifecycle hooks: `buildStart`, `buildEnd`
+   - Content transformers: `transform`
+   - Server hooks: `configureServer`
 
-2. Plugin Manager
-   ```typescript
-   interface PluginManager {
-     plugins: Plugin[];
-     addPlugin: (plugin: Plugin) => void;
-     removePlugin: (name: string) => void;
-     getPlugin: (name: string) => Plugin | undefined;
-     executeTransform: (content: string) => Promise<string>;
-     executeBuildStart: () => Promise<void>;
-     executeBuildEnd: () => Promise<void>;
-     executeConfigureServer: (server: any) => Promise<void>;
-   }
-   ```
+2. **Plugin Manager**: Manages the plugin lifecycle
+   - Adding, removing, and retrieving plugins
+   - Executing plugin hooks in sequence
+   - Managing plugin dependencies
+   - Error handling for plugin failures
 
-3. Content Processor with Plugin Integration
-   ```typescript
-   class ContentProcessor {
-     private pluginManager: PluginManager;
-     
-     constructor(options: { plugins?: PluginManager }) {
-       this.pluginManager = options.plugins || new DefaultPluginManager();
-     }
-     
-     async processMarkdownContent(filePath: string, rootDir: string): Promise<ContentFile> {
-       // Read file and parse frontmatter
-       // Apply plugin transformations to content
-       // Convert markdown to HTML
-       // Return processed content
-     }
-   }
-   ```
+3. **Content Processor**: Integrates with plugins to transform content
+   - Runs content through plugin transform functions
+   - Maintains transformation pipeline
+   - Manages content metadata
 
-4. Config Loader for Plugin Integration
-   ```typescript
-   async function loadConfig(options: ConfigLoaderOptions = {}): Promise<{
-     config: BunPressConfig;
-     pluginManager: PluginManager;
-   }> {
-     // Load config file
-     // Initialize plugin manager
-     // Load and configure plugins from config
-     // Return config and plugin manager
-   }
-   ```
+4. **Build System**: Integrates with plugins for build lifecycle
+   - Executes `buildStart` hooks before build
+   - Executes `buildEnd` hooks after build
+   - Provides build context to plugins
+   - Coordinates plugin execution order
 
-5. Build System with Plugin Integration
-   ```typescript
-   async function buildSite(config: BunPressConfig, pluginManager?: PluginManager) {
-     // Execute plugin buildStart hooks
-     // Generate routes with plugin transformations
-     // Render HTML pages
-     // Generate sitemap
-     // Execute plugin buildEnd hooks
-   }
-   ```
+### Provided Plugins
 
-6. Config and Plugin Definition Helpers
-   ```typescript
-   function defineConfig(config: BunPressConfig): BunPressConfig {
-     return config;
-   }
+1. **Markdown-It Plugin**
+   - Configures the Markdown-It processor
+   - Adds custom syntax and extensions
+   - Provides hooks for customizing the Markdown rendering
 
-   function definePlugin(plugin: Plugin): Plugin {
-     return plugin;
-   }
-   ```
+2. **Prism.js Plugin**
+   - Provides code syntax highlighting
+   - Supports various languages and themes
+   - Integrates with Markdown content transformation
+
+3. **Image Optimizer Plugin**
+   - Converts images to modern formats (WebP, AVIF)
+   - Generates responsive image sizes
+   - Compresses images for better performance
+   - Updates image references in content
+   - Hooks into the build process for asset processing
+
+```mermaid
+graph TD
+    P[Plugins] --> PM[Plugin Manager]
+    PM --> B[Build System]
+    PM --> C[Content Processor]
+    B --> O[Output]
+    C --> O
+    
+    subgraph Plugins
+        M[Markdown-It]
+        H[Syntax Highlighting]
+        I[Image Optimizer]
+        S[Other Plugins...]
+    end
+```
+
+### Plugin Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as CLI
+    participant B as Build System
+    participant PM as Plugin Manager
+    participant P as Plugins
+    participant CP as Content Processor
+    participant O as Output
+
+    U->>C: bunpress build
+    C->>B: initiateBuild()
+    B->>PM: executeBuildStartHooks()
+    PM->>P: buildStart()
+    B->>CP: processContent()
+    CP->>PM: transformContent()
+    PM->>P: transform()
+    CP->>O: writeOutput()
+    B->>PM: executeBuildEndHooks()
+    PM->>P: buildEnd()
+    B->>O: finalizeBuild()
+    O->>U: Built Site
+```
+
+### Image Optimizer Plugin Flow
+
+```mermaid
+sequenceDiagram
+    participant B as Build System
+    participant IO as Image Optimizer Plugin
+    participant FS as File System
+    participant CP as Content Processor
+
+    B->>IO: buildStart()
+    IO->>IO: Initialize processing
+    B->>CP: processContent()
+    CP->>IO: transform(content)
+    IO->>IO: Update image references
+    B->>IO: buildEnd()
+    IO->>FS: Read image files
+    IO->>IO: Process each image
+    IO->>IO: Convert formats
+    IO->>IO: Resize images
+    IO->>FS: Write optimized images
+    IO->>B: Complete processing
+```
 
 ## CLI Architecture
 
