@@ -141,7 +141,9 @@ describe('i18n Plugin', () => {
       locales: ['en', 'fr', 'es'],
       allowMissingTranslations: true,
       generateLocaleRoutes: true,
-      prefixLocaleInUrl: true
+      prefixLocaleInUrl: true,
+      contentDir: "pages",
+      outputDir: "dist"
     });
   });
 
@@ -437,21 +439,21 @@ With HTML elements:
     // Create mock content files
     const mockContentFiles = [
       {
-        path: '/project/pages/index.md',
+        path: './test-output/pages/index.md',
         route: '/',
         content: 'Home page content',
         frontmatter: { title: 'Home' },
         html: '<p>Home page content</p>'
       },
       {
-        path: '/project/pages/about.md',
+        path: './test-output/pages/about.md',
         route: '/about',
         content: 'About page content',
         frontmatter: { title: 'About' },
         html: '<p>About page content</p>'
       },
       {
-        path: '/project/pages/fr/contact.md',
+        path: './test-output/pages/fr/contact.md',
         route: '/fr/contact',
         content: 'Contact page content in French',
         frontmatter: { title: 'Contact', locale: 'fr' },
@@ -480,7 +482,7 @@ With HTML elements:
     
     // Create a mock content file
     const mockContentFile = {
-      path: '/project/pages/index.md',
+      path: './test-output/pages/index.md',
       route: '/',
       content: 'Home page content',
       frontmatter: { title: 'Home' },
@@ -541,7 +543,7 @@ With HTML elements:
     
     // Mock content file
     const mockContentFile = {
-      path: '/project/pages/index.md',
+      path: './test-output/pages/index.md',
       route: '/',
       content: 'Home page content',
       frontmatter: { title: 'Home' },

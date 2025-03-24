@@ -38,9 +38,9 @@
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./themes/default/*"]
+      "@/*": ["./themes/docs/*"]
     }
   },
-  "include": ["src/**/*", "themes/**/**/*"],
+  "include": ["src/**/*", "themes/**/**/**/*"],
   "exclude": ["node_modules", "dist"]
 }

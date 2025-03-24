@@ -1,4 +1,7 @@
 import { cn } from '../../../src/lib/utils';
+import { Button } from './ui/button';
+import { ChevronLeft, ChevronRight, Pencil, Clock } from 'lucide-react';
+import { Separator } from './ui/separator';
 
 interface FooterLink {
   text: string;
@@ -36,95 +39,91 @@ export function Footer({
     : null;
 
   return (
-    <footer className={cn('doc-footer', className)}>
+    <footer className={cn('space-y-8', isFullWidth ? 'w-full' : '', className)}>
       {/* Previous and Next navigation */}
       {(prev || next) && (
-        <nav className="doc-prev-next-nav">
-          <div className={cn('doc-prev-next-container', isFullWidth && 'full-width')}>
-            {prev && (
-              <a href={prev.link} className="doc-prev-link">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="doc-nav-icon"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="doc-nav-text">
-                  <span className="doc-nav-label">Previous</span>
-                  <span className="doc-nav-title">{prev.text}</span>
+        <nav className="flex flex-col sm:flex-row justify-between gap-4">
+          {prev ? (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 h-auto py-2" 
+              asChild
+            >
+              <a href={prev.link}>
+                <ChevronLeft className="h-4 w-4" />
+                <span className="flex flex-col items-start">
+                  <span className="text-xs text-muted-foreground">Previous</span>
+                  <span className="text-sm font-medium">{prev.text}</span>
                 </span>
               </a>
-            )}
-            {next && (
-              <a href={next.link} className="doc-next-link">
-                <span className="doc-nav-text">
-                  <span className="doc-nav-label">Next</span>
-                  <span className="doc-nav-title">{next.text}</span>
+            </Button>
+          ) : (
+            // Empty div for flex layout when no prev link
+            <div />
+          )}
+          
+          {next && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 h-auto py-2 ml-auto" 
+              asChild
+            >
+              <a href={next.link}>
+                <span className="flex flex-col items-end">
+                  <span className="text-xs text-muted-foreground">Next</span>
+                  <span className="text-sm font-medium">{next.text}</span>
                 </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="doc-nav-icon"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <ChevronRight className="h-4 w-4" />
               </a>
-            )}
-          </div>
+            </Button>
+          )}
         </nav>
       )}
 
       {/* Edit link and last updated */}
-      <div className="doc-meta">
-        <div className={cn('doc-meta-container', isFullWidth && 'full-width')}>
-          {editLink && (
+      <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+        {editLink && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-auto p-0 text-muted-foreground"
+            asChild
+          >
             <a
               href={editLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="doc-edit-link"
+              className="inline-flex items-center gap-1 hover:text-foreground"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="doc-edit-icon"
-              >
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-              Edit this page
+              <Pencil className="h-3.5 w-3.5" />
+              <span>Edit this page</span>
             </a>
-          )}
-          {formattedDate && (
-            <time className="doc-last-updated">
-              Last updated on {formattedDate}
-            </time>
-          )}
-        </div>
+          </Button>
+        )}
+        
+        {formattedDate && (
+          <time className="inline-flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Last updated on {formattedDate}</span>
+          </time>
+        )}
       </div>
 
       {/* Footer links */}
       {footerLinks.length > 0 && (
-        <div className="doc-footer-links">
-          <div className={cn('doc-footer-links-container', isFullWidth && 'full-width')}>
+        <div className="pt-4">
+          <Separator className="mb-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {footerLinks.map((section, index) => (
-              <div key={index} className="doc-footer-section">
-                <h3 className="doc-footer-title">{section.title}</h3>
-                <ul className="doc-footer-list">
+              <div key={index} className="space-y-3">
+                <h3 className="text-sm font-medium">{section.title}</h3>
+                <ul className="space-y-2">
                   {section.items.map((item, itemIndex) => (
                     <li key={itemIndex}>
-                      <a href={item.link} className="doc-footer-link">
+                      <a 
+                        href={item.link} 
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {item.text}
                       </a>
                     </li>
@@ -137,10 +136,8 @@ export function Footer({
       )}
 
       {/* Copyright */}
-      <div className="doc-copyright">
-        <div className={cn('doc-copyright-container', isFullWidth && 'full-width')}>
-          <p>&copy; {new Date().getFullYear()} - Powered by BunPress</p>
-        </div>
+      <div className="pt-6 text-center text-sm text-muted-foreground">
+        <p>&copy; {new Date().getFullYear()} - Powered by BunPress</p>
       </div>
     </footer>
   );

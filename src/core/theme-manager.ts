@@ -8,13 +8,12 @@ export interface Theme {
   layoutComponent: string;
   styleFile: string;
   options?: Record<string, any>;
-  type?: 'default' | 'docs';
 }
 
 export class ThemeManager {
   private themes: Map<string, Theme> = new Map();
   private activeTheme: Theme | null = null;
-  private readonly defaultThemeName = 'default';
+  private readonly defaultThemeName = 'docs';
   private readonly themesDir: string;
 
   constructor(workspaceRoot: string) {
@@ -38,14 +37,11 @@ export class ThemeManager {
       const stylePath = path.join(themePath, 'styles.css');
 
       if (fs.existsSync(layoutPath) && fs.existsSync(stylePath)) {
-        const themeType = themeName === 'docs' ? 'docs' : 'default';
-        
         this.themes.set(themeName, {
           name: themeName,
           path: themePath,
           layoutComponent: layoutPath,
-          styleFile: stylePath,
-          type: themeType
+          styleFile: stylePath
         });
       } else {
         console.warn(`Theme "${themeName}" is missing required files (Layout.tsx and/or styles.css)`);
@@ -58,32 +54,6 @@ export class ThemeManager {
   public setThemeFromConfig(config: BunPressConfig): void {
     const themeName = config.themeConfig?.name || this.defaultThemeName;
     const themeOptions = config.themeConfig?.options || {};
-    const themeType = config.themeConfig?.type;
-    
-    if (themeType) {
-      const matchingThemes = [...this.themes.values()].filter(
-        theme => theme.type === themeType
-      );
-      
-      if (matchingThemes.length > 0) {
-        const namedTheme = matchingThemes.find(theme => theme.name === themeName);
-        if (namedTheme) {
-          this.activeTheme = {
-            ...namedTheme,
-            options: themeOptions
-          };
-          console.log(`Active theme set to "${namedTheme.name}" (${themeType})`);
-          return;
-        }
-        
-        this.activeTheme = {
-          ...matchingThemes[0],
-          options: themeOptions
-        };
-        console.log(`Active theme set to "${matchingThemes[0].name}" (${themeType})`);
-        return;
-      }
-    }
     
     if (this.themes.has(themeName)) {
       const theme = this.themes.get(themeName)!;
@@ -118,7 +88,7 @@ export class ThemeManager {
     try {
       return fs.readFileSync(this.activeTheme.styleFile, 'utf-8');
     } catch (error) {
-      console.error(`Failed to read theme style file: ${this.activeTheme.styleFile}`);
+      console.error(`Failed to read theme styles: ${error}`);
       return '';
     }
   }

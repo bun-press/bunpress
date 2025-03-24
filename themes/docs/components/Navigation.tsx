@@ -1,4 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { cn } from '../../../src/lib/utils';
+import { Button } from './ui/button';
+import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { Menu } from 'lucide-react';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from './ui/navigation-menu';
 
 export interface NavItem {
   text: string;
@@ -16,7 +29,6 @@ interface NavigationProps {
   logoText?: string;
   logoLink?: string;
   logoImage?: string;
-  mobileTriggerText?: string;
 }
 
 // Type for processed items with consistent active state
@@ -31,12 +43,10 @@ export function Navigation({
   className = '',
   logoText = 'BunPress',
   logoLink = '/',
-  logoImage,
-  mobileTriggerText = 'Menu'
+  logoImage
 }: NavigationProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const navRef = useRef<HTMLElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
   
   // Process items to mark active ones based on current path
   const processedItems: ProcessedNavItem[] = React.useMemo(() => {
@@ -91,156 +101,139 @@ export function Navigation({
     });
   }
   
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-  
-  // Handle dropdown toggle
-  const toggleDropdown = (text: string) => {
-    setActiveDropdown(prev => prev === text ? null : text);
-  };
-  
   // Helper function to check if an item has dropdown items
   const hasDropdown = (item: ProcessedNavItem): boolean => {
     return Boolean(item.items && item.items.length > 0);
   };
   
-  return (
-    <nav className={`doc-navigation ${className}`} ref={navRef}>
-      {/* Logo */}
-      <div className="doc-nav-logo">
-        <a href={logoLink}>
-          {logoImage ? (
-            <img src={logoImage} alt={logoText} />
-          ) : (
-            logoText
+  // Render navigation item
+  const renderNavigationItem = (item: ProcessedNavItem, index: number) => {
+    // External link
+    if (item.external && item.link) {
+      return (
+        <NavigationMenuItem key={index}>
+          <NavigationMenuLink
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={navigationMenuTriggerStyle()}
+          >
+            {item.text}
+          </NavigationMenuLink>
+        </NavigationMenuItem>
+      );
+    }
+    
+    // Item with dropdown
+    if (hasDropdown(item)) {
+      return (
+        <NavigationMenuItem key={index}>
+          <NavigationMenuTrigger className={item.active ? 'active' : ''}>
+            {item.text}
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+              {item.items!.map((subItem, subIndex) => (
+                <li key={subIndex}>
+                  <a
+                    href={subItem.link}
+                    className={cn(
+                      "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                      subItem.active && "bg-accent/50"
+                    )}
+                  >
+                    <div className="text-sm font-medium leading-none">{subItem.text}</div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      );
+    }
+    
+    // Simple link
+    return (
+      <NavigationMenuItem key={index}>
+        <a
+          href={item.link}
+          className={cn(
+            navigationMenuTriggerStyle(),
+            item.active && "text-primary font-medium"
           )}
+        >
+          {item.text}
         </a>
+      </NavigationMenuItem>
+    );
+  };
+  
+  // Render mobile navigation items
+  const renderMobileItems = (items: ProcessedNavItem[]) => {
+    return items.map((item, index) => (
+      <div key={index} className="mb-4">
+        {item.link ? (
+          <a
+            href={item.link}
+            className={cn(
+              "block py-2 text-base font-medium transition-colors hover:text-primary",
+              item.active && "text-primary"
+            )}
+            target={item.external ? '_blank' : undefined}
+            rel={item.external ? 'noopener noreferrer' : undefined}
+            onClick={() => setMobileOpen(false)}
+          >
+            {item.text}
+          </a>
+        ) : (
+          <div className="py-2 text-base font-medium">{item.text}</div>
+        )}
+        
+        {item.items && item.items.length > 0 && (
+          <div className="ml-4 mt-2 border-l pl-4">
+            {renderMobileItems(item.items)}
+          </div>
+        )}
       </div>
+    ));
+  };
+  
+  return (
+    <div className={cn("flex items-center justify-between w-full", className)} ref={navRef}>
+      {/* Logo */}
+      <a href={logoLink} className="flex items-center gap-2 mr-4">
+        {logoImage ? (
+          <img src={logoImage} alt={logoText} className="h-8 w-auto" />
+        ) : (
+          <span className="text-xl font-bold">{logoText}</span>
+        )}
+      </a>
       
       {/* Desktop Navigation */}
-      <ul className="doc-nav-items desktop">
-        {processedItems.map((item, index) => (
-          <li 
-            key={index} 
-            className={`doc-nav-item ${item.active ? 'active' : ''} ${hasDropdown(item) ? 'has-dropdown' : ''}`}
-          >
-            {item.link ? (
-              <a 
-                href={item.link} 
-                className="doc-nav-link"
-                target={item.external ? '_blank' : undefined}
-                rel={item.external ? 'noopener noreferrer' : undefined}
-                onClick={hasDropdown(item) ? (e) => {
-                  e.preventDefault();
-                  toggleDropdown(item.text);
-                } : undefined}
-              >
-                {item.text}
-                {hasDropdown(item) && (
-                  <span className="dropdown-arrow">▼</span>
-                )}
-              </a>
-            ) : (
-              <span 
-                className="doc-nav-link"
-                onClick={() => hasDropdown(item) && toggleDropdown(item.text)}
-              >
-                {item.text}
-                {hasDropdown(item) && (
-                  <span className="dropdown-arrow">▼</span>
-                )}
-              </span>
-            )}
-            
-            {/* Dropdown menu */}
-            {hasDropdown(item) && item.items && (
-              <ul className={`doc-nav-dropdown ${activeDropdown === item.text ? 'active' : ''}`}>
-                {item.items.map((subItem, subIndex) => (
-                  <li 
-                    key={subIndex} 
-                    className={`doc-nav-dropdown-item ${subItem.active ? 'active' : ''}`}
-                  >
-                    <a 
-                      href={subItem.link} 
-                      className="doc-nav-dropdown-link"
-                      target={subItem.external ? '_blank' : undefined}
-                      rel={subItem.external ? 'noopener noreferrer' : undefined}
-                    >
-                      {subItem.text}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
-      
-      {/* Mobile Menu Toggle */}
-      <button 
-        className="doc-nav-mobile-toggle"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-      >
-        {mobileTriggerText}
-      </button>
+      <div className="hidden md:flex">
+        <NavigationMenu>
+          <NavigationMenuList>
+            {processedItems.map((item, index) => renderNavigationItem(item, index))}
+          </NavigationMenuList>
+        </NavigationMenu>
+      </div>
       
       {/* Mobile Navigation */}
-      <div className={`doc-nav-mobile ${mobileMenuOpen ? 'active' : ''}`}>
-        <ul className="doc-nav-items mobile">
-          {processedItems.map((item, index) => (
-            <li 
-              key={index} 
-              className={`doc-nav-item ${item.active ? 'active' : ''}`}
-            >
-              {item.link ? (
-                <a 
-                  href={item.link} 
-                  className="doc-nav-link"
-                  target={item.external ? '_blank' : undefined}
-                  rel={item.external ? 'noopener noreferrer' : undefined}
-                >
-                  {item.text}
-                </a>
-              ) : (
-                <span className="doc-nav-link">{item.text}</span>
-              )}
-              
-              {/* Dropdown items in mobile view */}
-              {hasDropdown(item) && item.items && (
-                <ul className="doc-nav-mobile-sub">
-                  {item.items.map((subItem, subIndex) => (
-                    <li 
-                      key={subIndex} 
-                      className={`doc-nav-mobile-sub-item ${subItem.active ? 'active' : ''}`}
-                    >
-                      <a 
-                        href={subItem.link} 
-                        className="doc-nav-mobile-sub-link"
-                        target={subItem.external ? '_blank' : undefined}
-                        rel={subItem.external ? 'noopener noreferrer' : undefined}
-                      >
-                        {subItem.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
+      <div className="md:hidden">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[250px] sm:w-[300px]">
+            <div className="flex flex-col space-y-4 py-4">
+              {renderMobileItems(processedItems)}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
-    </nav>
+    </div>
   );
 } 

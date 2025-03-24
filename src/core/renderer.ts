@@ -36,48 +36,28 @@ export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: 
     navItems,
     sidebarItems,
     tocItems,
-    themeType: activeTheme.type || 'default',
     config
   });
-  
-  // Check if a special layout is requested in frontmatter
-  const requestedLayout = frontmatter.layout || '';
-  const useDocsTheme = frontmatter.useDocsTheme === true || 
-                       requestedLayout === 'doc' || 
-                       requestedLayout === 'home' || 
-                       requestedLayout === 'page';
 
-  // Determine the appropriate theme class
-  const themeClass = useDocsTheme ? 'docs-theme' : 'default-theme';
-  
-  // Render with theme
-  return `<!DOCTYPE html>
-<html lang="en" class="${themeClass}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${frontmatter.title || config.title}</title>
-  <meta name="description" content="${frontmatter.description || config.description}">
-  <style>${themeStyles}</style>
-</head>
-<body>
-  <div id="app" data-layout-params='${layoutParams}'>
-    <div class="bunpress-content">${html}</div>
-  </div>
-  <script>
-    // Hydration script for client-side rendering
-    document.addEventListener('DOMContentLoaded', function() {
-      const appDiv = document.getElementById('app');
-      if (appDiv) {
-        const params = JSON.parse(appDiv.getAttribute('data-layout-params'));
-        
-        // Client-side rendering would happen here in a real implementation
-        // For now we just use the static HTML
-      }
-    });
-  </script>
-</body>
-</html>`;
+  // Apply theme class
+  const themeClass = 'bunpress-theme';
+
+  // Return the rendered HTML with theme styles and layout
+  return `
+    <!DOCTYPE html>
+    <html lang="en" class="${themeClass}">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${frontmatter.title || config.title}</title>
+        <style>${themeStyles}</style>
+      </head>
+      <body>
+        <div id="app" data-layout-params='${layoutParams}'></div>
+        <script type="module" src="${activeTheme.layoutComponent}"></script>
+      </body>
+    </html>
+  `;
 }
 
 // Extract TOC items from HTML content

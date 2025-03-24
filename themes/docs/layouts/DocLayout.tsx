@@ -4,6 +4,9 @@ import { TOC } from '../components/TOC';
 import { Navigation, NavItem } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SlotProvider, Slot } from '../../../src/core/slot-system';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { Separator } from '../components/ui/separator';
+import { cn } from '../../../src/lib/utils';
 
 interface TocItem {
   level: number;
@@ -99,12 +102,18 @@ export function DocLayout({
 
   return (
     <SlotProvider>
-      <div className="doc-layout" style={backgroundColor ? { backgroundColor } : undefined}>
+      <div 
+        className={cn(
+          "doc-layout min-h-screen flex flex-col",
+          backgroundColor && "bg-background"
+        )}
+        style={backgroundColor ? { backgroundColor } : undefined}
+      >
         {/* Navigation slot */}
         <Slot name="navigation" fallback={
           !hideNav && (
-            <header className="doc-header">
-              <div className={`doc-header-container ${isFullWidth ? 'full-width' : ''}`}>
+            <header className="doc-header sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className={cn("doc-header-container mx-auto flex h-14 items-center px-4 sm:container", isFullWidth && "max-w-full")}>
                 <Navigation 
                   items={navItems}
                   currentPath={currentPath}
@@ -117,25 +126,37 @@ export function DocLayout({
           )
         } />
 
-        <div className="doc-container">
+        <div className={cn(
+          "doc-container flex-1 items-start md:grid",
+          showSidebar && sidebarItems.length > 0 && showAside && tocItems.length > 0 
+            ? "md:grid-cols-[220px_1fr_220px] lg:grid-cols-[240px_1fr_280px]" 
+            : showSidebar && sidebarItems.length > 0 
+              ? "md:grid-cols-[220px_1fr] lg:grid-cols-[240px_1fr]"
+              : showAside && tocItems.length > 0
+                ? "md:grid-cols-[1fr_220px] lg:grid-cols-[1fr_280px]"
+                : "md:grid-cols-[1fr]",
+          isFullWidth ? "max-w-full" : "container mx-auto"
+        )}>
           {/* Sidebar slot */}
           <Slot name="sidebar" fallback={
             showSidebar && sidebarItems.length > 0 && (
-              <aside className="doc-sidebar">
-                <Sidebar 
-                  items={sidebarItems}
-                  config={sidebarConfig}
-                  currentPath={currentPath}
-                />
+              <aside className="doc-sidebar sticky top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 md:block">
+                <ScrollArea className="h-full py-6 pr-6">
+                  <Sidebar 
+                    items={sidebarItems}
+                    config={sidebarConfig}
+                    currentPath={currentPath}
+                  />
+                </ScrollArea>
               </aside>
             )
           } />
 
-          <main className="doc-main">
+          <main className="doc-main relative py-6 px-4 md:px-8 lg:px-10 max-w-full">
             {/* Before content slot */}
             <Slot name="before-content" />
 
-            <article className="doc-content">
+            <article className="doc-content prose prose-slate dark:prose-invert max-w-full">
               {children}
             </article>
 
@@ -143,28 +164,33 @@ export function DocLayout({
             <Slot name="after-content" />
 
             {/* Footer slot */}
-            <Slot name="footer" fallback={
-              showFooter && (
-                <Footer
-                  editLink={frontmatter.editLink}
-                  lastUpdated={frontmatter.lastUpdated}
-                  prev={frontmatter.prev}
-                  next={frontmatter.next}
-                  footerLinks={footerLinks}
-                />
-              )
-            } />
+            {showFooter && (
+              <>
+                <Separator className="my-6" />
+                <Slot name="footer" fallback={
+                  <Footer
+                    editLink={frontmatter.editLink}
+                    lastUpdated={frontmatter.lastUpdated}
+                    prev={frontmatter.prev}
+                    next={frontmatter.next}
+                    footerLinks={footerLinks}
+                  />
+                } />
+              </>
+            )}
           </main>
 
           {/* TOC slot */}
           <Slot name="toc" fallback={
             showAside && tocItems.length > 0 && (
-              <aside className="doc-toc">
-                <TOC 
-                  items={tocItems}
-                  minLevel={minLevel}
-                  maxLevel={maxLevel}
-                />
+              <aside className="doc-toc sticky top-14 z-20 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 lg:block">
+                <ScrollArea className="h-full py-6 pl-6">
+                  <TOC 
+                    items={tocItems}
+                    minLevel={minLevel}
+                    maxLevel={maxLevel}
+                  />
+                </ScrollArea>
               </aside>
             )
           } />

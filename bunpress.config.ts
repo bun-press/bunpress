@@ -7,7 +7,6 @@ export interface BunPressConfig {
   themeConfig: {
     name: string;
     options?: Record<string, any>;
-    type?: 'default' | 'docs';
     defaultLayout?: 'doc' | 'page' | 'home';
   };
   plugins: Array<{
@@ -62,7 +61,7 @@ const defaultConfig: BunPressConfig = {
   pagesDir: './pages',
   outputDir: './dist',
   themeConfig: {
-    name: 'default',
+    name: 'docs',
     defaultLayout: 'doc'
   },
   plugins: [
