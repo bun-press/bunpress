@@ -21,6 +21,21 @@ export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: 
   if (!activeTheme) {
     return renderFallbackTemplate(html, frontmatter, config);
   }
+
+  // Extract TOC items from the HTML content
+  const tocItems = extractTocItems(html);
+  
+  // Get navigation and sidebar data from the config
+  const navItems = config.navigation || [];
+  const sidebarItems = config.sidebar || [];
+  
+  // Prepare rendering parameters for React components
+  const layoutParams = JSON.stringify({
+    frontmatter,
+    navItems,
+    sidebarItems,
+    tocItems
+  });
   
   // Render with theme
   return `<!DOCTYPE html>
@@ -32,35 +47,42 @@ export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: 
   <meta name="description" content="${frontmatter.description || config.description}">
   <style>${themeStyles}</style>
 </head>
-<body class="min-h-screen bg-background">
-  <header class="border-b">
-    <div class="container mx-auto px-4 py-4">
-      <nav class="flex items-center justify-between">
-        <a href="/" class="text-xl font-bold">${config.title}</a>
-        <div class="flex items-center space-x-4">
-          <a href="/" class="hover:text-primary">Home</a>
-          <a href="/docs" class="hover:text-primary">Docs</a>
-        </div>
-      </nav>
-    </div>
-  </header>
-
-  <main class="container mx-auto px-4 py-8">
-    <article class="prose prose-lg dark:prose-invert mx-auto">
-      <h1>${frontmatter.title || ''}</h1>
-      ${html}
-    </article>
-  </main>
-
-  <footer class="border-t">
-    <div class="container mx-auto px-4 py-6">
-      <p class="text-center text-muted-foreground">
-        &copy; ${new Date().getFullYear()} - Powered by BunPress
-      </p>
-    </div>
-  </footer>
+<body>
+  <div id="app" data-layout-params='${layoutParams}'>
+    <div class="bunpress-content">${html}</div>
+  </div>
+  <script>
+    // Hydration script for client-side rendering
+    document.addEventListener('DOMContentLoaded', function() {
+      const appDiv = document.getElementById('app');
+      if (appDiv) {
+        const params = JSON.parse(appDiv.getAttribute('data-layout-params'));
+        
+        // Client-side rendering would happen here in a real implementation
+        // For now we just use the static HTML
+      }
+    });
+  </script>
 </body>
 </html>`;
+}
+
+// Extract TOC items from HTML content
+function extractTocItems(html: string) {
+  const tocItems = [];
+  const headingRegex = /<h([2-6])[^>]*id="([^"]+)"[^>]*>(.*?)<\/h\1>/g;
+  let match;
+  
+  while ((match = headingRegex.exec(html)) !== null) {
+    const level = parseInt(match[1], 10);
+    const id = match[2];
+    // Simple HTML tag stripping for the text
+    const text = match[3].replace(/<[^>]*>/g, '');
+    
+    tocItems.push({ level, id, text });
+  }
+  
+  return tocItems;
 }
 
 // Fallback to a simple template if theme is not available

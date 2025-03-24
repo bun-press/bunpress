@@ -2,6 +2,22 @@
 
 ## Current Focus
 
+We are continuing the development of BunPress with a focus on fixing issues and improving documentation. Recent updates include:
+
+1. **Fixed TypeScript Errors**: Resolved TypeScript errors in the theme layouts (DocLayout, HomeLayout, and PageLayout) by removing unused `description` variable declarations.
+
+2. **Documentation Improvements**:
+   - Updated CHANGELOG.md with version information and recent changes
+   - Enhanced CONTRIBUTING.md with more detailed project structure and development workflow
+   - Improved README.md with detailed usage instructions and examples
+   - Created a comprehensive user guide (bunpress-user-guide.md) in the memory bank
+
+3. **Next Steps**:
+   - Complete the internationalization (i18n) plugin implementation
+   - Add more comprehensive test coverage for CLI commands
+   - Enhance the theme system with more customization options
+   - Create a comprehensive documentation site
+
 We are currently working on implementing the internationalization (i18n) plugin for BunPress to provide multilingual support for content.
 
 ### Internationalization (i18n) Plugin
@@ -232,6 +248,62 @@ The plugin is configurable, allowing users to specify:
    - Improve CLI commands for working with plugins
    - Add plugin discovery and installation commands
    - Create interactive plugin configuration tools
+
+## VitePress Feature Gaps Analysis
+
+Based on comparison with VitePress, we've identified several areas where BunPress needs improvement to provide a comparable or better experience:
+
+1. **Documentation Layout System**: 
+   - Current layout is too basic with limited customization options
+   - Missing layout variants like VitePress's `doc`, `page`, and `home` options
+   - No dedicated documentation-specific styling and features
+   - Need more advanced customization options via frontmatter
+
+2. **Navigation Components**:
+   - Current header/navbar is basic with minimal configuration options
+   - Missing hierarchical navigation with active link highlighting
+   - No support for dropdown menus in navigation
+   - No mobile-responsive navigation menu
+
+3. **Sidebar Navigation**:
+   - Missing structured sidebar with collapsible sections
+   - No automatic generation of sidebar based on file structure
+   - Missing "active" and "visited" states for sidebar items
+   - No support for sidebar customization per page or section
+
+4. **Table of Contents**:
+   - Missing on-page table of contents (outline) component
+   - No configurable heading levels for TOC
+   - No smooth scrolling or active indication for TOC items
+
+5. **Footer Components**:
+   - Basic footer with minimal customization
+   - Missing edit link functionality
+   - Missing last updated timestamp
+   - No previous/next navigation links between pages
+
+6. **Theme System Enhancements**:
+   - Limited theme customization options
+   - Missing slot system for content injection
+   - No theme extension mechanism like VitePress offers
+   - Limited component gallery for theme customization
+
+7. **Search Functionality**:
+   - Missing integrated search experience
+   - No search index generation
+   - No keyboard navigation for search results
+
+8. **Frontmatter Capabilities**:
+   - Limited frontmatter options compared to VitePress
+   - No layout control via frontmatter
+   - Missing page-specific customization options
+
+9. **Markdown Extensions**:
+   - Missing custom containers support
+   - Limited code block features (line highlighting, line numbers, etc.)
+   - No inline component support in markdown
+
+These identified gaps will be addressed through new features and enhancements to the BunPress core and plugin system.
 
 ## Current Status
 - Analytics plugin implemented with support for multiple service providers

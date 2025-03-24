@@ -35,8 +35,12 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./themes/default/*"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "themes/default/**/**/*"],
   "exclude": ["node_modules", "dist"]
 }

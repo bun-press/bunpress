@@ -12,6 +12,34 @@ export interface BunPressConfig {
     name: string;
     options?: Record<string, any>;
   }>;
+  // Navigation and sidebar for documentation
+  navigation?: Array<{
+    title: string;
+    href: string;
+    items?: Array<{
+      title: string;
+      href: string;
+      active?: boolean;
+      external?: boolean;
+    }>;
+    active?: boolean;
+    external?: boolean;
+  }>;
+  sidebar?: Array<{
+    title: string;
+    href?: string;
+    items?: Array<{
+      title: string;
+      href?: string;
+      items?: any[];
+      collapsed?: boolean;
+      active?: boolean;
+      external?: boolean;
+    }>;
+    collapsed?: boolean;
+    active?: boolean;
+    external?: boolean;
+  }>;
 }
 
 // Default configuration
@@ -19,61 +47,83 @@ const defaultConfig: BunPressConfig = {
   title: 'BunPress Site',
   description: 'A site built with BunPress',
   siteUrl: 'https://example.com',
-  pagesDir: 'pages',
-  outputDir: 'dist',
+  pagesDir: './pages',
+  outputDir: './dist',
   themeConfig: {
-    name: 'default',
-    options: {},
+    name: 'default'
   },
   plugins: [
     {
-      name: '@bunpress/markdown-it',
+      name: 'markdown-it',
       options: {
+        preset: 'default',
         html: true,
         linkify: true,
-        typographer: true,
-      },
+        typographer: true
+      }
     },
     {
-      name: '@bunpress/prism',
+      name: 'prism',
       options: {
-        theme: 'dark',
-        languages: ['javascript', 'typescript', 'css', 'html', 'markdown'],
-        lineNumbers: true,
-      },
+        theme: 'vs-dark'
+      }
     },
     {
-      name: '@bunpress/seo',
+      name: 'seo',
       options: {
-        siteTitle: 'BunPress Site',
-        siteDescription: 'A site built with BunPress - fast, lightweight, and extensible.',
-        siteUrl: 'https://example.com',
-        defaultImage: '/images/social-share.png',
-        twitterHandle: 'bunpress',
-        generateRobotsTxt: true,
         generateSitemap: true,
-        addCanonicalUrls: true,
-        addJsonLd: true
-      },
+        generateRobotsTxt: true
+      }
     },
     {
-      name: '@bunpress/image-optimizer',
+      name: 'image-optimizer',
       options: {
-        inputDir: 'public',
-        outputDir: 'dist',
-        formats: [
-          { format: 'webp', quality: 80 },
-          { format: 'avif', quality: 70 }
-        ],
-        sizes: [
-          { width: 640 },
-          { width: 1280 },
-          { width: 1920 }
-        ],
-        keepOriginal: true
-      },
-    },
+        quality: 80,
+        formats: ['webp', 'avif'],
+        sizes: [640, 1280, 1920]
+      }
+    }
   ],
+  // Default navigation
+  navigation: [
+    { 
+      title: 'Home', 
+      href: '/' 
+    },
+    { 
+      title: 'Documentation', 
+      href: '/docs/' 
+    },
+    { 
+      title: 'Components', 
+      href: '/components/',
+      items: [
+        { title: 'UI', href: '/components/ui/' },
+        { title: 'Forms', href: '/components/forms/' },
+        { title: 'Layout', href: '/components/layout/' }
+      ]
+    }
+  ],
+  // Default sidebar for documentation
+  sidebar: [
+    {
+      title: 'Introduction',
+      items: [
+        { title: 'Getting Started', href: '/docs/getting-started/' },
+        { title: 'Installation', href: '/docs/installation/' }
+      ]
+    },
+    {
+      title: 'Guides',
+      collapsed: false,
+      items: [
+        { title: 'Basic Usage', href: '/docs/guides/basic-usage/' },
+        { title: 'Configuration', href: '/docs/guides/configuration/' },
+        { title: 'Themes', href: '/docs/guides/themes/' },
+        { title: 'Plugins', href: '/docs/guides/plugins/' }
+      ]
+    }
+  ]
 };
 
 export default defaultConfig; 

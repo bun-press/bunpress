@@ -24,14 +24,94 @@ Thank you for your interest in contributing to BunPress! This document provides 
 
 ```
 bunpress/
+├── bin/              # CLI executables
+├── docs/             # Documentation
+├── i18n/             # Internationalization files
+├── memory-bank/      # Project documentation and planning
+├── pages/            # Example pages
+├── public/           # Static assets
 ├── src/
-│   ├── core/          # Core functionality
-│   ├── plugins/       # Plugin system
-│   └── theme/         # Theme system
-├── themes/            # Default themes
-├── example/           # Example site
-└── tests/             # Test files
+│   ├── core/         # Core functionality
+│   │   ├── config/   # Configuration management
+│   │   ├── content/  # Content processing
+│   │   ├── plugin/   # Plugin system
+│   │   ├── router/   # Routing system
+│   │   └── theme/    # Theme system
+│   ├── plugins/      # Built-in plugins
+│   └── utils/        # Utility functions
+├── test-content/     # Test content for development
+├── test-input/       # Input files for tests
+├── themes/           # Theme components and layouts
+│   └── default/      # Default theme
+│       ├── components/ # UI components
+│       └── layouts/    # Page layouts
+└── types/            # TypeScript type definitions
 ```
+
+## Development Workflow
+
+### Local Development
+
+1. Make your changes to the source code
+2. Run the development server to test:
+   ```bash
+   bun run dev
+   ```
+3. Test your changes with the example content:
+   ```bash
+   bun run build
+   ```
+4. Run tests to ensure everything works:
+   ```bash
+   bun test
+   ```
+
+### Adding a New Plugin
+
+1. Create a new file in `src/plugins/` directory
+2. Implement the plugin interface:
+   ```typescript
+   import { definePlugin, Plugin } from '../core/plugin';
+
+   export interface MyPluginOptions {
+     // Define your plugin options here
+   }
+
+   export function myPlugin(options: MyPluginOptions = {}): Plugin {
+     return definePlugin({
+       name: 'my-plugin',
+       // Implement plugin hooks here
+     });
+   }
+   ```
+3. Export your plugin in `src/plugins/index.ts`
+4. Add tests in `tests/plugins/`
+5. Document your plugin in the README
+
+### Adding a New Theme Component
+
+1. Create a new component in `themes/default/components/`
+2. Use React and Shadcn UI for consistent styling
+3. Make sure it's responsive and accessible
+4. Add proper TypeScript types
+5. Export it through the appropriate index file
+
+## Testing Guidelines
+
+- Unit tests should be placed in `tests/` mirroring the source structure
+- Use Bun's built-in test runner
+- Mock external dependencies when necessary
+- Aim for high test coverage, especially for core functionality
+- Test edge cases thoroughly
+
+## Documentation
+
+Keep the following documentation updated:
+- README.md - Main project overview
+- CONTRIBUTING.md - Contributing guidelines (this file)
+- CHANGELOG.md - Version history and changes
+- memory-bank/ - Project planning and documentation
+- JSDoc comments for all public APIs
 
 ## Development Guidelines
 

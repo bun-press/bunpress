@@ -42,6 +42,145 @@ bunpress dev
 bunpress build
 ```
 
+### Creating Content
+
+Content in BunPress is created using Markdown or MDX files:
+
+```md
+---
+title: Getting Started
+description: Learn how to get started with BunPress
+layout: doc
+---
+
+# Getting Started with BunPress
+
+Welcome to BunPress! This guide will help you get started...
+```
+
+### Using Components in MDX
+
+You can use React components in your MDX files:
+
+```mdx
+---
+title: Interactive Example
+---
+
+import { Button } from '../components/Button';
+
+# Interactive Components
+
+Click the button below:
+
+<Button onClick={() => alert('Hello!')}>Click Me</Button>
+```
+
+### Creating Custom Themes
+
+You can create custom themes by modifying the components in the `themes` directory:
+
+1. Copy the default theme as a starting point:
+   ```bash
+   cp -r themes/default themes/my-theme
+   ```
+
+2. Update your configuration to use the new theme:
+   ```typescript
+   // bunpress.config.ts
+   export default defineConfig({
+     // ...
+     themeConfig: {
+       name: 'my-theme',
+       options: {
+         // Your theme options
+       }
+     }
+   });
+   ```
+
+3. Customize the components in your theme directory
+
+## Advanced Usage
+
+### Using Plugins
+
+BunPress comes with several built-in plugins that you can configure in your `bunpress.config.ts`:
+
+```typescript
+import { defineConfig } from 'bunpress';
+import { 
+  seoPlugin, 
+  imagePlugin, 
+  rssPlugin,
+  analyticsPlugin
+} from 'bunpress/plugins';
+
+export default defineConfig({
+  // ...
+  plugins: [
+    seoPlugin({
+      siteUrl: 'https://example.com',
+      sitemap: true,
+      robots: true,
+    }),
+    imagePlugin({
+      optimize: true,
+      formats: ['webp', 'avif'],
+    }),
+    rssPlugin({
+      title: 'My Blog',
+      description: 'Latest posts from my blog',
+      itemLimit: 20,
+    }),
+    analyticsPlugin({
+      provider: 'google',
+      trackingId: 'G-XXXXXXXXXX',
+    }),
+  ],
+});
+```
+
+### Internationalization
+
+BunPress has built-in support for multilingual content via the i18n plugin:
+
+```typescript
+import { i18nPlugin } from 'bunpress/plugins';
+
+export default defineConfig({
+  // ...
+  plugins: [
+    i18nPlugin({
+      defaultLocale: 'en',
+      locales: ['en', 'es', 'fr'],
+      fallback: true,
+    }),
+  ],
+});
+```
+
+Then, add translations in the `i18n` directory:
+
+```json
+// i18n/en.json
+{
+  "welcome": "Welcome to BunPress",
+  "navigation": {
+    "home": "Home",
+    "docs": "Documentation"
+  }
+}
+```
+
+Use translations in your content:
+
+```md
+# {{t:welcome}}
+
+Click on the {{t:navigation.home}} link to return to the homepage.
+```
+
 ## Project Structure
 
 ```

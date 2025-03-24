@@ -141,8 +141,44 @@
   - [x] Mock implementations for filesystem operations
 - [ ] Documentation site
 
+### Phase 4: VitePress Feature Parity & Enhancements
+- [ ] Documentation layout system
+  - [ ] Multiple layout types (doc, page, home)
+  - [ ] Layout configuration via frontmatter
+  - [ ] Documentation-specific styling
+- [ ] Enhanced navigation components
+  - [ ] Hierarchical navigation with dropdowns
+  - [ ] Active link highlighting
+  - [ ] Mobile-responsive navigation
+- [ ] Sidebar navigation system
+  - [ ] Collapsible sections
+  - [ ] Automatic generation from file structure
+  - [ ] Per-page/section customization
+- [ ] Table of contents component
+  - [ ] Configurable heading levels
+  - [ ] Active state indication
+  - [ ] Smooth scrolling
+- [ ] Enhanced footer components
+  - [ ] Edit link functionality
+  - [ ] Last updated timestamp
+  - [ ] Previous/next navigation links
+- [ ] Advanced theme system
+  - [ ] Theme extension mechanism
+  - [ ] Slot system for content injection
+  - [ ] Component gallery
+- [ ] Improved search functionality
+  - [ ] Integrated search experience
+  - [ ] Keyboard navigation
+- [ ] Extended frontmatter capabilities
+  - [ ] Layout control options
+  - [ ] Page-specific customizations
+- [ ] Expanded markdown extensions
+  - [ ] Custom containers
+  - [ ] Enhanced code blocks
+  - [ ] Inline component support
+
 ## Next Milestone
-Complete the development of additional example plugins, implement plugin validation and error handling, and publish to npm.
+Complete the development of additional example plugins, implement plugin validation and error handling, and begin work on VitePress feature parity enhancements, starting with the documentation layout system and navigation components.
 
 ## Timeline
 - **Phase 1**: Core implementation (95% complete)
