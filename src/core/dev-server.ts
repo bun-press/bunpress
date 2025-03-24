@@ -1,15 +1,15 @@
 import { serve, Server } from 'bun';
-import { watch, FSWatcher } from 'chokidar';
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import type { BunPressConfig } from '../../bunpress.config';
 import path from 'path';
 import fs from 'fs';
+import { watch } from 'fs/promises';
 import { PluginManager } from './plugin';
 
 export interface DevServerResult {
   server: Server;
-  watcher: FSWatcher;
+  watcher: { close: () => void };
 }
 
 export function startDevServer(config: BunPressConfig, pluginManager?: PluginManager): DevServerResult {
@@ -31,25 +31,45 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
   // Find HTML templates in the theme directory
   const themeDir = path.join(workspaceRoot, 'themes', config.themeConfig.name);
   
-  // Set up file watcher for content files
-  const watcher = watch(`${config.pagesDir}/**/*.{md,mdx}`, {
-    persistent: true,
-  });
-  
-  // Handle file changes with a single handler for all events
-  watcher.on('all', (event, filePath) => {
-    console.log(`Content file ${event}: ${filePath}`);
-    
-    // Regenerate routes
-    if (pluginManager) {
-      generateRoutesAsync(config.pagesDir).then(asyncRoutes => {
-        routes = asyncRoutes;
-        console.log('Routes regenerated with plugin transformations');
-      });
-    } else {
-      routes = generateRoutes(config.pagesDir);
+  // Set up file watcher for content files using fs/promises watch
+  let abortController = new AbortController();
+  const watcher = {
+    close: () => {
+      abortController.abort();
     }
-  });
+  };
+  
+  // Start watching the pages directory
+  (async () => {
+    try {
+      const ac = abortController;
+      for await (const event of watch(config.pagesDir, { 
+        recursive: true, 
+        signal: ac.signal 
+      })) {
+        // Only process .md and .mdx files
+        if (!event.filename?.match(/\.(md|mdx)$/)) continue;
+        
+        console.log(`Content file changed: ${event.filename}`);
+        
+        // Regenerate routes
+        if (pluginManager) {
+          generateRoutesAsync(config.pagesDir).then(asyncRoutes => {
+            routes = asyncRoutes;
+            console.log('Routes regenerated with plugin transformations');
+          });
+        } else {
+          routes = generateRoutes(config.pagesDir);
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('File watcher stopped');
+      } else {
+        console.error('Error watching files:', error);
+      }
+    }
+  })();
   
   // Start the server with Bun's built-in features
   const server = serve({

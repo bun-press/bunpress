@@ -70,7 +70,6 @@ export class I18nPlugin implements Plugin {
         if (contentFiles.length === 0) return;
         
         // Use the first content file as the template
-        const templateFile = contentFiles[0];
         
         // For each locale, generate a locale-specific route and file
         locales.forEach(locale => {
@@ -83,15 +82,7 @@ export class I18nPlugin implements Plugin {
           const localeRoute = this.generateLocaleRoute(route, locale);
           
           // Create a localized version of the content
-          const localizedContent = {
-            ...templateFile,
-            route: localeRoute,
-            frontmatter: {
-              ...templateFile.frontmatter,
-              locale: locale,
-            }
-          };
-          
+   
           // In a real implementation, you'd now:
           // 1. Create the output file in the build directory
           // 2. Update any navigation/routing data structures to include this route
@@ -300,6 +291,23 @@ export class I18nPlugin implements Plugin {
     }
     
     return translation;
+  }
+
+  translateContent(content: string, locale: string): string {
+    // Check if content contains translation markers
+    if (!content.includes('{{t:')) {
+      return content;
+    }
+    
+    // Replace all translation markers
+    // Format: {{t:key}} or {{t:key|default value}}
+    return content.replace(/\{\{t:([^|{}]+)(?:\|([^{}]*))?\}\}/g, (_match,key, defaultValue) => {
+      return this.getTranslation(
+        locale, 
+        key.trim(), 
+        defaultValue ? defaultValue.trim() : undefined
+      );
+    });
   }
 }
 

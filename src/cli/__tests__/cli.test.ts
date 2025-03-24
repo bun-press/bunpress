@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach, beforeAll, afterAll } fr
 import { spawn } from 'bun';
 import fs from 'fs/promises';
 import path from 'path';
-import { existsSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import os from 'os';
 
 const TEMP_DIR = path.join(os.tmpdir(), 'bunpress-test-' + Date.now());

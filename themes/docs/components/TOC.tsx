@@ -91,9 +91,6 @@ export function TOC({
     
     const element = document.getElementById(id);
     if (element) {
-      // Save current scroll position
-      const currentScrollPosition = window.scrollY;
-      
       // Calculate target position with offset
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.scrollY - scrollOffset;

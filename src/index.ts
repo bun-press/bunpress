@@ -37,8 +37,7 @@ import { buildSite } from './core/builder';
 import path from 'path';
 import fs from 'fs';
 import chalk from 'chalk';
-import { Listr, ListrTask } from 'listr2';
-import { execSync } from 'child_process';
+import { Listr } from 'listr2';
 
 // Version is read from package.json
 const version = (() => {
@@ -108,7 +107,7 @@ async function main() {
         [
           {
             title: 'Initializing build process',
-            task: async (ctx, task) => {
+            task: async (task) => {
               task.output = 'Setting up build environment...';
               await pluginManager.executeBuildStart();
               task.output = 'Build environment ready!';
@@ -117,7 +116,7 @@ async function main() {
           },
           {
             title: 'Processing content files',
-            task: async (ctx, task) => {
+            task: async (task) => {
               // This is a placeholder for the actual content processing tracking
               // In a real implementation, we would track the number of files processed
               task.output = 'Scanning content directories...';
@@ -148,7 +147,7 @@ async function main() {
           },
           {
             title: 'Building site',
-            task: async (ctx, task) => {
+            task: async (task) => {
               task.output = 'Generating HTML files...';
               await buildSite(config, pluginManager);
               task.output = 'Site built successfully!';
@@ -233,7 +232,7 @@ async function main() {
         const ipAddress = getLocalIpAddress();
         
         // Start the development server
-        const { watcher, server } = startDevServer(config, pluginManager);
+        const { watcher } = startDevServer(config, pluginManager);
         
         // Show server startup message with local and network URLs
         const port = 3000; // This should match the port in startDevServer
@@ -315,7 +314,7 @@ async function initProject(args: string[] = []) {
     [
       {
         title: 'Creating project structure',
-        task: (ctx, task) => {
+        task: (task) => {
           // Create directories
           const createDir = (dir: string) => {
             const fullPath = path.join(absoluteProjectDir, dir);
@@ -339,7 +338,7 @@ async function initProject(args: string[] = []) {
       },
       {
         title: 'Creating configuration file',
-        task: (ctx, task) => {
+        task: (task) => {
           // Create config file
           const configPath = path.join(absoluteProjectDir, 'bunpress.config.ts');
           
@@ -406,7 +405,7 @@ export default defineConfig({
       },
       {
         title: 'Creating sample content',
-        task: (ctx, task) => {
+        task: (task) => {
           // Create a sample page
           const indexPath = path.join(absoluteProjectDir, 'pages', 'index.md');
           
@@ -661,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       {
         title: 'Setting up package files',
-        task: async (ctx, task) => {
+        task: async (task) => {
           const packageJsonPath = path.join(absoluteProjectDir, 'package.json');
           
           if (fs.existsSync(packageJsonPath)) {

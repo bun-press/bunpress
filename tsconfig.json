@@ -41,6 +41,6 @@
       "@/*": ["./themes/default/*"]
     }
   },
-  "include": ["src/**/*", "themes/default/**/**/*"],
+  "include": ["src/**/*", "themes/**/**/*"],
   "exclude": ["node_modules", "dist"]
 }

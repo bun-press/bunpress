@@ -1,5 +1,8 @@
 import React from 'react';
 import { Navigation, NavItem } from '../components/Navigation';
+import { Footer } from '../components/Footer';
+import { SlotProvider, Slot } from '../../../src/core/slot-system';
+import { cn } from '../../../src/lib/utils';
 
 interface PageLayoutProps {
   frontmatter: {
@@ -47,70 +50,55 @@ export function PageLayout({
   const logoImage = frontmatter.heroImage;
 
   return (
-    <div className="page-layout" style={backgroundColor ? { backgroundColor } : undefined}>
-      {!hideNav && (
-        <header className="page-header">
-          <div className={`page-header-container ${isFullWidth ? 'full-width' : ''}`}>
-            <Navigation 
-              items={navItems}
-              currentPath={currentPath}
-              logoText={logoText}
-              logoLink={logoLink}
-              logoImage={logoImage}
-            />
-          </div>
-        </header>
-      )}
-      
-      <main className="page-content">
-        <div className={`page-container ${isFullWidth ? 'full-width' : ''}`}>
-          <article className="page-article">
-            <h1 className="page-title">{frontmatter.title}</h1>
-            <div className="page-content-body">
-              {children}
-            </div>
-            
-            {frontmatter.editLink && (
-              <div className="page-footer">
-                <a href={frontmatter.editLink} className="page-edit-link" target="_blank" rel="noopener noreferrer">
-                  Edit this page on GitHub
-                </a>
-                {frontmatter.lastUpdated && (
-                  <div className="page-last-updated">
-                    Last updated: {frontmatter.lastUpdated}
-                  </div>
-                )}
+    <SlotProvider>
+      <div className="page-layout" style={backgroundColor ? { backgroundColor } : undefined}>
+        {/* Navigation slot */}
+        <Slot name="navigation" fallback={
+          !hideNav && (
+            <header className="page-header">
+              <div className={cn(
+                'page-header-container',
+                isFullWidth && 'full-width'
+              )}>
+                <Navigation 
+                  items={navItems}
+                  currentPath={currentPath}
+                  logoText={logoText}
+                  logoLink={logoLink}
+                  logoImage={logoImage}
+                />
               </div>
-            )}
+            </header>
+          )
+        } />
+
+        <main className="page-main">
+          {/* Before content slot */}
+          <Slot name="before-content" />
+
+          <article className={cn(
+            'page-content',
+            isFullWidth ? 'full-width' : 'container'
+          )}>
+            {children}
           </article>
-        </div>
-      </main>
-      
-      {showFooter && (
-        <footer className="page-footer-container">
-          <div className={`page-footer-content ${isFullWidth ? 'full-width' : ''}`}>
-            {footerLinks.length > 0 ? (
-              <div className="page-footer-links">
-                {footerLinks.map((section, index) => (
-                  <div key={index} className="page-footer-section">
-                    <h3 className="page-footer-title">{section.title}</h3>
-                    <ul className="page-footer-items">
-                      {section.items.map((item, itemIndex) => (
-                        <li key={itemIndex} className="page-footer-item">
-                          <a href={item.link} className="page-footer-link">{item.text}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>Powered by BunPress</p>
-            )}
-          </div>
-        </footer>
-      )}
-    </div>
+
+          {/* After content slot */}
+          <Slot name="after-content" />
+
+          {/* Footer slot */}
+          <Slot name="footer" fallback={
+            showFooter && (
+              <Footer
+                editLink={frontmatter.editLink}
+                lastUpdated={frontmatter.lastUpdated}
+                footerLinks={footerLinks}
+              />
+            )
+          } />
+        </main>
+      </div>
+    </SlotProvider>
   );
 }
 
