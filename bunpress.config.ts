@@ -1,18 +1,43 @@
+export interface DevServerConfig {
+  port?: number;
+  host?: string;
+  hmrPort?: number;
+  hmrHost?: string;
+  open?: boolean;
+}
+
+export interface BundleConfig {
+  minify?: boolean;
+  sourcemap?: boolean;
+  splitting?: boolean;
+  assetHashing?: boolean;
+  publicPath?: string;
+  target?: 'browser' | 'bun' | 'node';
+  format?: 'esm' | 'cjs' | 'iife';
+  cssChunking?: boolean;
+  plugins?: any[]; // Plugin array
+}
+
+export interface ThemeConfig {
+  name: string;
+  options?: Record<string, any>;
+  defaultLayout?: 'doc' | 'page' | 'home';
+  tailwind?: boolean;
+}
+
 export interface BunPressConfig {
   title: string;
   description: string;
   siteUrl: string;
   pagesDir: string;
   outputDir: string;
-  themeConfig: {
-    name: string;
-    options?: Record<string, any>;
-    defaultLayout?: 'doc' | 'page' | 'home';
-  };
+  themeConfig: ThemeConfig;
   plugins: Array<{
     name: string;
     options?: Record<string, any>;
   }>;
+  devServer?: DevServerConfig;
+  bundle?: BundleConfig;
   // Navigation and sidebar for documentation
   navigation?: Array<{
     title: string;
@@ -50,6 +75,48 @@ export interface BunPressConfig {
     showTOC?: boolean;
     showSidebar?: boolean;
     tocLevels?: [number, number];
+  };
+}
+
+export function defineConfig(config: BunPressConfig): BunPressConfig {
+  return {
+    // Default config values
+    pagesDir: 'pages',
+    outputDir: 'dist',
+    ...config,
+    // Ensure themeConfig has default values
+    themeConfig: {
+      name: 'default',
+      ...config.themeConfig
+    },
+    // Ensure devServer has default values
+    devServer: {
+      port: 3000,
+      host: 'localhost',
+      hmrPort: 3001,
+      hmrHost: 'localhost',
+      open: false,
+      ...config.devServer
+    },
+    // Ensure bundle has default values
+    bundle: {
+      minify: process.env.NODE_ENV === 'production',
+      sourcemap: process.env.NODE_ENV !== 'production',
+      splitting: true,
+      assetHashing: process.env.NODE_ENV === 'production',
+      publicPath: '/',
+      target: 'browser',
+      format: 'esm',
+      cssChunking: true,
+      ...config.bundle
+    }
+  };
+}
+
+export function definePlugin(name: string, options?: Record<string, any>) {
+  return {
+    name,
+    options
   };
 }
 

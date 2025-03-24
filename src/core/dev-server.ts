@@ -1,4 +1,4 @@
-import { serve, Server } from 'bun';
+import { Server, serve } from 'bun';
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import type { BunPressConfig } from '../../bunpress.config';
@@ -6,11 +6,415 @@ import path from 'path';
 import fs from 'fs';
 import { watch } from 'fs/promises';
 import { PluginManager } from './plugin';
+import { createHmrContext, createHmrClientScript, broadcastHmrUpdate, HmrContext } from './hmr';
+import { processHtmlWithRewriter } from './bundler';
 
 export interface DevServerResult {
   server: Server;
   watcher: { close: () => void };
+  hmrContext: HmrContext;
 }
+
+/**
+ * Server configuration options
+ */
+interface ServerConfig {
+  port: number;
+  hostname: string;
+  directory: string;
+  hmr?: boolean;
+  open?: boolean;
+  cors?: boolean;
+}
+
+/**
+ * Client connection for HMR
+ */
+interface HMRClient {
+  id: string;
+  ws: WebSocket;
+}
+
+/**
+ * File watcher options
+ */
+interface WatchOptions {
+  ignored?: string[];
+  debounce?: number;
+}
+
+// Store connected clients
+const connectedClients: HMRClient[] = [];
+
+/**
+ * Create a development server for BunPress
+ * 
+ * @param config BunPress configuration
+ * @returns Bun server instance
+ */
+export async function createDevServer(config: BunPressConfig): Promise<Server> {
+  const devConfig = config.devServer || {};
+  
+  // Default server configuration
+  const serverConfig: ServerConfig = {
+    port: devConfig.port || 3000,
+    hostname: devConfig.host || 'localhost',
+    directory: config.outputDir,
+    hmr: devConfig.hmr !== false,
+    open: devConfig.open !== false,
+    cors: true
+  };
+  
+  console.log(`Starting dev server at http://${serverConfig.hostname}:${serverConfig.port}`);
+  
+  // Create the server
+  const server = serve({
+    port: serverConfig.port,
+    hostname: serverConfig.hostname,
+    development: true,
+    
+    // Serve static files from the output directory
+    fetch(req) {
+      const url = new URL(req.url);
+      
+      // Handle HMR client script
+      if (url.pathname === '/__bunpress_hmr.js') {
+        return new Response(hmrClientScript, {
+          headers: { 'Content-Type': 'application/javascript' }
+        });
+      }
+      
+      // Handle static files
+      let filePath = path.join(serverConfig.directory, url.pathname);
+      
+      // Default to index.html for directory requests
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, 'index.html');
+      }
+      
+      // Check if file exists
+      if (fs.existsSync(filePath)) {
+        const file = Bun.file(filePath);
+        const content = fs.readFileSync(filePath, 'utf-8');
+        
+        // Inject HMR script for HTML files if HMR is enabled
+        if (serverConfig.hmr && filePath.endsWith('.html')) {
+          const injectedHtml = injectHMRScript(content);
+          return new Response(injectedHtml, {
+            headers: { 'Content-Type': 'text/html' }
+          });
+        }
+        
+        return new Response(file);
+      }
+      
+      // Return 404 for missing files
+      return new Response('Not Found', { status: 404 });
+    },
+    
+    // WebSocket handler for HMR
+    websocket: {
+      message(ws, message) {
+        // Handle client messages
+        try {
+          const data = JSON.parse(message as string);
+          
+          if (data.type === 'connect') {
+            // Register new client
+            const clientId = data.id || Math.random().toString(36).substring(2, 10);
+            connectedClients.push({ id: clientId, ws });
+            console.log(`HMR client connected: ${clientId}`);
+          }
+        } catch (err) {
+          console.error('Error processing websocket message:', err);
+        }
+      },
+      
+      open(ws) {
+        // WebSocket connection opened
+      },
+      
+      close(ws) {
+        // Remove disconnected client
+        const index = connectedClients.findIndex(client => client.ws === ws);
+        if (index !== -1) {
+          const client = connectedClients[index];
+          console.log(`HMR client disconnected: ${client.id}`);
+          connectedClients.splice(index, 1);
+        }
+      }
+    }
+  });
+  
+  // Setup file watching for HMR if enabled
+  if (serverConfig.hmr) {
+    await setupHMR(server, config);
+  }
+  
+  // Open browser if requested
+  if (serverConfig.open) {
+    const url = `http://${serverConfig.hostname}:${serverConfig.port}`;
+    console.log(`Opening browser at ${url}`);
+    
+    // Use the appropriate open command based on platform
+    const platform = process.platform;
+    let openCommand = '';
+    
+    if (platform === 'darwin') {
+      openCommand = `open "${url}"`;
+    } else if (platform === 'win32') {
+      openCommand = `start "${url}"`;
+    } else {
+      openCommand = `xdg-open "${url}"`;
+    }
+    
+    Bun.spawn(['sh', '-c', openCommand]);
+  }
+  
+  return server;
+}
+
+/**
+ * Inject HMR client script into HTML
+ * 
+ * @param html HTML content
+ * @returns HTML with HMR client script injected
+ */
+function injectHMRScript(html: string): string {
+  // Check if HMR script is already injected
+  if (html.includes('__bunpress_hmr.js')) {
+    return html;
+  }
+  
+  // Inject before closing head tag
+  return html.replace(
+    '</head>',
+    '  <script src="/__bunpress_hmr.js"></script>\n  </head>'
+  );
+}
+
+/**
+ * Set up file watching for Hot Module Replacement
+ * 
+ * @param server Bun server instance
+ * @param config BunPress configuration
+ */
+export async function setupHMR(
+  server: Server,
+  config: BunPressConfig,
+  options: WatchOptions = {}
+): Promise<void> {
+  const watchDir = config.outputDir;
+  
+  // Default options
+  const watchOptions: WatchOptions = {
+    ignored: [
+      '**/node_modules/**',
+      '**/.git/**'
+    ],
+    debounce: 100,
+    ...options
+  };
+  
+  console.log(`Watching directory: ${watchDir}`);
+  
+  // Set up a debounced function to handle file changes
+  let changeTimeout: NodeJS.Timeout | null = null;
+  let pendingChanges: Set<string> = new Set();
+  
+  const handleChanges = () => {
+    // Process all pending changes
+    for (const filePath of pendingChanges) {
+      const ext = path.extname(filePath).toLowerCase();
+      
+      console.log(`File changed: ${filePath}`);
+      
+      if (ext === '.css') {
+        // For CSS files, send a style reload message
+        const relativePath = path.relative(watchDir, filePath);
+        const publicPath = '/' + relativePath.replace(/\\/g, '/');
+        
+        server.publish('hmr', JSON.stringify({
+          type: 'css-update',
+          path: publicPath,
+          timestamp: Date.now()
+        }));
+      } else if (['.js', '.ts', '.jsx', '.tsx'].includes(ext)) {
+        // For JS files, send a script reload message
+        const relativePath = path.relative(watchDir, filePath);
+        const publicPath = '/' + relativePath.replace(/\\/g, '/');
+        
+        server.publish('hmr', JSON.stringify({
+          type: 'js-update',
+          path: publicPath,
+          timestamp: Date.now()
+        }));
+      } else if (ext === '.html') {
+        // For HTML files, reload the page
+        reloadPage(server);
+      } else {
+        // For other files, reload the page
+        reloadPage(server);
+      }
+    }
+    
+    // Clear pending changes
+    pendingChanges.clear();
+  };
+  
+  // Use Bun's watch API to monitor file changes
+  try {
+    const watcher = fs.watch(watchDir, { recursive: true }, (eventType, filename) => {
+      if (!filename) return;
+      
+      const filePath = path.join(watchDir, filename);
+      
+      // Skip ignored paths
+      if (watchOptions.ignored?.some(pattern => {
+        return minimatch(filePath, pattern);
+      })) {
+        return;
+      }
+      
+      // Add to pending changes
+      pendingChanges.add(filePath);
+      
+      // Debounce changes
+      if (changeTimeout) {
+        clearTimeout(changeTimeout);
+      }
+      
+      changeTimeout = setTimeout(handleChanges, watchOptions.debounce);
+    });
+    
+    // Handle watcher errors
+    watcher.on('error', (error) => {
+      console.error('Error watching files:', error);
+    });
+  } catch (error) {
+    console.error('Failed to set up file watcher:', error);
+  }
+}
+
+/**
+ * Send a full page reload message to all connected clients
+ * 
+ * @param server Bun server instance
+ */
+export function reloadPage(server: Server): void {
+  server.publish('hmr', JSON.stringify({
+    type: 'reload',
+    timestamp: Date.now()
+  }));
+}
+
+/**
+ * Simple implementation of minimatch for pattern matching
+ * 
+ * @param filepath File path to check
+ * @param pattern Glob pattern to match against
+ * @returns Whether the path matches the pattern
+ */
+function minimatch(filepath: string, pattern: string): boolean {
+  // Convert glob pattern to regex
+  const regex = new RegExp(
+    '^' + pattern
+      .replace(/\*\*/g, '.*')
+      .replace(/\*/g, '[^/]*')
+      .replace(/\?/g, '[^/]')
+      + '$'
+  );
+  
+  return regex.test(filepath);
+}
+
+/**
+ * HMR client script that will be injected into HTML pages
+ */
+const hmrClientScript = `
+// BunPress HMR Client
+(function() {
+  const socketUrl = 'ws://' + location.host;
+  let socket;
+  let reconnectTimer;
+  const clientId = Math.random().toString(36).substring(2, 10);
+  
+  function connect() {
+    console.log('[HMR] Connecting...');
+    socket = new WebSocket(socketUrl);
+    
+    socket.addEventListener('open', () => {
+      console.log('[HMR] Connected');
+      clearTimeout(reconnectTimer);
+      socket.send(JSON.stringify({ type: 'connect', id: clientId }));
+    });
+    
+    socket.addEventListener('message', (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'reload':
+          console.log('[HMR] Full page reload');
+          window.location.reload();
+          break;
+          
+        case 'css-update':
+          console.log('[HMR] Updating CSS', data.path);
+          updateCSS(data.path);
+          break;
+          
+        case 'js-update':
+          console.log('[HMR] JavaScript updated - reloading page');
+          // For now, we just reload the page for JS changes
+          // In the future, we could implement proper HMR for JS modules
+          window.location.reload();
+          break;
+      }
+    });
+    
+    socket.addEventListener('close', () => {
+      console.log('[HMR] Disconnected. Attempting to reconnect...');
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 1000);
+    });
+    
+    socket.addEventListener('error', (err) => {
+      console.error('[HMR] Connection error:', err);
+      socket.close();
+    });
+  }
+  
+  // Update a CSS file without refreshing the page
+  function updateCSS(path) {
+    // Find existing link element for this stylesheet
+    const links = document.getElementsByTagName('link');
+    let found = false;
+    
+    for (let i = 0; i < links.length; i++) {
+      const link = links[i];
+      if (link.rel === 'stylesheet' && link.href.includes(path)) {
+        // Update with a cache-busting query parameter
+        const newHref = link.href.split('?')[0] + '?t=' + Date.now();
+        link.href = newHref;
+        found = true;
+        break;
+      }
+    }
+    
+    // If not found, append a new link element
+    if (!found) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = path + '?t=' + Date.now();
+      document.head.appendChild(link);
+    }
+  }
+  
+  // Start the connection
+  connect();
+})();
+`;
 
 export function startDevServer(config: BunPressConfig, pluginManager?: PluginManager): DevServerResult {
   // Get workspace root
@@ -30,6 +434,23 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
   
   // Find HTML templates in the theme directory
   const themeDir = path.join(workspaceRoot, 'themes', config.themeConfig.name);
+  
+  // Set up HMR
+  const hmrContext = createHmrContext();
+  const websocketUrl = `ws://${config.devServer?.host || 'localhost'}:${config.devServer?.hmrPort || 3001}/hmr`;
+  const hmrClientScript = createHmrClientScript(websocketUrl);
+  
+  // Create a callback for when clients connect to the HMR WebSocket
+  hmrContext.websocket.subscribe('open', (ws) => {
+    hmrContext.connectedClients.add(ws);
+    console.log(`HMR client connected. Total clients: ${hmrContext.connectedClients.size}`);
+  });
+  
+  // Handle client disconnection
+  hmrContext.websocket.subscribe('close', (ws) => {
+    hmrContext.connectedClients.delete(ws);
+    console.log(`HMR client disconnected. Remaining clients: ${hmrContext.connectedClients.size}`);
+  });
   
   // Set up file watcher for content files using fs/promises watch
   let abortController = new AbortController();
@@ -57,9 +478,15 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
           generateRoutesAsync(config.pagesDir).then(asyncRoutes => {
             routes = asyncRoutes;
             console.log('Routes regenerated with plugin transformations');
+            
+            // Notify HMR clients of the update
+            broadcastHmrUpdate(hmrContext, event.filename || '');
           });
         } else {
           routes = generateRoutes(config.pagesDir);
+          
+          // Notify HMR clients of the update
+          broadcastHmrUpdate(hmrContext, event.filename || '');
         }
       }
     } catch (error: any) {
@@ -71,13 +498,81 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
     }
   })();
   
+  // Watch theme directory for changes
+  (async () => {
+    try {
+      const ac = abortController;
+      for await (const event of watch(themeDir, { 
+        recursive: true, 
+        signal: ac.signal 
+      })) {
+        // Process scripts, styles, and HTML templates
+        if (!event.filename) continue;
+        
+        const ext = path.extname(event.filename);
+        if (['.js', '.ts', '.jsx', '.tsx', '.css', '.html'].includes(ext)) {
+          console.log(`Theme file changed: ${event.filename}`);
+          
+          // Notify HMR clients of the update
+          broadcastHmrUpdate(hmrContext, event.filename);
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Theme file watcher stopped');
+      } else {
+        console.error('Error watching theme files:', error);
+      }
+    }
+  })();
+  
+  // Check if we are using HTML with bundling
+  let htmlEntrypoints: string[] = [];
+  try {
+    // Find HTML files in the theme directory
+    function scanHtmlFiles(dir: string) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        
+        if (entry.isDirectory()) {
+          scanHtmlFiles(fullPath);
+        } else if (entry.isFile() && entry.name.endsWith('.html')) {
+          htmlEntrypoints.push(fullPath);
+        }
+      }
+    }
+    
+    scanHtmlFiles(themeDir);
+    console.log(`Found ${htmlEntrypoints.length} HTML entrypoints in theme directory`);
+  } catch (error) {
+    console.error('Error scanning for HTML entrypoints:', error);
+  }
+  
   // Start the server with Bun's built-in features
   const server = serve({
-    port: 3000,
+    port: config.devServer?.port || 3000,
     development: true, // Enable development mode for HMR and detailed errors
     
-    // Use Bun's routes feature for API endpoints
+    // HTML imports as routes for fullstack dev server
     routes: {
+      // Use HTML files directly as routes (for fullstack capabilities)
+      ...Object.fromEntries(
+        htmlEntrypoints.map(htmlPath => {
+          const routePath = path.relative(themeDir, htmlPath)
+            .replace(/\.html$/, '')
+            .replace(/index$/, '');
+          
+          const finalPath = '/' + routePath;
+          
+          return [
+            finalPath, 
+            htmlPath // Bun will natively handle HTML imports as routes
+          ];
+        })
+      ),
+      
       // Dynamic API endpoints
       "/api/routes": {
         async GET() {
@@ -111,6 +606,15 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
           console.error("Error processing content:", error);
           return new Response("Error processing content", { status: 500 });
         }
+      },
+      
+      // HMR client script
+      "/bunpress-hmr.js": () => {
+        return new Response(hmrClientScript, {
+          headers: {
+            'Content-Type': 'application/javascript',
+          },
+        });
       }
     },
     
@@ -123,7 +627,15 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
       if (pathname === '/') {
         const indexHtmlPath = path.join(themeDir, 'index.html');
         if (fs.existsSync(indexHtmlPath)) {
-          return new Response(Bun.file(indexHtmlPath));
+          // Process HTML with HTMLRewriter to inject HMR script
+          const html = fs.readFileSync(indexHtmlPath, 'utf-8');
+          const processedHtml = injectHmrScript(html);
+          
+          return new Response(processedHtml, {
+            headers: {
+              'Content-Type': 'text/html',
+            },
+          });
         }
       }
       
@@ -155,7 +667,9 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
       // Check if route exists
       if (routes[routePath]) {
         const html = renderHtml(routes[routePath]!, config, workspaceRoot);
-        return new Response(html, {
+        const processedHtml = injectHmrScript(html);
+        
+        return new Response(processedHtml, {
           headers: {
             'Content-Type': 'text/html',
           },
@@ -170,12 +684,37 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
     }
   });
   
-  console.log(`BunPress dev server running at http://localhost:3000`);
-  console.log(`HMR enabled for fast development experience`);
+  // Helper function to inject HMR script into HTML
+  function injectHmrScript(html: string): string {
+    // Simple string replacement to inject the HMR script
+    const headEndPos = html.indexOf('</head>');
+    
+    if (headEndPos !== -1) {
+      return html.slice(0, headEndPos) + 
+        `<script src="/bunpress-hmr.js"></script>\n` + 
+        html.slice(headEndPos);
+    }
+    
+    // If no head tag, inject before end of body or just at the end
+    const bodyEndPos = html.indexOf('</body>');
+    if (bodyEndPos !== -1) {
+      return html.slice(0, bodyEndPos) + 
+        `<script src="/bunpress-hmr.js"></script>\n` + 
+        html.slice(bodyEndPos);
+    }
+    
+    // Last resort, append to the end
+    return html + `<script src="/bunpress-hmr.js"></script>`;
+  }
+  
+  const devServerUrl = `http://${config.devServer?.host || 'localhost'}:${config.devServer?.port || 3000}`;
+  console.log(`BunPress dev server running at ${devServerUrl}`);
+  console.log(`HMR enabled at ${websocketUrl}`);
   
   return {
     server,
     watcher,
+    hmrContext
   };
 }
 

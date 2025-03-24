@@ -1,5 +1,75 @@
 # Active Context
 
+## Current Focus: Enhancing Configuration System
+
+The current focus is on improving the configuration system of BunPress to make it more flexible and powerful. We're working on adding support for:
+
+1. Theme configuration
+2. Build configuration
+3. Site metadata
+4. Plugin system configuration
+
+## Bun Feature Integration
+
+We're currently working on enhancing BunPress to take full advantage of Bun's native features. The key areas we're focusing on include:
+
+1. **HTML-first bundling approach** - We've implemented a new bundler.ts module that handles HTML-first bundling by:
+   - Using HTMLRewriter to extract assets from HTML
+   - Processing JavaScript, CSS, and image files separately
+   - Bundling assets with appropriate content hashing
+   - Updating HTML to reference bundled assets
+
+2. **Bun.build API** - We've integrated the native Bun.build API in our bundler implementation to:
+   - Process JavaScript files efficiently 
+   - Support code splitting
+   - Enable source maps
+   - Configure publicPath and other bundler options
+
+3. **Hot Module Replacement** - We've implemented a dev server with HMR capabilities that:
+   - Provides websocket-based HMR
+   - Supports CSS hot reloading without page refreshes
+   - Watches for file changes and triggers appropriate updates
+   - Includes an HMR client script that's injected into HTML pages
+
+4. **CSS Processing** - We've added a css-processor.ts module that:
+   - Processes CSS files using Bun's transform API
+   - Supports minification and source maps
+   - Handles asset URL rewriting
+   - Bundles multiple CSS files into a single output
+
+5. **Theme Building** - We've created a theme-builder.ts module that:
+   - Loads themes from the filesystem
+   - Processes theme layouts and assets
+   - Bundles theme scripts and styles
+   - Applies theme layouts to content
+
+6. **Testing** - We've begun creating tests for these new modules:
+   - Tests for bundler.ts
+   - Tests for css-processor.ts
+   - Tests for theme-builder.ts
+   - Tests for dev-server.ts
+
+## Next Steps
+
+1. Fix any linter errors in the implementations
+2. Add necessary dependencies (fast-glob)
+3. Integrate the new modules with the existing build system
+4. Update the BunPress CLI to use the new bundler
+5. Create documentation for the new features
+6. Add more comprehensive tests
+
+## Current Tasks
+
+- [x] Update bunpress.config.ts to include new configuration options
+- [x] Create test files for the new modules
+- [x] Implement HTML-first bundling with Bun.build API
+- [x] Implement CSS processor
+- [x] Implement theme builder
+- [x] Implement Hot Module Replacement
+- [ ] Fix linter errors
+- [ ] Add necessary dependencies
+- [ ] Integrate new modules with existing build system
+
 ## Current Focus
 
 We are continuing the development of BunPress with a focus on developing the documentation layout system and components to achieve feature parity with VitePress. Recent updates include:
@@ -185,22 +255,6 @@ We've made significant progress on the layout system:
 7. Strong focus on accessibility and responsive design
 8. Consistent styling using CSS variables for easy theming
 9. Full-width layout support for all components
-
-## Next Steps
-1. Theme System Polishing:
-   - Complete slot system for content injection
-   - Enhance theme extension capabilities
-   - Document theming options and customization
-
-2. Search Functionality:
-   - Implement integrated search experience
-   - Add keyboard navigation for search results
-   - Create search index integration
-
-3. Markdown Extensions:
-   - Add custom containers support
-   - Implement enhanced code block features
-   - Add inline component support in markdown
 
 ## Current Challenges
 - Ensuring consistent footer behavior across all layout types

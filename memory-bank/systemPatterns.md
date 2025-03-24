@@ -683,3 +683,115 @@ This pattern allows tests to control and inspect plugin behavior without relying
 5. **Singleton**: Used for the configuration object
 6. **Adapter**: Used to normalize plugin interfaces
 7. **Facade**: Used to simplify complex subsystems to plugins 
+
+## Bun Feature Utilization Patterns
+
+To better align with the "Bun-First" approach, we should adopt these architectural patterns:
+
+### HTML-First Pattern
+```mermaid
+graph TD
+    A[HTML Files] --> B[Bun's HTMLRewriter]
+    B --> C[Extract Scripts]
+    B --> D[Extract Styles]
+    C --> E[Bundled JS]
+    D --> F[Bundled CSS]
+    E --> G[Final HTML]
+    F --> G
+```
+
+1. **HTML as Entry Point**: Use HTML files directly as entry points for the bundler
+2. **Automatic Asset Discovery**: Let Bun scan and detect assets from HTML rather than manual configuration
+3. **Path Preservation**: Maintain directory structure from source to output
+
+### CSS Processing Pattern
+```mermaid
+graph LR
+    A[CSS Files] --> B[Bun's CSS Parser]
+    B --> C[Process @imports]
+    B --> D[Minify]
+    B --> E[Transform URLs]
+    C --> F[Bundled CSS]
+    D --> F
+    E --> F
+```
+
+1. **CSS Bundle Chunking**: Group related CSS imports to reduce duplicate loading
+2. **Asset Path Transformation**: Automatically rewrite asset paths with content hashing
+3. **CSS Optimization Pipeline**: Use Bun's native CSS processing for all transformations
+
+### Static Asset Pattern
+```mermaid
+graph TD
+    A[Static Assets] --> B[Copy & Hash]
+    B --> C[Update References]
+    C --> D[Optimize Size]
+    D --> E[Output Directory]
+```
+
+1. **Content-Addressable Hashing**: Apply content hashes to enable long-term caching
+2. **Size-Based Optimization**: Inline small assets into data: URLs to reduce HTTP requests
+3. **Format Optimization**: Convert images to modern formats based on browser support
+
+### Hot Module Replacement Pattern
+```mermaid
+flowchart TD
+    A[File Change] --> B[Detect Module Boundary]
+    B --> C{Self-Accepting?}
+    C -->|Yes| D[Replace Module]
+    C -->|No| E[Find Accepting Parent]
+    E --> F{Parent Found?}
+    F -->|Yes| G[Replace Parent]
+    F -->|No| H[Full Reload]
+    D --> I[Update UI]
+    G --> I
+```
+
+1. **Module Boundary Detection**: Clearly define module boundaries for hot replacement
+2. **State Preservation**: Use `import.meta.hot.data` to transfer state between module instances
+3. **Graceful Degradation**: Fall back to full page reload when boundary can't be determined
+
+### Build Optimization Pattern
+```mermaid
+graph TD
+    A[Source Files] --> B[Tree Shaking]
+    B --> C[Code Splitting]
+    C --> D[Minification]
+    D --> E[Output Files]
+```
+
+1. **Entry Point Analysis**: Identify and optimize entry points based on dependency graph
+2. **Shared Chunk Extraction**: Extract common dependencies into shared chunks
+3. **Conditional Compilation**: Use environment-based compilation for development vs. production
+
+### Fullstack Integration Pattern
+```mermaid
+graph LR
+    A[Frontend] <--> B[Bun.serve]
+    C[Backend] <--> B
+    B --> D[Development]
+    B --> E[Production Build]
+```
+
+1. **Unified Development**: Single server for both frontend and API endpoints
+2. **Route-Based Architecture**: Define routes for both static content and API endpoints
+3. **Environment Consistency**: Use the same environment for development and production
+
+### Plugin Architecture Pattern
+```mermaid
+flowchart TD
+    A[Config] --> B[Plugin Manager]
+    B --> C{Plugin Type}
+    C -->|Builder| D[Build Plugins]
+    C -->|Transformer| E[Content Plugins]
+    C -->|Server| F[Server Plugins]
+    D --> G[Build Process]
+    E --> H[Content Pipeline]
+    F --> I[Dev Server]
+```
+
+1. **Bundler Plugin Integration**: Seamless integration with Bun's bundler plugins
+2. **Plugin Discovery**: Automatic loading of plugins from configuration
+3. **Life-cycle Hooks**: Well-defined hooks for plugins to interact with various stages
+
+Adopting these patterns will ensure BunPress fully leverages Bun's native capabilities and delivers on its promise of exceptional performance and developer experience. 

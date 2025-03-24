@@ -45,6 +45,59 @@ The project is designed to be developed with Bun, leveraging its fast runtime an
 4. **TypeScript**: All code is written in TypeScript for type safety.
 5. **Plugin Architecture**: Features should be implemented as plugins when possible.
 
+## Bun Native Features Status
+
+### Currently Used Bun Features
+1. **Runtime Execution**: Using Bun as the runtime for execution
+2. **Package Management**: Using Bun as the package manager
+3. **Basic Bundling**: Simple bundling with `bun build` command
+4. **HTTP Server**: Using `Bun.serve` for development server
+5. **File Operations**: Using Bun's file system APIs
+6. **Testing**: Using Bun's built-in test runner with `bun:test`
+7. **Shebang Support**: Using `#!/usr/bin/env bun` for CLI tools
+8. **Import Detection**: Using `import.meta.url === Bun.main` for entry point detection
+9. **File Access**: Using `Bun.file()` for file access in the server
+
+### Bun Features To Be Implemented
+1. **HTML-First Bundling**: Bun's HTML entrypoint bundling for better performance
+   - HTMLRewriter for scanning HTML files
+   - Auto-detection of script and link tags
+   - CSS bundling from HTML files
+
+2. **Enhanced CSS Processing**:
+   - Native CSS parser and bundler
+   - CSS imports bundling
+   - CSS modules support
+
+3. **Advanced HMR**:
+   - `import.meta.hot` API implementation
+   - Proper module boundary detection
+   - State preservation between updates
+
+4. **Asset Optimization**:
+   - Content hashing
+   - Asset copying and optimization
+   - Path rewriting in HTML, CSS, and JS
+
+5. **Fullstack Capabilities**:
+   - HTML imports as routes
+   - Integrated API endpoints
+   - Server component support
+
+6. **Build Optimization**:
+   - Code splitting with `splitting: true`
+   - Tree shaking and dead code elimination
+   - Minification options
+
+7. **Plugin Integration**:
+   - Bundler plugins through bunfig.toml
+   - Tailwind CSS plugin support
+   - Custom transformer plugins
+
+8. **Watch Mode**: 
+   - Enhanced watch mode using Bun's native capabilities
+   - Better file watching with AbortController support
+
 ## Dependencies
 
 ### Core Dependencies
@@ -142,4 +195,4 @@ The build process follows these steps:
 6. Generate routes
 7. Build output files
 8. Run plugin buildEnd hooks
-9. Write files to disk 
+9. Write files to disk

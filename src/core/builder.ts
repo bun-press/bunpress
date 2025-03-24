@@ -4,8 +4,19 @@ import type { BunPressConfig } from '../../bunpress.config';
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import { PluginManager } from './plugin';
+import { bundleAssets } from './bundler';
 
-export async function buildSite(config: BunPressConfig, pluginManager?: PluginManager) {
+export interface BuildOptions {
+  minify?: boolean;
+  sourcemap?: boolean;
+  assetHashing?: boolean;
+}
+
+export async function buildSite(
+  config: BunPressConfig, 
+  pluginManager?: PluginManager,
+  buildOptions: BuildOptions = {}
+) {
   // Get workspace root
   const workspaceRoot = process.cwd();
   
@@ -42,6 +53,30 @@ export async function buildSite(config: BunPressConfig, pluginManager?: PluginMa
     
     // Write HTML file
     writeFileSync(outputPath, html);
+  }
+  
+  // Bundle assets with Bun's native bundler
+  const themeDir = path.join(workspaceRoot, 'themes', config.themeConfig.name);
+  const htmlFiles = Object.entries(routes).map(([route, _]) => {
+    if (route === '/') {
+      return path.join(config.outputDir, 'index.html');
+    } else {
+      return path.join(config.outputDir, route.substring(1), 'index.html');
+    }
+  });
+  
+  try {
+    // Process theme assets
+    await bundleAssets(config, {
+      entrypoints: htmlFiles,
+      minify: buildOptions.minify,
+      sourcemap: buildOptions.sourcemap,
+      assetHashing: buildOptions.assetHashing,
+    });
+    
+    console.log('Assets bundled successfully');
+  } catch (error) {
+    console.error('Error bundling assets:', error);
   }
   
   // Copy static assets from public directory

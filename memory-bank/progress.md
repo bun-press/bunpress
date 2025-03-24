@@ -229,6 +229,35 @@
   - [ ] Enhanced code blocks
   - [ ] Inline component support
 
+### Phase 5: Bun Native Features 🔄
+- [ ] HTML-first bundling
+  - [ ] Use Bun.build API for HTML entrypoint bundling
+  - [ ] Implement HTMLRewriter for HTML processing
+  - [ ] Auto-scanning of script and link tags
+- [ ] Advanced CSS processing
+  - [ ] CSS imports bundling and optimization
+  - [ ] CSS modules support
+  - [ ] Automatic asset path rewriting in CSS
+- [ ] Enhanced asset management
+  - [ ] Automatic content hashing
+  - [ ] Optimized image and asset processing
+  - [ ] Path normalization and rewriting
+- [ ] Improved HMR implementation
+  - [ ] Use import.meta.hot API
+  - [ ] Proper module boundary detection
+  - [ ] State preservation between updates
+- [ ] Fullstack development
+  - [ ] HTML imports as routes
+  - [ ] Better API endpoint integration
+  - [ ] Server component support
+- [ ] Build optimization
+  - [ ] Code splitting
+  - [ ] Tree shaking
+  - [ ] Minification options
+- [ ] Plugin system enhancement
+  - [ ] Integration with Bun's bundler plugins
+  - [ ] Tailwind CSS plugin through bunfig.toml
+
 ## Next Milestone
 Continue implementing the remaining components of Phase 4, focusing on:
 1. Creating comprehensive documentation for the slot system
@@ -241,3 +270,52 @@ Continue implementing the remaining components of Phase 4, focusing on:
 - **Phase 2**: Plugin system base implementation (100% complete)
 - **Phase 3**: Testing infrastructure (90% complete)
 - **Phase 4**: VitePress Feature Parity & Enhancements (90% complete)
+
+## Bun Feature Integration Progress
+
+We've made significant progress in enhancing BunPress to leverage Bun's native features:
+
+### Completed:
+- ✅ Updated `bunpress.config.ts` with new configuration options for bundling, dev server, and themes
+- ✅ Implemented HTML-first bundling in `bundler.ts` using HTMLRewriter and Bun.build
+- ✅ Created CSS processor module to handle CSS bundling and asset processing
+- ✅ Implemented theme builder to handle theme loading and asset processing
+- ✅ Added Hot Module Replacement capabilities to the development server
+- ✅ Created test files for new modules (bundler, css-processor, theme-builder, dev-server)
+
+### In Progress:
+- 🔄 Resolving linter errors in newly created modules
+- 🔄 Adding necessary dependencies like fast-glob
+- 🔄 Integrating new modules with the existing build system
+
+### Upcoming:
+- 📅 Update BunPress CLI to use the new bundler
+- 📅 Create documentation for the new bundling features
+- 📅 Add more comprehensive tests
+- 📅 Create benchmarks to measure performance improvements
+
+### Implementation Details:
+
+1. **HTML-first Bundling**:
+   - HTML files are used as entry points
+   - Assets (JS, CSS, images) are extracted from HTML using HTMLRewriter
+   - Assets are processed, optimized, and bundled based on their type
+   - HTML is updated with references to bundled assets
+
+2. **CSS Processing**:
+   - CSS files are processed with Bun's transform API
+   - Support for minification and source maps
+   - URL rewriting for assets with content hashing
+   - Multiple CSS files can be bundled together
+
+3. **Dev Server with HMR**:
+   - WebSocket-based hot module replacement
+   - CSS updates without page reloads
+   - File watcher with debouncing
+   - Client-side HMR runtime injected into HTML
+
+4. **Theme Building**:
+   - Themes are loaded from the themes directory
+   - Layout templates are processed and applied to content
+   - Theme assets are optimized and bundled
+   - Support for theme extensions and customization
