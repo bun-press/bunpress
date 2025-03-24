@@ -55,22 +55,21 @@ export async function processCSS(
     const cssFile = Bun.file(cssPath);
     let cssContent = await cssFile.text();
     
-    // Use the Bun transform API for transpiling CSS
-    // This handles @import statements and other preprocessing
-    const { transpile } = await import('bun');
-    const result = await transpile({
-      source: cssContent,
-      loader: 'css',
+    // Use Bun's built-in transformer for CSS
+    const result = await Bun.build({
+      entrypoints: [cssPath],
+      target: 'browser',
       minify: opts.minify,
-      sourcemap: opts.sourceMap ? 'inline' : false,
-      filePath: cssPath
+      sourcemap: opts.sourceMap ? 'inline' : 'none',
     });
     
     if (!result.success) {
-      throw new Error(`Failed to process CSS: ${result.error?.message}`);
+      throw new Error(`Failed to process CSS`);
     }
     
-    let output = result.code;
+    // Get the CSS output
+    const cssOutput = await result.outputs[0]?.text() || cssContent;
+    let output = cssOutput;
     
     // If needed, rewrite URLs to be relative to the output directory
     if (opts.rewriteUrls) {

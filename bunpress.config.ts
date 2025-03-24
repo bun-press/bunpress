@@ -4,6 +4,7 @@ export interface DevServerConfig {
   hmrPort?: number;
   hmrHost?: string;
   open?: boolean;
+  hmr?: boolean;
 }
 
 export interface BundleConfig {
@@ -81,13 +82,11 @@ export interface BunPressConfig {
 export function defineConfig(config: BunPressConfig): BunPressConfig {
   return {
     // Default config values
-    pagesDir: 'pages',
-    outputDir: 'dist',
     ...config,
     // Ensure themeConfig has default values
     themeConfig: {
-      name: 'default',
-      ...config.themeConfig
+      ...config.themeConfig,
+      name: config.themeConfig?.name || 'default',
     },
     // Ensure devServer has default values
     devServer: {

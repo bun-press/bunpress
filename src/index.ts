@@ -38,6 +38,7 @@ import path from 'path';
 import fs from 'fs';
 import chalk from 'chalk';
 import { Listr } from 'listr2';
+import { processHTMLEntrypoints } from './core/bundler';
 
 // Version is read from package.json
 const version = (() => {
@@ -51,14 +52,18 @@ const version = (() => {
 
 async function main() {
   try {
+    console.log("DEBUG: main function called");
     console.log(chalk.bold(`\n${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} ${chalk.gray(`v${version}`)}`));
     
     // Check for command-line arguments
     const args = process.argv.slice(2);
     const command = args[0];
     
+    console.log("DEBUG: Command:", command, "Args:", args);
+    
     // Handle help command
     if (command === 'help' || args.includes('--help') || args.includes('-h')) {
+      console.log("DEBUG: Calling printHelp");
       printHelp();
       return;
     }
@@ -102,6 +107,10 @@ async function main() {
     
     // Execute different commands based on input
     if (command === 'build') {
+      // Check for bundling mode
+      const useHtmlFirstBundling = args.includes('--html');
+      const useHybridMode = args.includes('--hybrid');
+      
       // Build site with enhanced listr2 tasks
       const tasks = new Listr<any>(
         [
@@ -146,11 +155,49 @@ async function main() {
             rendererOptions: { persistentOutput: true }
           },
           {
-            title: 'Building site',
+            title: useHtmlFirstBundling ? 'Building with HTML-first bundling' : (useHybridMode ? 'Building in hybrid mode' : 'Building site'),
             task: async (task) => {
-              task.output = 'Generating HTML files...';
-              await buildSite(config, pluginManager);
-              task.output = 'Site built successfully!';
+              if (useHtmlFirstBundling || useHybridMode) {
+                task.output = 'Finding HTML entrypoints...';
+                // Find HTML files in the project
+                const globSync = await import('fast-glob');
+                const htmlFiles = await globSync.default(['**/*.html', '!**/node_modules/**', '!**/dist/**'], {
+                  cwd: process.cwd(),
+                  absolute: true
+                });
+                
+                if (htmlFiles.length === 0) {
+                  task.output = 'No HTML entrypoints found. ' + (useHybridMode ? 'Proceeding with markdown only.' : 'Falling back to standard build...');
+                  await buildSite(config, pluginManager);
+                } else {
+                  task.output = `Found ${htmlFiles.length} HTML entrypoints. Processing...`;
+                  // Process HTML entrypoints
+                  const outputDir = path.resolve(process.cwd(), config.outputDir);
+                  await processHTMLEntrypoints(
+                    htmlFiles,
+                    outputDir,
+                    config,
+                    {
+                      minify: process.env.NODE_ENV === 'production',
+                      sourcemap: process.env.NODE_ENV !== 'production',
+                      target: 'browser',
+                      splitting: true
+                    }
+                  );
+                  task.output = 'HTML entrypoints processed successfully!';
+                  
+                  // In hybrid mode, also process markdown
+                  if (useHybridMode) {
+                    task.output = 'Processing markdown content...';
+                    await buildSite(config, pluginManager);
+                    task.output = 'Markdown content processed successfully!';
+                  }
+                }
+              } else {
+                task.output = 'Generating HTML files...';
+                await buildSite(config, pluginManager);
+                task.output = 'Site built successfully!';
+              }
             },
             rendererOptions: { persistentOutput: true }
           },
@@ -273,30 +320,40 @@ async function main() {
 }
 
 function printHelp() {
-  console.log(chalk.blue.bold(`
+  // Using console.error to see if output is being redirected
+  console.error(chalk.blue.bold(`
 ${chalk.blue('B')}${chalk.cyan('u')}${chalk.green('n')}${chalk.yellow('P')}${chalk.red('r')}${chalk.magenta('e')}${chalk.blue('s')}${chalk.cyan('s')} - A modern static site generator built with Bun
 
 ${chalk.white('Usage:')}
-  ${chalk.green('bunpress init [dir]')}    Initialize a new BunPress project in the specified directory
-                          or current directory if not specified
-  ${chalk.green('bunpress dev')}           Start the development server (default command)
-  ${chalk.green('bunpress build')}         Build the site for production
-  ${chalk.green('bunpress help')}          Display this help message
-  ${chalk.green('bunpress version')}       Display version information
+  ${chalk.green('bunpress')} ${chalk.yellow('<command>')} ${chalk.gray('[options]')}
 
-${chalk.white('Options:')}
-  ${chalk.green('-h, --help')}             Display help information
-  ${chalk.green('-v, --version')}          Display version information
+${chalk.white('Commands:')}
+  ${chalk.green('init [dir]')}      Initialize a new BunPress project
+  ${chalk.green('dev')}             Start the development server
+  ${chalk.green('build')}           Build the site for production
+  ${chalk.green('help')}            Display this help message
+  ${chalk.green('version')}         Display version information
+
+${chalk.white('Build Options:')}
+  ${chalk.yellow('--html')}           Use HTML-first bundling (experimental)
+  ${chalk.yellow('--hybrid')}         Process both HTML and markdown (experimental)
+  ${chalk.yellow('--minify')}         Minify the output (default in production)
+  ${chalk.yellow('--no-minify')}      Disable minification
 
 ${chalk.white('Examples:')}
-  ${chalk.green('bunpress init my-site')}  Create a new project in the my-site directory
-  ${chalk.green('bunpress dev')}           Start the development server
-  ${chalk.green('bunpress build')}         Build the site for production
+  ${chalk.green('bunpress init my-site')}     Create a new project in the my-site directory
+  ${chalk.green('bunpress dev')}              Start the development server
+  ${chalk.green('bunpress build')}            Build the site for production
+  ${chalk.green('bunpress build --html')}     Use HTML-first bundling for build
+  ${chalk.green('bunpress build --hybrid')}   Process both HTML and markdown
 
 ${chalk.white('Documentation:')}
   ${chalk.cyan('https://github.com/bunpress/bunpress')}
 `));
 }
+
+// Export the printHelp function for testing
+export { printHelp };
 
 async function initProject(args: string[] = []) {
   const projectDir = args[0] || '.';
@@ -831,9 +888,10 @@ function getLocalIpAddress(): string | null {
 }
 
 // Only run the CLI code if this file is executed directly (not imported)
-if (import.meta.url === Bun.main) {
+// The condition import.meta.url === Bun.main doesn't work because of URL format differences
+// Using a more reliable condition
+if (process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/index.ts')) {
   console.log("BunPress CLI starting...");
-  console.log("Arguments:", process.argv);
   
   // Special handling for test environment
   if (process.env.BUNPRESS_TEST === 'true') {
@@ -875,10 +933,13 @@ if (import.meta.url === Bun.main) {
     process.exit(0);
   }
   
-  // Check if called with "help" command
-  if (process.argv.includes('help') || process.argv.includes('--help') || process.argv.includes('-h')) {
+  // Improved help command detection - ensures we process all forms of help flags
+  const args = process.argv.slice(2);
+  
+  if (args.includes('help') || args.includes('--help') || args.includes('-h')) {
     console.log("Displaying help...");
     printHelp();
+    process.exit(0); // Ensure we exit after displaying help
   } else {
     main();
   }

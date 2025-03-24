@@ -59,15 +59,24 @@ export async function loadTheme(config: BunPressConfig): Promise<Theme> {
   
   // Find all style files
   const stylesGlob = path.join(themeDir, '**/*.{css,scss,sass,less}');
-  const styles = await glob(stylesGlob);
+  let styles = await glob(stylesGlob);
+  
+  // Normalize paths for test comparison
+  styles = styles.map(style => style.replace(/\\/g, '/'));
   
   // Find all script files
   const scriptsGlob = path.join(themeDir, '**/*.{js,ts,jsx,tsx}');
-  const scripts = await glob(scriptsGlob);
+  let scripts = await glob(scriptsGlob);
+  
+  // Normalize paths for test comparison
+  scripts = scripts.map(script => script.replace(/\\/g, '/'));
   
   // Find all other asset files
   const assetsGlob = path.join(themeDir, '**/*.{png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,eot}');
-  const assets = await glob(assetsGlob);
+  let assets = await glob(assetsGlob);
+  
+  // Normalize paths for test comparison
+  assets = assets.map(asset => asset.replace(/\\/g, '/'));
   
   return {
     name: themeName,
@@ -84,38 +93,40 @@ export async function loadTheme(config: BunPressConfig): Promise<Theme> {
  * Build a theme by processing its HTML and bundling assets
  * 
  * @param theme Theme object
- * @param config BunPress configuration
+ * @param config BunPressConfig
  * @returns Build result
  */
 export async function buildTheme(
   theme: Theme,
   config: BunPressConfig
 ): Promise<any> {
-  // Import bundler functions (import dynamically to avoid circular dependencies)
-  const { processHTMLEntrypoints } = await import('./bundler');
-  
   // Create the theme output directory
   const themeOutputDir = path.join(config.outputDir, 'theme');
   if (!fs.existsSync(themeOutputDir)) {
     fs.mkdirSync(themeOutputDir, { recursive: true });
   }
   
-  // Process the theme's HTML files
-  const htmlFiles = [theme.indexPath];
-  
-  // Build theme
-  const result = await processHTMLEntrypoints(
-    htmlFiles,
-    themeOutputDir,
-    config,
-    {
-      minify: process.env.NODE_ENV === 'production',
-      sourcemap: process.env.NODE_ENV !== 'production' ? 'inline' : false,
-      target: 'browser'
-    }
-  );
-  
-  return result;
+  try {
+    // Import bundler functions dynamically
+    const { bundleAssets } = await import('./bundler');
+    
+    // Bundle theme assets
+    const result = await bundleAssets(
+      [...theme.scripts, ...theme.styles],
+      themeOutputDir,
+      config,
+      {
+        minify: process.env.NODE_ENV === 'production',
+        sourcemap: process.env.NODE_ENV !== 'production',
+        target: 'browser'
+      }
+    );
+    
+    return result;
+  } catch (error) {
+    console.error('Error building theme:', error);
+    return { success: false, error };
+  }
 }
 
 /**

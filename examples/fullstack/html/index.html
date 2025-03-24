@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BunPress Fullstack Example</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>BunPress Fullstack Example</h1>
+    
+    <p>This is a simple example of using the BunPress fullstack server.</p>
+    
+    <div class="import-example">
+      <h2>HTML Import Example</h2>
+      <import-html src="partial.html"></import-html>
+    </div>
+    
+    <div class="api-example">
+      <h2>API Example</h2>
+      <button id="apiButton">Call API</button>
+      <div id="apiResult"></div>
+    </div>
+    
+    <div class="route-example">
+      <h2>Custom Route Example</h2>
+      <a href="/hello/BunPress">Go to /hello/BunPress</a>
+    </div>
+    
+    <div class="websocket-example">
+      <h2>WebSocket Example</h2>
+      <a href="/chat.html">Open Real-time Chat App</a>
+      <p>This demonstrates WebSocket functionality with the fullstack server.</p>
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById('apiButton').addEventListener('click', async () => {
+      const response = await fetch('/api/hello');
+      const data = await response.json();
+      document.getElementById('apiResult').textContent = JSON.stringify(data, null, 2);
+    });
+  </script>
+</body>
+</html> 

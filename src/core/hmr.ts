@@ -3,11 +3,11 @@
  * Based on Bun's import.meta.hot API
  */
 
-import { WebSocket } from 'bun';
+import { Server } from 'bun';
 
 export interface HmrContext {
-  websocket: WebSocket;
-  connectedClients: Set<WebSocket>;
+  websocket: Server;
+  connectedClients: Set<any>;
   moduleDependencies: Map<string, Set<string>>;
   moduleLastUpdate: Map<string, number>;
 }
@@ -178,10 +178,15 @@ export function createHmrClientScript(websocketUrl: string): string {
  */
 export function createHmrContext(): HmrContext {
   return {
-    websocket: new WebSocket({
+    websocket: Bun.serve({
       port: 3001,
-      callback: server => {
-        console.log('HMR WebSocket server running on port 3001');
+      fetch: () => new Response("Not Found", { status: 404 }),
+      websocket: {
+        open: () => {
+          console.log('HMR WebSocket server running on port 3001');
+        },
+        message: () => {},
+        close: () => {}
       }
     }),
     connectedClients: new Set(),

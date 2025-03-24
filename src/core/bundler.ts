@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs';
 import type { BunPressConfig } from '../../bunpress.config';
-import { BunFile } from 'bun';
 
 /**
  * Asset types that can be extracted from HTML
@@ -224,7 +223,9 @@ export async function bundleAssets(
       entrypoints: scriptEntries,
       outdir: outputDir,
       minify: bundleOptions.minify,
-      sourcemap: bundleOptions.sourcemap,
+      sourcemap: bundleOptions.sourcemap === true 
+        ? 'inline' 
+        : (bundleOptions.sourcemap === false ? 'none' : (bundleOptions.sourcemap as "none" | "linked" | "inline" | "external" | undefined)),
       target: bundleOptions.target as any,
       splitting: bundleOptions.splitting,
       publicPath: bundleOptions.publicPath,

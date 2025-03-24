@@ -1,0 +1,30 @@
+# BunPress Project Rules
+
+## Path Resolution
+
+- When comparing paths in Bun, be aware of format differences between `import.meta.url` (URL format with `file://` protocol) and `Bun.main` (regular path string).
+- For entry point detection, use path-based comparison with `endsWith()` rather than direct equality checks.
+
+## CLI Implementation
+
+- Use `process.argv.slice(2)` to get command-line arguments, not `process.argv.includes()` which checks the entire array including the runtime path.
+- Add output to both console.log and file-based logging during development for better debugging.
+- Always use `process.exit(0)` after displaying help or version information to prevent continuing execution.
+
+## Testing Strategy
+
+- For testing CLI functionality, create isolated scripts that directly invoke the functions.
+- Use file-based logging in addition to console output to capture results reliably.
+- Test with both direct file execution and module imports to verify behavior in both contexts.
+
+## Debugging Techniques
+
+- When debugging Bun-specific behavior, create minimal test cases outside the main application.
+- Log environment details such as `process.env`, `process.argv`, and module paths.
+- Use `BUN_DEBUG=1` environment variable for additional Bun-specific debugging information.
+
+## Error Handling
+
+- Handle path format differences explicitly when working with file paths from different sources.
+- Add dedicated error handlers for CLI operations with user-friendly error messages.
+- Use try/catch blocks around file operations with specific error messaging for common failures. 

@@ -6,8 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { watch } from 'fs/promises';
 import { PluginManager } from './plugin';
-import { createHmrContext, createHmrClientScript, broadcastHmrUpdate, HmrContext } from './hmr';
-import { processHtmlWithRewriter } from './bundler';
+import { createHmrContext, broadcastHmrUpdate, HmrContext } from './hmr';
 
 export interface DevServerResult {
   server: Server;
@@ -114,7 +113,7 @@ export async function createDevServer(config: BunPressConfig): Promise<Server> {
     
     // WebSocket handler for HMR
     websocket: {
-      message(ws, message) {
+      message(ws: any, message: any) {
         // Handle client messages
         try {
           const data = JSON.parse(message as string);
@@ -130,11 +129,11 @@ export async function createDevServer(config: BunPressConfig): Promise<Server> {
         }
       },
       
-      open(ws) {
+      open(_ws: any) {
         // WebSocket connection opened
       },
       
-      close(ws) {
+      close(ws: any) {
         // Remove disconnected client
         const index = connectedClients.findIndex(client => client.ws === ws);
         if (index !== -1) {
@@ -218,11 +217,15 @@ export async function setupHMR(
   
   console.log(`Watching directory: ${watchDir}`);
   
-  // Set up a debounced function to handle file changes
-  let changeTimeout: NodeJS.Timeout | null = null;
-  let pendingChanges: Set<string> = new Set();
+  // Setup state for debounced changes
+  const pendingChanges = new Set<string>();
+  let changeTimeout: ReturnType<typeof setTimeout> | null = null;
   
+  // Define handler for changes
   const handleChanges = () => {
+    // Update timeout
+    changeTimeout = null;
+    
     // Process all pending changes
     for (const filePath of pendingChanges) {
       const ext = path.extname(filePath).toLowerCase();
@@ -264,7 +267,7 @@ export async function setupHMR(
   
   // Use Bun's watch API to monitor file changes
   try {
-    const watcher = fs.watch(watchDir, { recursive: true }, (eventType, filename) => {
+    const watcher = fs.watch(watchDir, { recursive: true }, (_eventType, filename) => {
       if (!filename) return;
       
       const filePath = path.join(watchDir, filename);
@@ -435,22 +438,8 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
   // Find HTML templates in the theme directory
   const themeDir = path.join(workspaceRoot, 'themes', config.themeConfig.name);
   
-  // Set up HMR
+  // Initialize HMR
   const hmrContext = createHmrContext();
-  const websocketUrl = `ws://${config.devServer?.host || 'localhost'}:${config.devServer?.hmrPort || 3001}/hmr`;
-  const hmrClientScript = createHmrClientScript(websocketUrl);
-  
-  // Create a callback for when clients connect to the HMR WebSocket
-  hmrContext.websocket.subscribe('open', (ws) => {
-    hmrContext.connectedClients.add(ws);
-    console.log(`HMR client connected. Total clients: ${hmrContext.connectedClients.size}`);
-  });
-  
-  // Handle client disconnection
-  hmrContext.websocket.subscribe('close', (ws) => {
-    hmrContext.connectedClients.delete(ws);
-    console.log(`HMR client disconnected. Remaining clients: ${hmrContext.connectedClients.size}`);
-  });
   
   // Set up file watcher for content files using fs/promises watch
   let abortController = new AbortController();
@@ -709,7 +698,6 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
   
   const devServerUrl = `http://${config.devServer?.host || 'localhost'}:${config.devServer?.port || 3000}`;
   console.log(`BunPress dev server running at ${devServerUrl}`);
-  console.log(`HMR enabled at ${websocketUrl}`);
   
   return {
     server,

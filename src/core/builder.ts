@@ -8,17 +8,18 @@ import { bundleAssets } from './bundler';
 
 export interface BuildOptions {
   minify?: boolean;
-  sourcemap?: boolean;
+  sourcemap?: boolean | 'inline' | 'external';
+  splitting?: boolean;
   assetHashing?: boolean;
 }
 
 export async function buildSite(
   config: BunPressConfig, 
-  pluginManager?: PluginManager,
-  buildOptions: BuildOptions = {}
+  pluginManager?: PluginManager
 ) {
   // Get workspace root
   const workspaceRoot = process.cwd();
+  console.log(`Workspace root: ${workspaceRoot}`);
   
   // Execute plugin buildStart hooks if not already done by CLI
   if (pluginManager && !process.env.BUNPRESS_BUILD_STARTED) {
@@ -55,24 +56,18 @@ export async function buildSite(
     writeFileSync(outputPath, html);
   }
   
-  // Bundle assets with Bun's native bundler
-  const themeDir = path.join(workspaceRoot, 'themes', config.themeConfig.name);
-  const htmlFiles = Object.entries(routes).map(([route, _]) => {
-    if (route === '/') {
-      return path.join(config.outputDir, 'index.html');
-    } else {
-      return path.join(config.outputDir, route.substring(1), 'index.html');
-    }
-  });
-  
   try {
     // Process theme assets
-    await bundleAssets(config, {
-      entrypoints: htmlFiles,
-      minify: buildOptions.minify,
-      sourcemap: buildOptions.sourcemap,
-      assetHashing: buildOptions.assetHashing,
-    });
+    await bundleAssets(
+      [], // entrypoints
+      config.outputDir, // outputDir
+      config, // config
+      {
+        minify: process.env.NODE_ENV === 'production',
+        sourcemap: process.env.NODE_ENV !== 'production',
+        target: 'browser'
+      }
+    );
     
     console.log('Assets bundled successfully');
   } catch (error) {
@@ -138,4 +133,50 @@ function copyDirectory(source: string, destination: string) {
       copyFileSync(sourcePath, destPath);
     }
   }
+}
+
+export async function build(config: BunPressConfig): Promise<any> {
+  // Get workspace root
+  const workspaceRoot = process.cwd();
+  console.log(`Workspace root: ${workspaceRoot}`);
+
+  // Generate output directory
+  const outputDir = path.resolve(config.outputDir);
+  
+  // Ensure output directory exists
+  if (!existsSync(outputDir)) {
+    mkdirSync(outputDir, { recursive: true });
+  }
+  
+  // Generate routes
+  const routes = generateRoutes(config.pagesDir);
+  
+  // Import bundler functions
+  const { bundleAssets } = await import('./bundler');
+  
+  // Bundle all assets
+  console.log('Bundling assets...');
+  try {
+    // Process theme assets
+    await bundleAssets(
+      [], // entrypoints
+      outputDir, // outputDir
+      config, // config
+      {
+        minify: process.env.NODE_ENV === 'production',
+        sourcemap: process.env.NODE_ENV !== 'production',
+        target: 'browser'
+      }
+    );
+  } catch (error) {
+    console.error('Error bundling assets:', error);
+  }
+  
+  // Copy static assets from public directory
+  if (existsSync('public')) {
+    copyDirectory('public', path.join(config.outputDir, 'public'));
+  }
+  
+  // Generate sitemap.xml
+  generateSitemap(routes, config);
 } 
