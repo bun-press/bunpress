@@ -5,24 +5,66 @@
 2. **Functional Core**: Pure functions for core operations
 3. **Explicit Dependencies**: Clear dependency injection
 4. **Plugin-Based Extensibility**: Keeping core lightweight with plugin-based architecture
-5. **Static Generation Focus**: Prioritizing static site generation for optimal performance 
+5. **Static Generation Focus**: Prioritizing static site generation for optimal performance
+6. **Bun-First Approach**: Optimizing for Bun's runtime capabilities
 
 ## Project Structure
 ```
-src/
-  core/               # Core functionality
-    plugin.ts         # Plugin system
-    content-processor.ts # Content processor
-    dev-server.ts     # Development server
-    router.ts         # Routing system
-    renderer.ts       # HTML rendering
-    builder.ts        # Static site builder
-    config-loader.ts  # Configuration loader
-    __tests__/        # Core tests
-  plugins/            # Built-in plugins
-    markdown-it/      # Markdown-it plugin
-    prism/            # Prism.js syntax highlighting
-  index.ts           # CLI entry point
+bunpress/
+├── src/                     # Source code
+│   ├── core/               # Core functionality
+│   │   ├── plugin.ts       # Plugin system
+│   │   ├── content-processor.ts # Content processor
+│   │   ├── dev-server.ts   # Development server
+│   │   ├── router.ts       # Routing system
+│   │   ├── renderer.ts     # HTML rendering
+│   │   ├── builder.ts      # Static site builder
+│   │   ├── config-loader.ts # Configuration loader
+│   │   ├── index.ts        # Core exports
+│   │   └── __tests__/      # Core tests
+│   ├── plugins/            # Built-in plugins
+│   │   ├── markdown-it/    # Markdown-it plugin
+│   │   ├── prism/          # Prism.js syntax highlighting
+│   │   └── index.ts        # Plugin exports
+│   ├── lib/                # Utility functions
+│   │   └── utils.ts        # Utility functions
+│   ├── config.ts           # Config and plugin definition helpers
+│   ├── lib.ts              # Library exports
+│   └── index.ts            # CLI and package entry point
+├── bin/                    # Binary executables
+│   └── bunpress.js         # CLI entry point
+├── dist/                   # Compiled code (generated)
+├── types/                  # TypeScript declarations (generated)
+├── pages/                  # Content pages (user project)
+├── public/                 # Static assets (user project)
+└── bunpress.config.ts     # User configuration
+```
+
+## Package Structure
+
+```
+npm package structure:
+├── dist/                  # Compiled JavaScript
+│   ├── core/
+│   ├── plugins/
+│   └── index.js           # Entry point
+├── types/                 # TypeScript declarations
+│   ├── core/
+│   ├── plugins/
+│   └── index.d.ts
+├── bin/
+│   └── bunpress.js        # CLI executable
+├── README.md              # Documentation
+└── package.json           # Package metadata
+```
+
+## Export Structure
+
+```javascript
+// Main exports
+import { defineConfig, definePlugin } from 'bunpress';
+import { buildSite, loadConfig } from 'bunpress/core';
+import { markdownItPlugin, prismPlugin } from 'bunpress/plugins';
 ```
 
 ## Plugin System Architecture
@@ -96,6 +138,27 @@ src/
    }
    ```
 
+6. Config and Plugin Definition Helpers
+   ```typescript
+   function defineConfig(config: BunPressConfig): BunPressConfig {
+     return config;
+   }
+
+   function definePlugin(plugin: Plugin): Plugin {
+     return plugin;
+   }
+   ```
+
+## CLI Architecture
+
+```
+CLI Command Structure:
+bunpress init          # Initialize a new project
+bunpress dev           # Start development server
+bunpress build         # Build for production
+bunpress help          # Display help information
+```
+
 ### Design Patterns
 1. Plugin Pattern
    - Extensible architecture for adding functionality
@@ -120,8 +183,8 @@ src/
    - Consistent interface implementation
 
 5. Command Pattern
-   - CLI command routing (dev, build)
-   - Consistent interface for both dev and build operations
+   - CLI command routing (init, dev, build, help)
+   - Consistent interface for all commands
    - Plugin lifecycle hooks for different commands
 
 ### Component Relationships
@@ -176,6 +239,16 @@ graph TD
     J --> K[Execute buildEnd]
 ```
 
+## Package Publishing Flow
+
+```mermaid
+graph TD
+    A[Edit Source] --> B[Run Tests]
+    B --> C[Generate Types]
+    C --> D[Bundle JavaScript]
+    D --> E[Publish to npm]
+```
+
 ## Key Technical Decisions
 1. Async/await for all plugin hooks
 2. Ordered execution of transform hooks
@@ -186,6 +259,8 @@ graph TD
 7. Configuration-based plugin loading
 8. CLI command pattern for dev/build operations
 9. Build system integration with plugin lifecycle hooks
+10. Bun-first design approach
+11. ESM-only package structure
 
 ## Architecture Overview
 BunPress follows a modular architecture with clear separation of concerns:

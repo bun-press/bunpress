@@ -15,6 +15,11 @@
 - Plugin configuration system implemented
 - Project structure cleaned up and organized
 - Plugin documentation created
+- NPM publish ready
+  - Package.json configured for npm publishing
+  - Types generation setup
+  - CLI command structure
+  - Project initialization command
 
 ## In Progress
 - Developing additional example plugins (image optimization, SEO)
@@ -39,13 +44,18 @@
   - [ ] Shadcn integration
 - [x] Development server with HMR
 - [x] Production build system
+- [x] NPM package preparation
+  - [x] Package.json configuration
+  - [x] CLI command structure
+  - [x] Type definitions
 
 ### Phase 2: Plugin System
 - [x] Plugin architecture
   - [x] Plugin manager
   - [x] Lifecycle hooks
   - [x] Plugin documentation
-- [ ] Core plugins
+  - [x] Plugin config helpers
+- [x] Core plugins
   - [x] Markdown-it plugin
   - [x] Syntax highlighting (Prism)
   - [ ] Internationalization (i18n)
@@ -66,9 +76,9 @@
 - Need to add error boundaries for plugin failures
 
 ## Next Milestone
-Complete the development of additional example plugins and implement plugin validation and error handling.
+Complete the development of additional example plugins, implement plugin validation and error handling, and publish to npm.
 
 ## Timeline
-- **Phase 1**: Core implementation (90% complete)
-- **Phase 2**: Plugin system base implementation (60% complete)
+- **Phase 1**: Core implementation (95% complete)
+- **Phase 2**: Plugin system base implementation (70% complete)
 - **Phase 3**: Not started 

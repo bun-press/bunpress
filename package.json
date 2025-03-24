@@ -1,12 +1,59 @@
 {
   "name": "bunpress",
-  "module": "index.ts",
+  "version": "0.1.0",
+  "description": "A static site generator built with Bun",
+  "module": "dist/index.js",
   "type": "module",
+  "bin": {
+    "bunpress": "./bin/bunpress.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./types/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./types/core/index.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "types": "./types/plugins/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun run src/index.ts build",
+    "build": "bun build src/index.ts --outdir dist --target node && bun build:types",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outDir types",
+    "prepublishOnly": "bun run clean && bun run build",
+    "clean": "rm -rf dist types",
     "test": "bun test"
   },
+  "keywords": [
+    "bun",
+    "static-site-generator",
+    "markdown",
+    "plugins",
+    "ssg",
+    "website"
+  ],
+  "author": "BunPress Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bun-press/bunpress.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bun-press/bunpress/issues"
+  },
+  "homepage": "https://bunpress.dev",
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.0.12",
@@ -14,9 +61,7 @@
     "autoprefixer": "^10.4.21",
     "chokidar": "^4.0.3",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.0.15"
-  },
-  "peerDependencies": {
+    "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2"
   },
   "dependencies": {
@@ -34,5 +79,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.0.2"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }
