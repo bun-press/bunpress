@@ -2,7 +2,59 @@
 
 ## Current Focus
 
-We are currently working on comprehensive testing of core functionality and expanding the BunPress plugin ecosystem to provide valuable functionality for users.
+We are currently working on implementing the internationalization (i18n) plugin for BunPress to provide multilingual support for content.
+
+### Internationalization (i18n) Plugin
+
+We are developing an internationalization plugin for BunPress that will:
+
+1. Support multiple locales with configurable default language
+2. Load translations from JSON files
+3. Allow for inline translation in content using a simple syntax like `{{t:key}}`
+4. Generate locale-specific routes (e.g., /en/about, /fr/about)
+5. Provide a fallback mechanism for missing translations
+6. Support nested translation keys for better organization
+
+The i18n plugin will demonstrate:
+- Integration with the content processing pipeline
+- Route generation based on configured locales
+- Transformation of content with translations
+- Exposing utility functions for programmatic use
+- Proper testing with mock translations
+
+### Analytics Plugin
+
+We've implemented an analytics plugin for BunPress that:
+
+1. Provides support for multiple analytics services (Google Analytics, Google Tag Manager, Fathom, Plausible, Umami)
+2. Automatically injects the appropriate script tags into HTML output
+3. Respects development mode with optional inclusion
+4. Allows custom analytics code integration
+5. Includes comprehensive test coverage
+
+The analytics plugin demonstrates:
+- Using the transform hook to modify HTML content
+- Environment-aware behavior (development vs. production)
+- Supporting multiple service providers with a unified interface
+- Type-safe configuration options
+- Proper testing with mocked HTML content
+
+### Theme System
+
+We've implemented a theme system that:
+
+1. Supports custom themes with customizable layouts and styles
+2. Integrates with Shadcn UI components
+3. Allows for theme configuration via bunpress.config.ts
+4. Provides fallback to a default theme when needed
+5. Includes proper testing of theme loading and application
+
+The theme system implementation demonstrates:
+- Using a manager pattern to handle theme loading and configuration
+- Integrating with the renderer for HTML output
+- Supporting theme options for customization
+- Properly handling missing themes with graceful fallbacks
+- Using TypeScript interfaces for better type safety
 
 ### RSS Feed Plugin
 
@@ -79,17 +131,26 @@ The plugin is configurable, allowing users to specify:
 - File extensions to process
 - Whether to keep original files
 
-### Recent Changes
+## Recent Changes
 
-1. Implemented the RSS feed plugin with configurable options and proper testing
-2. Fixed testing isolation issues between router tests and other components
-3. Added type declarations for plugin test helpers to ensure type safety
-4. Updated the plugins index and configuration example with RSS feed plugin
-5. Implemented comprehensive tests for all plugins
-6. Fixed issues with content processor testing
-7. Improved plugin type definitions for better developer experience
+1. Fixed content processor test by properly implementing mocks
+2. Started implementation of the internationalization (i18n) plugin
+3. Implemented the analytics plugin with support for multiple providers
+4. Fixed TypeScript errors in the renderer and other components
+5. Fixed content processor test by properly mocking gray-matter
+6. Implemented the theme system with Shadcn UI integration
+7. Created ThemeManager class for managing themes
+8. Updated renderer to use theme styles and layout
+9. Added proper tests for theme system
+10. Implemented the RSS feed plugin with configurable options and proper testing
+11. Fixed testing isolation issues between router tests and other components
+12. Added type declarations for plugin test helpers to ensure type safety
+13. Updated the plugins index and configuration example with RSS feed plugin
+14. Implemented comprehensive tests for all plugins
+15. Fixed issues with content processor testing
+16. Improved plugin type definitions for better developer experience
 
-### Current Decisions
+## Current Decisions
 
 1. **Plugin First Approach**: We're emphasizing a plugin-based architecture to make BunPress highly extensible.
 2. **Modern Image Formats**: The image optimizer defaults to WebP for better web performance.
@@ -101,32 +162,44 @@ The plugin is configurable, allowing users to specify:
 
 ## Next Steps
 
-1. Develop more essential plugins:
-   - Search functionality
-   - Analytics integration
+1. Complete the internationalization (i18n) plugin:
+   - Create the basic plugin structure with options interface
+   - Implement translation loading from JSON files
+   - Add content transformation with translation keys
+   - Generate locale-specific routes
+   - Implement fallback mechanism for missing translations
+   - Add test coverage with mock translations
+   - Create example usage documentation
+   - Add plugin to main exports
 
-2. Improve plugin documentation:
+2. Develop more essential plugins:
+   - Advanced syntax highlighting features
+
+3. Improve plugin documentation:
    - Create a plugin development guide
    - Add more examples
    - Document best practices
 
-3. Enhance plugin system:
+4. Enhance plugin system:
    - Add plugin dependency resolution
    - Implement validation and error handling
    - Create plugin conflict detection
 
-4. User Experience:
+5. User Experience:
    - Improve CLI commands for working with plugins
    - Add plugin discovery and installation commands
    - Create interactive plugin configuration tools
 
 ## Current Status
+- Analytics plugin implemented with support for multiple service providers
+- Theme system implemented with Shadcn UI integration
 - Plugin system core implementation completed
 - Markdown-it plugin example created and tested
 - Prism.js syntax highlighting plugin implemented
 - Image optimization plugin implemented and tested
 - SEO optimization plugin implemented and tested
 - RSS feed plugin implemented and tested
+- Search index plugin implemented and tested
 - Content processor integrated with plugin system
 - Build system integrated with plugin lifecycle hooks
 - All core components have comprehensive test coverage

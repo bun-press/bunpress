@@ -9,6 +9,10 @@ import { ContentProcessor } from './content-processor';
 import { PluginManager } from './plugin';
 
 export function startDevServer(config: BunPressConfig, pluginManager?: PluginManager) {
+  // Get workspace root
+  const workspaceRoot = process.cwd();
+  console.log(`Workspace root: ${workspaceRoot}`);
+  
   // Generate initial routes
   let routes = generateRoutes(config.pagesDir);
   
@@ -116,7 +120,7 @@ export function startDevServer(config: BunPressConfig, pluginManager?: PluginMan
       
       // Check if route exists
       if (routes[route]) {
-        const html = renderHtml(routes[route]!, config);
+        const html = renderHtml(routes[route]!, config, workspaceRoot);
         return new Response(html, {
           headers: {
             'Content-Type': 'text/html',

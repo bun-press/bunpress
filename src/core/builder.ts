@@ -8,6 +8,10 @@ import { PluginManager } from './plugin';
 export async function buildSite(config: BunPressConfig, pluginManager?: PluginManager) {
   console.log('Building site...');
   
+  // Get workspace root
+  const workspaceRoot = process.cwd();
+  console.log(`Workspace root: ${workspaceRoot}`);
+  
   // Execute plugin buildStart hooks
   if (pluginManager) {
     await pluginManager.executeBuildStart();
@@ -26,7 +30,7 @@ export async function buildSite(config: BunPressConfig, pluginManager?: PluginMa
   
   // Process each route and write to output
   for (const [route, contentFile] of Object.entries(routes)) {
-    const html = renderHtml(contentFile, config);
+    const html = renderHtml(contentFile, config, workspaceRoot);
     
     // Determine output path
     let outputPath: string;
