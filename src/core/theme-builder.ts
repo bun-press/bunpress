@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import glob from 'fast-glob';
+import { Glob } from "bun";
 import type { BunPressConfig } from '../../bunpress.config';
 
 /**
@@ -42,7 +42,13 @@ export async function loadTheme(config: BunPressConfig): Promise<Theme> {
   const layouts: Record<string, string> = {};
   
   if (fs.existsSync(layoutsDir)) {
-    const layoutFiles = await glob('**/*.html', { cwd: layoutsDir });
+    const layoutFiles = [];
+    const layoutsPattern = path.join(layoutsDir, '**/*.html');
+    for await (const file of new Glob(layoutsPattern).scan()) {
+      // Get the relative path from the layouts directory
+      const relativePath = path.relative(layoutsDir, file);
+      layoutFiles.push(relativePath);
+    }
     
     for (const layoutFile of layoutFiles) {
       const layoutName = path.basename(layoutFile, '.html');
@@ -59,21 +65,30 @@ export async function loadTheme(config: BunPressConfig): Promise<Theme> {
   
   // Find all style files
   const stylesGlob = path.join(themeDir, '**/*.{css,scss,sass,less}');
-  let styles = await glob(stylesGlob);
+  let styles = [];
+  for await (const file of new Glob(stylesGlob).scan()) {
+    styles.push(file);
+  }
   
   // Normalize paths for test comparison
   styles = styles.map(style => style.replace(/\\/g, '/'));
   
   // Find all script files
   const scriptsGlob = path.join(themeDir, '**/*.{js,ts,jsx,tsx}');
-  let scripts = await glob(scriptsGlob);
+  let scripts = [];
+  for await (const file of new Glob(scriptsGlob).scan()) {
+    scripts.push(file);
+  }
   
   // Normalize paths for test comparison
   scripts = scripts.map(script => script.replace(/\\/g, '/'));
   
   // Find all other asset files
   const assetsGlob = path.join(themeDir, '**/*.{png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,eot}');
-  let assets = await glob(assetsGlob);
+  let assets = [];
+  for await (const file of new Glob(assetsGlob).scan()) {
+    assets.push(file);
+  }
   
   // Normalize paths for test comparison
   assets = assets.map(asset => asset.replace(/\\/g, '/'));

@@ -29,6 +29,8 @@ export type {
   ImageOptimizerOptions 
 } from './image-optimizer'; 
 
+export type { MarkdownItOptions } from './markdown-it';
+
 export type {
   RssFeedOptions
 } from './rss-feed';

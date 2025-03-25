@@ -31,6 +31,7 @@ export interface BunPressConfig {
   description: string;
   siteUrl: string;
   pagesDir: string;
+  contentDir?: string;
   outputDir: string;
   themeConfig: ThemeConfig;
   plugins: Array<{
@@ -125,6 +126,7 @@ const defaultConfig: BunPressConfig = {
   description: 'A site built with BunPress',
   siteUrl: 'https://example.com',
   pagesDir: './pages',
+  contentDir: './content',
   outputDir: './dist',
   themeConfig: {
     name: 'docs',

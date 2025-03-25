@@ -1,198 +1,193 @@
 # Technical Context
 
-## Technologies Used
+## Core Technologies
 
-### Core Technologies
+### Primary Technologies
+- **Bun**: JavaScript runtime and toolkit (v1.0+)
+  - Used for: Runtime execution, package management, bundling, HTTP server
+  - Key features leveraged: Bun.serve, Bun.build, FileSystemRouter
 
-1. **Bun**: Core runtime and package manager, providing a fast JavaScript runtime with built-in testing capabilities.
-2. **TypeScript**: Used for type-safe development.
-3. **Markdown-it**: For Markdown processing.
-4. **Esbuild**: For JavaScript/TypeScript bundling.
-5. **fs-extra**: For enhanced file system operations.
-6. **path**: For path manipulation.
-7. **globby**: For file matching using glob patterns.
-8. **commander**: For CLI command parsing.
-9. **chokidar**: For file watching in development mode.
-10. **gray-matter**: For frontmatter parsing.
-11. **cosmiconfig**: For configuration loading.
-12. **chalk**: For terminal coloring.
+- **TypeScript**: Programming language (v5.0+)
+  - Used for: Type-safe code development
+  - Key features: Strong typing, interfaces, type inference
 
-### Testing Libraries
+- **React**: UI library (v18+)
+  - Used for: Component rendering, client and server components
+  - Key features: Server components, React hooks, context API
 
-1. **Bun Test**: Used for unit and integration testing.
-2. **Jest compatible mocking**: For mocking dependencies in tests.
+- **Markdown-it**: Markdown processor
+  - Used for: Content transformation
+  - Key features: Plugin system, HTML rendering, syntax extensions
 
-### Plugin-Specific Technologies
+### Supporting Libraries
 
-1. **Prism.js**: For syntax highlighting in code blocks.
-2. **Sharp**: For image processing and optimization.
-3. **HTML/XML Manipulation**: For SEO meta tag insertion and RSS feed generation.
+- **Radix UI**: Component primitives
+  - Used for: Accessible UI components 
+  - Key components: Dialog, Navigation, Dropdown, Accordion
 
-## Development Setup
+- **Tailwind CSS**: Utility-first CSS framework
+  - Used for: Styling components
+  - Integration: PostCSS plugin
 
-The project is designed to be developed with Bun, leveraging its fast runtime and testing capabilities. The development setup includes:
+- **Shadcn/ui**: Component library
+  - Used for: Pre-styled UI components
+  - Based on: Tailwind CSS and Radix UI
 
-1. Bun as the package manager and runtime
-2. TypeScript for type-safe development
-3. ESLint for code linting
-4. Git for version control
+- **Prism.js**: Syntax highlighting (placeholder implementation)
+  - Used for: Code block highlighting
+  - Integration: Via plugin system
 
-## Technical Constraints
+## Development Environment
 
-1. **Bun Compatibility**: All code must be compatible with Bun's runtime.
-2. **Node.js APIs**: The code uses Node.js APIs that are supported by Bun.
-3. **Pure ESM**: The project uses pure ES modules (no CommonJS).
-4. **TypeScript**: All code is written in TypeScript for type safety.
-5. **Plugin Architecture**: Features should be implemented as plugins when possible.
+### Required Tools
+- **Bun**: v1.0.0 or higher
+- **Node.js**: v16.0.0 or higher (for compatibility)
+- **Git**: For version control
 
-## Bun Native Features Status
-
-### Currently Used Bun Features
-1. **Runtime Execution**: Using Bun as the runtime for execution
-2. **Package Management**: Using Bun as the package manager
-3. **Basic Bundling**: Simple bundling with `bun build` command
-4. **HTTP Server**: Using `Bun.serve` for development server
-5. **File Operations**: Using Bun's file system APIs
-6. **Testing**: Using Bun's built-in test runner with `bun:test`
-7. **Shebang Support**: Using `#!/usr/bin/env bun` for CLI tools
-8. **Import Detection**: Using `import.meta.url === Bun.main` for entry point detection
-9. **File Access**: Using `Bun.file()` for file access in the server
-
-### Bun Features To Be Implemented
-1. **HTML-First Bundling**: Bun's HTML entrypoint bundling for better performance
-   - HTMLRewriter for scanning HTML files
-   - Auto-detection of script and link tags
-   - CSS bundling from HTML files
-
-2. **Enhanced CSS Processing**:
-   - Native CSS parser and bundler
-   - CSS imports bundling
-   - CSS modules support
-
-3. **Advanced HMR**:
-   - `import.meta.hot` API implementation
-   - Proper module boundary detection
-   - State preservation between updates
-
-4. **Asset Optimization**:
-   - Content hashing
-   - Asset copying and optimization
-   - Path rewriting in HTML, CSS, and JS
-
-5. **Fullstack Capabilities**:
-   - HTML imports as routes
-   - Integrated API endpoints
-   - Server component support
-
-6. **Build Optimization**:
-   - Code splitting with `splitting: true`
-   - Tree shaking and dead code elimination
-   - Minification options
-
-7. **Plugin Integration**:
-   - Bundler plugins through bunfig.toml
-   - Tailwind CSS plugin support
-   - Custom transformer plugins
-
-8. **Watch Mode**: 
-   - Enhanced watch mode using Bun's native capabilities
-   - Better file watching with AbortController support
-
-## Dependencies
-
-### Core Dependencies
-
-- `bun`: Core runtime and test runner
-- `typescript`: For type checking and compilation
-- `markdown-it`: For Markdown processing
-- `gray-matter`: For frontmatter parsing
-- `fs-extra`: Enhanced file system operations
-- `globby`: For file matching using glob patterns
-- `commander`: For CLI command parsing
-- `chokidar`: For file watching
-
-### Plugin Dependencies
-
-- `prismjs`: For syntax highlighting (Prism.js plugin)
-- `sharp`: For image processing (Image Optimizer plugin)
-
-## Technical Patterns
-
-### File-Based Routing
-
-BunPress uses a file-based routing system, where the structure of the content directory determines the routes of the site. This approach is similar to frameworks like Next.js and Nuxt.js.
-
-### Plugin System
-
-The plugin system is based on a set of lifecycle hooks that allow plugins to interact with the build process at various stages:
-
-1. `configureServer`: For development server configuration
-2. `buildStart`: For initialization at the beginning of a build
-3. `transform`: For content transformation
-4. `buildEnd`: For finalization at the end of a build
-
-### Content Processing Pipeline
-
-The content processing pipeline transforms raw Markdown files into processed content objects:
-
-1. Read file content
-2. Parse frontmatter
-3. Render Markdown to HTML
-4. Apply plugin transformations
-5. Generate final content object
-
-### Test Patterns
-
-1. **Mock File System**: Using Jest-compatible mock implementations for file system operations
-2. **Isolated Tests**: Ensuring tests are independent and don't affect each other
-3. **Plugin Testing**: Using dedicated test helpers exposed through a `__test__` property
-4. **Mock Content Processor**: Creating mock implementations of the content processor for testing
-
-### RSS Feed Generation
-
-The RSS feed plugin uses several technical patterns:
-
-1. **XML Generation**: Creating valid XML for RSS feeds
-2. **Content Collection**: Gathering content files during the build process
-3. **XML Escaping**: Properly escaping special characters in XML
-4. **Content Excerpts**: Generating excerpts from full content
-5. **Test Helper Pattern**: Exposing internal methods for testing through `__test__` property
+### Recommended VSCode Extensions
+- TypeScript language features
+- Tailwind CSS IntelliSense
+- ESLint
+- Prettier
 
 ## Project Structure
 
 ```
 bunpress/
-  ├── src/               # Source code
-  │   ├── cli/           # CLI commands
-  │   ├── core/          # Core functionality
-  │   │   ├── builder.ts # Build process
-  │   │   ├── config.ts  # Configuration management
-  │   │   ├── content-processor.ts # Content processing
-  │   │   ├── plugins.ts # Plugin system
-  │   │   └── router.ts  # Routing system
-  │   ├── plugins/       # Built-in plugins
-  │   │   ├── image-optimizer/ # Image optimization plugin
-  │   │   ├── markdown-it/     # Markdown-it configuration
-  │   │   ├── prism/           # Syntax highlighting
-  │   │   ├── seo/             # SEO optimization
-  │   │   ├── rss-feed/        # RSS feed generation
-  │   │   └── index.ts         # Plugin exports
-  │   └── utils/         # Utility functions
-  ├── tests/             # Test files
-  ├── types/             # TypeScript type definitions
-  └── package.json       # Package configuration
+├── src/                    # Source code
+│   ├── core/              # Core functionality
+│   ├── plugins/           # Built-in plugins
+│   ├── cli/               # CLI commands
+│   ├── templates/         # Default templates
+│   └── utils/             # Utility functions
+├── dist/                  # Compiled code
+├── types/                 # TypeScript declarations
+├── themes/                # Theme components
+│   └── default/           # Default theme
+└── memory-bank/           # Project documentation
 ```
 
-## Build Process
+## Technical Constraints
 
-The build process follows these steps:
+### Browser Support
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+- IE not supported
 
-1. Parse configuration
-2. Initialize plugins (buildStart)
-3. Scan content directory
-4. Process content files
-5. Apply plugin transformations
-6. Generate routes
-7. Build output files
-8. Run plugin buildEnd hooks
-9. Write files to disk
+### Node.js Requirements
+- ESM modules only
+- No CommonJS support
+
+### Platform Compatibility
+- Primary: Unix/Linux and macOS
+- Secondary: Windows (with some path resolution issues)
+
+## Technical Decisions
+
+### Fullstack Architecture
+BunPress leverages Bun's built-in server capabilities to provide a unified approach for static and dynamic content:
+
+1. **Static Generation**:
+   - Pre-rendered HTML for optimal performance
+   - Asset optimization and bundling
+   - Path-based routing
+
+2. **Server Capabilities**:
+   - API routes with file-based structure
+   - HTML imports for component reuse
+   - Middleware support for request transformation
+
+### Plugin System
+The plugin system is designed to be extensible and composable:
+
+1. **Plugin Interface**:
+   ```typescript
+   interface BunPressPlugin {
+     name: string;
+     onInit?: (config: BunPressConfig) => void | Promise<void>;
+     onContent?: (content: ContentObject) => ContentObject | Promise<ContentObject>;
+     onBuild?: (buildContext: BuildContext) => void | Promise<void>;
+     onServer?: (server: Server) => void | Promise<void>;
+   }
+   ```
+
+2. **Plugin Registration**:
+   ```typescript
+   // In bunpress.config.ts
+   export default {
+     plugins: [
+       imageOptimizerPlugin(),
+       seoPlugin(),
+       rssPlugin()
+     ]
+   };
+   ```
+
+### Content Processing
+Content is processed through a transformation pipeline:
+
+1. **Source**: Read Markdown files
+2. **Parse**: Extract frontmatter and content
+3. **Transform**: Apply Markdown and plugin transformations
+4. **Render**: Generate HTML with React components
+5. **Output**: Write to static files or serve dynamically
+
+### Build System
+The build process optimizes assets for production:
+
+1. **Content Processing**: Transform all content
+2. **Asset Bundling**: Bundle JS, CSS, and other assets
+3. **HTML Generation**: Create static HTML files
+4. **Output**: Generate a deployable site
+
+## Development Workflow
+
+### Local Development
+```bash
+# Install dependencies
+bun install
+
+# Start development server
+bun run dev
+
+# Build for production
+bun run build
+
+# Create a new project
+bun run bunpress init my-project
+```
+
+### Production Deployment
+BunPress sites can be deployed to any static hosting service or Node.js/Bun capable environment:
+
+1. **Static Hosting**: Deploy the `dist` directory to services like Vercel, Netlify, or GitHub Pages
+2. **Dynamic Hosting**: Deploy with Bun runtime support for fullstack features
+
+## Testing Approach
+
+1. **Unit Tests**: Core functions and utilities
+2. **Integration Tests**: Plugin system and content processing
+3. **End-to-End Tests**: Build process and server functionality
+
+Tests are implemented using Bun's built-in test runner:
+```bash
+bun test
+```
+
+## Performance Considerations
+
+1. **Development Mode**:
+   - Hot Module Replacement (HMR)
+   - On-demand content processing
+   - In-memory caching
+
+2. **Production Mode**:
+   - Static HTML generation
+   - Asset optimization
+   - Client-side hydration
+
+## Security Considerations
+
+1. **Input Validation**: Validate all user input in API routes
+2. **HTML Sanitization**: Clean HTML output from Markdown
+3. **Path Traversal Protection**: Prevent directory traversal
+4. **Plugin Isolation**: Prevent plugins from affecting each other

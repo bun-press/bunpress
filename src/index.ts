@@ -39,6 +39,8 @@ import fs from 'fs';
 import chalk from 'chalk';
 import { Listr } from 'listr2';
 import { processHTMLEntrypoints } from './core/bundler';
+import { Glob } from "bun";
+import { ContentProcessor, ContentFile } from './core/content-processor';
 
 // Version is read from package.json
 const version = (() => {
@@ -440,28 +442,111 @@ async function main() {
             {
               title: 'Processing content files',
               task: async (task) => {
-                // This is a placeholder for the actual content processing tracking
-                // In a real implementation, we would track the number of files processed
+                // Implement actual content processing instead of simulation
                 task.output = 'Scanning content directories...';
-                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
-                task.output = 'Processing markdown files...';
-                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
-                task.output = 'Applying plugin transformations...';
-                await new Promise(resolve => setTimeout(resolve, 300)); // Simulate work
+                
+                // Get content directory from config
+                const contentDir = path.resolve(process.cwd(), config.contentDir || 'content');
+                const outputDir = path.resolve(process.cwd(), config.outputDir || 'dist');
+                
+                // Ensure output directory exists
+                fs.mkdirSync(outputDir, { recursive: true });
+                
+                // Find all markdown files
+                const contentPattern = path.join(contentDir, '**/*.{md,mdx}');
+                task.output = `Finding markdown files in ${contentDir}...`;
+                const contentFiles = [];
+                for await (const file of new Glob(contentPattern).scan()) {
+                  contentFiles.push(file);
+                }
+                
+                if (contentFiles.length === 0) {
+                  task.output = 'No content files found.';
+                  return;
+                }
+                
+                task.output = `Found ${contentFiles.length} content files. Processing...`;
+                
+                // Create content processor
+                const contentProcessor = new ContentProcessor({
+                  plugins: pluginManager
+                });
+                
+                // Process each file
+                const processedFiles: ContentFile[] = [];
+                let processed = 0;
+                
+                for (const filePath of contentFiles) {
+                  try {
+                    const contentFile = await contentProcessor.processMarkdownContent(filePath, contentDir);
+                    processedFiles.push(contentFile);
+                    processed++;
+                    
+                    // Update progress
+                    if (processed % 10 === 0 || processed === contentFiles.length) {
+                      task.output = `Processed ${processed}/${contentFiles.length} files...`;
+                    }
+                  } catch (error: any) {
+                    console.error(`Error processing file ${filePath}: ${error.message}`);
+                  }
+                }
+                
+                task.output = `Processed ${processed} content files. Applying transformations...`;
+                
+                // Generate routes from content files
+                const routes = processedFiles.map(file => ({
+                  path: file.route,
+                  component: file.html,
+                  meta: file.frontmatter
+                }));
+                
+                // Store routes for use in generating output
+                ctx.routes = routes;
+                ctx.processedFiles = processedFiles;
                 
                 return task.newListr([
                   {
                     title: 'Generating routes',
                     task: async () => {
-                      // Simulate route generation work
-                      await new Promise(resolve => setTimeout(resolve, 200));
+                      // Generate routes file
+                      const routesData = routes.map(route => ({
+                        path: route.path,
+                        meta: route.meta
+                      }));
+                      
+                      // Write routes data for client-side navigation
+                      const routesFilePath = path.join(outputDir, 'routes.json');
+                      fs.writeFileSync(routesFilePath, JSON.stringify(routesData, null, 2));
                     }
                   },
                   {
                     title: 'Optimizing assets',
                     task: async () => {
-                      // Simulate asset optimization work
-                      await new Promise(resolve => setTimeout(resolve, 300));
+                      // Process and copy assets from content directory to output
+                      const assetPattern = path.join(contentDir, '**/*.{png,jpg,jpeg,gif,svg,webp,pdf,zip}');
+                      const assetFiles = [];
+                      for await (const file of new Glob(assetPattern).scan()) {
+                        assetFiles.push(file);
+                      }
+                      
+                      if (assetFiles.length > 0) {
+                        // Create assets directory
+                        const assetsDir = path.join(outputDir, 'assets');
+                        fs.mkdirSync(assetsDir, { recursive: true });
+                        
+                        // Copy each asset
+                        for (const assetPath of assetFiles) {
+                          const relativePath = path.relative(contentDir, assetPath);
+                          const outputPath = path.join(assetsDir, relativePath);
+                          
+                          // Create directory if it doesn't exist
+                          const outputDir = path.dirname(outputPath);
+                          fs.mkdirSync(outputDir, { recursive: true });
+                          
+                          // Copy the file
+                          fs.copyFileSync(assetPath, outputPath);
+                        }
+                      }
                     }
                   }
                 ], { concurrent: false });

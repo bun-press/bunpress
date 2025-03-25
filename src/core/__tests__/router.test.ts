@@ -1,268 +1,146 @@
-import { describe, expect, test, spyOn, mock } from 'bun:test';
+import { describe, expect, test, beforeAll } from 'bun:test';
 import { generateRoutes, generateRoutesAsync } from '../router';
 import * as fs from 'fs';
-import { PathLike } from 'fs';
-import * as contentProcessor from '../content-processor';
+import path from 'path';
+import { Plugin } from '../plugin';
 
-// Create mock data
-/* Commented out as these are not directly used but are helpful for reference
-const mockFiles = {
-  '/mock/pages': ['index.md', 'about.md', 'blog'],
-  '/mock/pages/blog': ['index.md', 'post1.md', 'post2.md'],
-  '/mock/empty': []
-};
-
-const mockStats = {
-  '/mock/pages/index.md': { isDirectory: () => false, isFile: () => true },
-  '/mock/pages/about.md': { isDirectory: () => false, isFile: () => true },
-  '/mock/pages/blog': { isDirectory: () => true, isFile: () => false },
-  '/mock/pages/blog/index.md': { isDirectory: () => false, isFile: () => true },
-  '/mock/pages/blog/post1.md': { isDirectory: () => false, isFile: () => true },
-  '/mock/pages/blog/post2.md': { isDirectory: () => false, isFile: () => true },
-  '/mock/pages/component.mdx': { isDirectory: () => false, isFile: () => true }
-};
-*/
-
-// Mock content files corresponding to each file
-const mockContentFiles: Record<string, any> = {
-  '/mock/pages/index.md': {
-    route: '/',
-    frontmatter: { title: 'Mock title for /' },
-    content: '# Mock content for /',
-    html: '<h1>Mock content for /</h1>'
-  },
-  '/mock/pages/about.md': {
-    route: '/about',
-    frontmatter: { title: 'Mock title for /about' },
-    content: '# Mock content for /about',
-    html: '<h1>Mock content for /about</h1>'
-  },
-  '/mock/pages/blog/index.md': {
-    route: '/blog/',
-    frontmatter: { title: 'Mock title for /blog/' },
-    content: '# Mock content for /blog/',
-    html: '<h1>Mock content for /blog/</h1>'
-  },
-  '/mock/pages/blog/post1.md': {
-    route: '/blog/post1',
-    frontmatter: { title: 'Mock title for /blog/post1' },
-    content: '# Mock content for /blog/post1',
-    html: '<h1>Mock content for /blog/post1</h1>'
-  },
-  '/mock/pages/blog/post2.md': {
-    route: '/blog/post2',
-    frontmatter: { title: 'Mock title for /blog/post2' },
-    content: '# Mock content for /blog/post2',
-    html: '<h1>Mock content for /blog/post2</h1>'
-  },
-  '/mock/pages/component.mdx': {
-    route: '/component',
-    frontmatter: { title: 'Mock title for /component' },
-    content: '# Mock content for /component',
-    html: '<h1>Mock content for /component</h1>'
-  }
-};
+// Use a real test directory with actual files
+const TEST_PAGES_DIR = path.join(process.cwd(), 'test-input', 'pages');
 
 describe('Router', () => {
+  // Ensure test files exist before running tests
+  beforeAll(() => {
+    // Verify test files exist to ensure tests will work properly
+    const files = [
+      path.join(TEST_PAGES_DIR, 'index.md'),
+      path.join(TEST_PAGES_DIR, 'about.md'),
+      path.join(TEST_PAGES_DIR, 'blog', 'index.md'),
+      path.join(TEST_PAGES_DIR, 'blog', 'post1.md'),
+      path.join(TEST_PAGES_DIR, 'blog', 'post2.md')
+    ];
+    
+    for (const file of files) {
+      if (!fs.existsSync(file)) {
+        throw new Error(`Test file ${file} does not exist. Please ensure test files are set up correctly.`);
+      }
+    }
+  });
+  
   test('generates routes for simple directory structure', () => {
-    // Setup mocks for this test
-    const mockReaddirSync = spyOn(fs, 'readdirSync');
-    const mockStatSync = spyOn(fs, 'statSync');
-    const mockProcessMarkdownContent = spyOn(contentProcessor, 'processMarkdownContent');
-    
-    // Configure mock behavior for readdir
-    mockReaddirSync.mockImplementation(((dir: PathLike) => {
-      const dirPath = dir.toString();
-      if (dirPath === '/mock/pages') {
-        return ['index.md', 'about.md', 'blog'];
-      } else if (dirPath === '/mock/pages/blog') {
-        return ['index.md', 'post1.md', 'post2.md'];
-      }
-      return [];
-    }) as any);
-    
-    // Configure mock behavior for stat
-    mockStatSync.mockImplementation(((filePath: PathLike) => {
-      const filePathStr = filePath.toString();
-      if (filePathStr.endsWith('blog')) {
-        return { isDirectory: () => true, isFile: () => false } as fs.Stats;
-      }
-      return { isDirectory: () => false, isFile: () => true } as fs.Stats;
-    }) as any);
-    
-    // Configure mock behavior for processMarkdownContent
-    mockProcessMarkdownContent.mockImplementation((filePath: string, _rootDir?: string) => {
-      return mockContentFiles[filePath.toString()];
-    });
-    
-    // Mock the content processor module
-    mock.module('../content-processor', () => {
-      const mockProcessor = {
-        async processMarkdownContent(filePath: string, _rootDir?: string) {
-          return mockContentFiles[filePath.toString()];
-        }
-      };
-      
-      return {
-        ...contentProcessor,
-        ContentProcessor: class MockContentProcessor {
-          constructor() { return mockProcessor; }
-        }
-      };
-    });
-    
-    const routes = generateRoutes('/mock/pages');
+    // Use real file system for testing
+    const routes = generateRoutes(TEST_PAGES_DIR);
     
     expect(Object.keys(routes).length).toBe(5);
     expect(routes['/']).toBeDefined();
     expect(routes['/about']).toBeDefined();
-    expect(routes['/blog/']).toBeDefined();
+    expect(routes['/blog']).toBeDefined();
     expect(routes['/blog/post1']).toBeDefined();
     expect(routes['/blog/post2']).toBeDefined();
     
-    // Check route content
-    expect(routes['/'].frontmatter.title).toBe('Mock title for /');
-    expect(routes['/blog/post1'].frontmatter.title).toBe('Mock title for /blog/post1');
-    
-    // Reset mocks
-    mockReaddirSync.mockRestore();
-    mockStatSync.mockRestore();
-    mockProcessMarkdownContent.mockRestore();
-    mock.restore();
+    // Check route content matches the actual files
+    expect(routes['/'].frontmatter.title).toBe('Home Page');
+    expect(routes['/about'].frontmatter.title).toBe('About Page');
+    expect(routes['/blog'].frontmatter.title).toBe('Blog Index');
+    expect(routes['/blog/post1'].frontmatter.title).toBe('First Post');
+    expect(routes['/blog/post2'].frontmatter.title).toBe('Second Post');
   });
   
   test('handles empty directory', () => {
-    // Setup mocks for this test
-    const mockReaddirSync = spyOn(fs, 'readdirSync');
-    const mockStatSync = spyOn(fs, 'statSync');
+    // Create a temporary empty directory
+    const emptyDir = path.join(process.cwd(), 'test-input', 'empty');
     
-    // Return empty array for any directory
-    mockReaddirSync.mockImplementation((() => {
-      return [];
-    }) as any);
-    
-    const routes = generateRoutes('/mock/empty');
-    expect(Object.keys(routes).length).toBe(0);
-    
-    // Reset mocks
-    mockReaddirSync.mockRestore();
-    mockStatSync.mockRestore();
-  });
-  
-  test('handles directories without markdown files', () => {
-    // Setup mocks for this test
-    const mockReaddirSync = spyOn(fs, 'readdirSync');
-    const mockStatSync = spyOn(fs, 'statSync');
-    
-    // Configure mock behavior for this test
-    mockReaddirSync.mockImplementation(((dir: PathLike) => {
-      const dirPath = dir.toString();
-      if (dirPath === '/mock/pages') {
-        return ['assets', 'images'];
+    // Ensure the directory exists and is empty
+    if (!fs.existsSync(emptyDir)) {
+      fs.mkdirSync(emptyDir, { recursive: true });
+    } else {
+      // Clear any existing files
+      const files = fs.readdirSync(emptyDir);
+      for (const file of files) {
+        const filePath = path.join(emptyDir, file);
+        if (fs.statSync(filePath).isFile()) {
+          fs.unlinkSync(filePath);
+        } else {
+          fs.rmSync(filePath, { recursive: true, force: true });
+        }
       }
-      return [];
-    }) as any);
+    }
     
-    mockStatSync.mockImplementation((() => {
-      return { isDirectory: () => true, isFile: () => false } as fs.Stats;
-    }) as any);
-    
-    const routes = generateRoutes('/mock/pages');
+    const routes = generateRoutes(emptyDir);
     expect(Object.keys(routes).length).toBe(0);
-    
-    // Reset mocks
-    mockReaddirSync.mockRestore();
-    mockStatSync.mockRestore();
   });
   
   test('generates routes asynchronously', async () => {
-    // Setup mocks for this test
-    const mockReaddirSync = spyOn(fs, 'readdirSync');
-    const mockStatSync = spyOn(fs, 'statSync');
-    
-    // Configure mock behavior for readdir
-    mockReaddirSync.mockImplementation(((dir: PathLike) => {
-      const dirPath = dir.toString();
-      if (dirPath === '/mock/pages') {
-        return ['index.md', 'about.md', 'blog'];
-      } else if (dirPath === '/mock/pages/blog') {
-        return ['index.md', 'post1.md', 'post2.md'];
-      }
-      return [];
-    }) as any);
-    
-    // Configure mock behavior for stat
-    mockStatSync.mockImplementation(((filePath: PathLike) => {
-      const filePathStr = filePath.toString();
-      if (filePathStr.endsWith('blog')) {
-        return { isDirectory: () => true, isFile: () => false } as fs.Stats;
-      }
-      return { isDirectory: () => false, isFile: () => true } as fs.Stats;
-    }) as any);
-    
-    // Mock the content processor module
-    mock.module('../content-processor', () => {
-      const mockProcessor = {
-        async processMarkdownContent(filePath: string, _rootDir?: string) {
-          return mockContentFiles[filePath.toString()];
-        }
-      };
-      
-      return {
-        ...contentProcessor,
-        ContentProcessor: class MockContentProcessor {
-          constructor() { return mockProcessor; }
-        }
-      };
-    });
-    
-    const routes = await generateRoutesAsync('/mock/pages');
+    // Use real file system for testing
+    const routes = await generateRoutesAsync(TEST_PAGES_DIR);
     
     expect(Object.keys(routes).length).toBe(5);
     expect(routes['/']).toBeDefined();
     expect(routes['/about']).toBeDefined();
-    expect(routes['/blog/']).toBeDefined();
+    expect(routes['/blog']).toBeDefined();
     expect(routes['/blog/post1']).toBeDefined();
     expect(routes['/blog/post2']).toBeDefined();
     
-    // Reset mocks
-    mockReaddirSync.mockRestore();
-    mockStatSync.mockRestore();
-    mock.restore();
+    // Verify content matches actual files
+    expect(routes['/'].frontmatter.title).toBe('Home Page');
+    expect(routes['/blog/post1'].frontmatter.title).toBe('First Post');
+  });
+  
+  test('generateRoutesAsync works with plugins', async () => {
+    // Define a simple test plugin
+    class TestPlugin implements Plugin {
+      name = 'test-plugin';
+      
+      async transform(content: string): Promise<string> {
+        // Simple transformation: add a test marker to the content
+        return content + '\n\n<!-- Processed by TestPlugin -->';
+      }
+    }
+    
+    const routes = await generateRoutesAsync(TEST_PAGES_DIR, [new TestPlugin()]);
+    
+    // Check that plugin transform was applied
+    expect(routes['/']).toBeDefined();
+    expect(routes['/'].content).toContain('<!-- Processed by TestPlugin -->');
+    
+    // Verify other routes were also processed
+    expect(Object.keys(routes).length).toBe(5);
+    expect(routes['/about'].content).toContain('<!-- Processed by TestPlugin -->');
   });
   
   test('handles MDX files', () => {
-    // Setup mocks for this test
-    const mockReaddirSync = spyOn(fs, 'readdirSync');
-    const mockStatSync = spyOn(fs, 'statSync');
-    const mockProcessMarkdownContent = spyOn(contentProcessor, 'processMarkdownContent');
+    // Create a temporary test MDX file
+    const mdxDir = path.join(process.cwd(), 'test-input', 'mdx');
+    const mdxFilePath = path.join(mdxDir, 'component.mdx');
     
-    // Configure mock behavior for this test
-    mockReaddirSync.mockImplementation(((dir: PathLike) => {
-      const dirPath = dir.toString();
-      if (dirPath === '/mock/pages') {
-        return ['index.md', 'component.mdx'];
-      }
-      return [];
-    }) as any);
+    // Ensure directory exists
+    if (!fs.existsSync(mdxDir)) {
+      fs.mkdirSync(mdxDir, { recursive: true });
+    }
     
-    mockStatSync.mockImplementation((() => {
-      return { isDirectory: () => false, isFile: () => true } as fs.Stats;
-    }) as any);
+    // Create an MDX test file
+    const mdxContent = `---
+title: MDX Component
+---
+
+# MDX Component
+
+This is a test MDX component with JSX.
+
+<div className="test-component">
+  <p>This is a JSX component</p>
+</div>`;
     
-    mockProcessMarkdownContent.mockImplementation((filePath: string, _rootDir?: string) => {
-      return mockContentFiles[filePath.toString()];
-    });
+    fs.writeFileSync(mdxFilePath, mdxContent);
     
-    const routes = generateRoutes('/mock/pages');
+    // Test MDX file processing
+    const routes = generateRoutes(mdxDir);
     
-    expect(Object.keys(routes).length).toBe(2);
-    expect(routes['/']).toBeDefined();
+    expect(Object.keys(routes).length).toBe(1);
     expect(routes['/component']).toBeDefined();
+    expect(routes['/component'].frontmatter.title).toBe('MDX Component');
     
-    // Reset mocks
-    mockReaddirSync.mockRestore();
-    mockStatSync.mockRestore();
-    mockProcessMarkdownContent.mockRestore();
+    // Clean up
+    fs.unlinkSync(mdxFilePath);
+    fs.rmdirSync(mdxDir);
   });
 }); 

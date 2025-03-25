@@ -35,18 +35,26 @@ export async function loadConfig(options: ConfigLoaderOptions = {}): Promise<{
       let plugin: Plugin;
       
       if (pluginConfig.name.startsWith('@bunpress/')) {
-        // Built-in plugin
+        // Built-in plugin with @bunpress/ prefix
         const pluginName = pluginConfig.name.replace('@bunpress/', '');
         const pluginModule = await import(`../plugins/${pluginName}`);
         
         // Initialize the plugin with options
         plugin = pluginModule.default(pluginConfig.options || {});
-      } else {
-        // External plugin - try to load from node_modules
-        const pluginModule = await import(pluginConfig.name);
-        
-        // Initialize the plugin with options
+      } else if (pluginConfig.name === 'prism') {
+        // Special case for prism plugin which exports as prismPlugin
+        const pluginModule = await import('../plugins/prism');
         plugin = pluginModule.default(pluginConfig.options || {});
+      } else {
+        try {
+          // Try to load as a built-in plugin first
+          const pluginModule = await import(`../plugins/${pluginConfig.name}`);
+          plugin = pluginModule.default(pluginConfig.options || {});
+        } catch (error) {
+          // If that fails, try to load as an external plugin from node_modules
+          const pluginModule = await import(pluginConfig.name);
+          plugin = pluginModule.default(pluginConfig.options || {});
+        }
       }
       
       // Add the plugin to the manager

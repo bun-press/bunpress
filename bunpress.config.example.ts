@@ -20,6 +20,35 @@ const config: BunPressConfig = {
         html: true,
         linkify: true,
         typographer: true,
+        containers: {
+          tip: true,
+          info: true,
+          warning: true,
+          danger: true,
+          details: true,
+          custom: [
+            {
+              name: 'demo',
+              options: {
+                validate: (params: string) => {
+                  return params.trim().match(/^demo\s+(.*)$/);
+                }
+              }
+            }
+          ]
+        },
+        anchor: {
+          level: [1, 2, 3, 4],
+          permalink: true,
+          permalinkSymbol: '#'
+        },
+        toc: {
+          level: [2, 3], 
+          containerClass: 'table-of-contents'
+        },
+        codeHighlight: {
+          theme: 'github-dark'
+        }
       },
     },
     {

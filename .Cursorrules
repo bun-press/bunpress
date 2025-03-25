@@ -27,4 +27,60 @@
 
 - Handle path format differences explicitly when working with file paths from different sources.
 - Add dedicated error handlers for CLI operations with user-friendly error messages.
-- Use try/catch blocks around file operations with specific error messaging for common failures. 
+- Use try/catch blocks around file operations with specific error messaging for common failures.
+
+## Project Structure
+- Follow the structure defined in memory-bank/systemPatterns.md
+- Keep all React components in the themes directory
+- Keep all core functionality in src/core
+- Keep all plugins in src/plugins
+- Keep all utilities in src/lib
+- Keep all CLI functionality in src/cli
+
+## Code Organization
+- Use TypeScript for all code
+- Use ESM modules only (no CommonJS)
+- Follow a consistent pattern for exports
+- Keep tests alongside code in __tests__ directories
+- Use the .tsx extension only for React components
+
+## Folder Structure Cleanup
+1. Consolidate test directories:
+   - Keep tests alongside the code they test
+   - Use __tests__ naming convention consistently
+
+2. Remove redundant folders:
+   - Merge overlapping test directories
+   - Remove empty directories
+
+3. Reorganize example content:
+   - Move all examples to examples directory
+   - Structure examples by feature (basic, fullstack, etc.)
+
+4. Clean up development artifacts:
+   - Move test content to test-content directory
+   - Keep temporary build outputs separate from source
+
+## Naming Conventions
+- Use kebab-case for file names
+- Use PascalCase for React components
+- Use camelCase for functions and variables
+- Use UPPER_SNAKE_CASE for constants
+
+## Documentation
+- Keep memory-bank files focused and non-redundant
+- Update documentation when making significant changes
+- Document APIs with JSDoc comments
+- Include examples in documentation
+
+## Plugin Development
+- Follow the plugin interface in src/core/plugin.ts
+- Implement plugin tests in __tests__ directories
+- Export plugins through src/plugins/index.ts
+- Use consistent naming for plugin options
+
+## Build Process
+- Use Bun for all build operations
+- Leverage Bun's native features where possible
+- Keep the build process clean and reproducible
+- Document build configuration options 
