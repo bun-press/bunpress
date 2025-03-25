@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { cn } from "../../../src/lib/utils";
 
 interface TocItem {
   level: number;
@@ -115,29 +116,50 @@ export function TOC({
   }
   
   return (
-    <aside className={`doc-toc ${className}`}>
-      <div className="doc-toc-container">
-        {title && <h2 className="doc-toc-title">{title}</h2>}
-        <nav className="doc-toc-nav">
-          <ul className="doc-toc-list">
-            {filteredItems.map((item) => (
-              <li 
-                key={item.id} 
-                className={`doc-toc-item level-${item.level} ${activeId === item.id ? 'active' : ''}`}
-                style={{ 
-                  paddingLeft: `${(item.level - minLevel) * 12}px`,
-                  marginTop: item.level > minLevel ? '0.5em' : '0.75em'
-                }}
-              >
-                <a 
-                  href={`#${item.id}`}
-                  className="doc-toc-link"
-                  onClick={(e) => handleClick(e, item.id)}
+    <aside className={cn("animate-in fade-in-50 duration-300", className)}>
+      <div className="rounded-lg bg-accent/30 p-5">
+        {title && (
+          <h2 className="text-sm font-medium text-foreground/80 mb-4 tracking-tight">
+            {title}
+          </h2>
+        )}
+        <nav className="relative">
+          <ul className="space-y-2.5 text-sm">
+            {filteredItems.map((item) => {
+              const isActive = activeId === item.id;
+              
+              // Calculate indentation based on heading level
+              const indentLevel = item.level - minLevel;
+              
+              return (
+                <li 
+                  key={item.id} 
+                  className={cn(
+                    "relative transition-colors duration-200",
+                    indentLevel > 0 && "text-muted-foreground text-xs"
+                  )}
+                  style={{ 
+                    paddingLeft: `${indentLevel * 12}px`,
+                  }}
                 >
-                  {item.text}
-                </a>
-              </li>
-            ))}
+                  {isActive && (
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary rounded-full animate-in slide-in-from-left-1 duration-200"
+                    />
+                  )}
+                  <a 
+                    href={`#${item.id}`}
+                    className={cn(
+                      "inline-block py-1 pl-3 transition-colors hover:text-primary",
+                      isActive ? "text-primary font-medium" : "hover:text-primary"
+                    )}
+                    onClick={(e) => handleClick(e, item.id)}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>

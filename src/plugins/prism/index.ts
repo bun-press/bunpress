@@ -17,11 +17,11 @@ import 'prismjs/components/prism-markdown';
 
 // Map of theme names to their file paths
 const THEME_MAP = {
-  'default': 'prism.css',
-  'dark': 'prism-dark.css',
-  'okaidia': 'prism-okaidia.css',
-  'solarizedlight': 'prism-solarizedlight.css',
-  'tomorrow': 'prism-tomorrow.css'
+  default: 'prism.css',
+  dark: 'prism-dark.css',
+  okaidia: 'prism-okaidia.css',
+  solarizedlight: 'prism-solarizedlight.css',
+  tomorrow: 'prism-tomorrow.css',
 };
 
 interface PrismOptions {
@@ -78,17 +78,22 @@ function getLineNumbersCSS(): string {
 }
 
 export default function prismPlugin(options: PrismOptions = {}): Plugin {
-  const {
-    theme = 'default',
-    languages = [],
-    lineNumbers = false,
-    injectStyles = true
-  } = options;
-  
+  const { theme = 'default', languages = [], lineNumbers = false, injectStyles = true } = options;
+
   // Track loaded languages to avoid duplicate loading warnings
-  const loadedLanguages = new Set<string>(['markup', 'css', 'javascript', 'typescript', 
-    'jsx', 'tsx', 'bash', 'yaml', 'json', 'markdown']);
-  
+  const loadedLanguages = new Set<string>([
+    'markup',
+    'css',
+    'javascript',
+    'typescript',
+    'jsx',
+    'tsx',
+    'bash',
+    'yaml',
+    'json',
+    'markdown',
+  ]);
+
   // Load additional languages
   for (const lang of languages) {
     if (!loadedLanguages.has(lang)) {
@@ -97,11 +102,11 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
       }
     }
   }
-  
+
   // Theme CSS content
   let themeCSS = '';
   let lineNumbersCSS = '';
-  
+
   // Helper function to highlight code
   function highlightCode(code: string, language: string): string {
     // Try loading the language if it's not loaded yet
@@ -110,7 +115,7 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
         loadedLanguages.add(language);
       }
     }
-    
+
     // Check if language is supported
     if (language && Prism.languages[language]) {
       try {
@@ -120,73 +125,73 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
         return code; // Return original code on error
       }
     }
-    
+
     // Return original code for unknown languages
     return code;
   }
-  
+
   return {
     name: 'prism-syntax-highlighting',
     options,
-    
+
     transform: async (content: string) => {
       // Find code blocks in markdown content
       const regex = /```(\w+)?\s*\n([\s\S]+?)```/g;
-      
+
       // Replace each code block with highlighted code
       const transformed = content.replace(regex, (match, language, code) => {
         const lang = language?.trim() || 'text';
-        
+
         // Skip if language is text or plaintext
         if (lang === 'text' || lang === 'plaintext') {
           return match;
         }
-        
+
         // Trim trailing whitespace and newlines
         const trimmedCode = code.trim();
-        
+
         // Highlight the code
         const highlightedCode = highlightCode(trimmedCode, lang);
-        
+
         // Prepare CSS classes
         const cssClasses = ['language-' + lang];
         if (lineNumbers) {
           cssClasses.push('line-numbers');
         }
-        
+
         // Return highlighted code wrapped in pre and code tags
         return `<pre class="${cssClasses.join(' ')}"><code class="language-${lang}">${highlightedCode}</code></pre>`;
       });
-      
+
       return transformed;
     },
-    
+
     buildStart: async () => {
       console.log('Prism.js plugin: build starting');
-      
+
       // Load theme CSS
       themeCSS = getThemeCSS(theme);
-      
+
       // Load line numbers CSS if enabled
       if (lineNumbers) {
         lineNumbersCSS = getLineNumbersCSS();
       }
     },
-    
+
     buildEnd: async () => {
       console.log('Prism.js plugin: build complete');
-      
+
       if (injectStyles) {
         try {
           // Create directory for CSS
           const outputDir = process.cwd() + '/dist/assets/css';
           fs.mkdirSync(outputDir, { recursive: true });
-          
+
           // Write theme CSS
           if (themeCSS) {
             fs.writeFileSync(path.join(outputDir, `prism-${theme}.css`), themeCSS);
           }
-          
+
           // Write line numbers CSS
           if (lineNumbers && lineNumbersCSS) {
             fs.writeFileSync(path.join(outputDir, 'prism-line-numbers.css'), lineNumbersCSS);
@@ -196,37 +201,41 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
         }
       }
     },
-    
+
     configureServer: async (server: any) => {
       console.log('Prism.js plugin: configuring server');
-      
+
       // In a server context (development):
       // 1. Add middleware to serve Prism's themes from node_modules
       // 2. Inject the appropriate stylesheet link in HTML responses
-      
+
       // This is a simplified example - actual implementation would depend on server type
       if (server && server.use && typeof server.use === 'function') {
         // Simple middleware to inject Prism styles
         server.use((_req: any, res: any, next: () => void) => {
           // Only process HTML responses
           const originalSend = res.send;
-          
-          res.send = function(body: any) {
+
+          res.send = function (body: any) {
             if (typeof body === 'string' && res.getHeader('content-type')?.includes('text/html')) {
               // Inject styles in head
               const styleLinks = [];
-              
+
               // Theme stylesheet
-              styleLinks.push(`<link rel="stylesheet" href="/node_modules/prismjs/themes/${THEME_MAP[theme]}">`);
-              
+              styleLinks.push(
+                `<link rel="stylesheet" href="/node_modules/prismjs/themes/${THEME_MAP[theme]}">`
+              );
+
               // Line numbers stylesheet
               if (lineNumbers) {
-                styleLinks.push('<link rel="stylesheet" href="/node_modules/prismjs/plugins/line-numbers/prism-line-numbers.css">');
+                styleLinks.push(
+                  '<link rel="stylesheet" href="/node_modules/prismjs/plugins/line-numbers/prism-line-numbers.css">'
+                );
               }
-              
+
               // Inject styles before </head>
               body = body.replace('</head>', styleLinks.join('') + '</head>');
-              
+
               // Inject Prism initialization script before </body>
               const script = `<script>
                 document.addEventListener('DOMContentLoaded', (event) => {
@@ -235,16 +244,16 @@ export default function prismPlugin(options: PrismOptions = {}): Plugin {
                   }
                 });
               </script>`;
-              
+
               body = body.replace('</body>', script + '</body>');
             }
-            
+
             return originalSend.call(this, body);
           };
-          
+
           next();
         });
       }
     },
   };
-} 
+}

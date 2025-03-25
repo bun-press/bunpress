@@ -47,10 +47,39 @@ export interface SearchIndexOptions {
 
 // Default English stopwords
 const DEFAULT_STOPWORDS = [
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
-  'if', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on', 'or',
-  'such', 'that', 'the', 'their', 'then', 'there', 'these', 'they',
-  'this', 'to', 'was', 'will', 'with'
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'but',
+  'by',
+  'for',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'no',
+  'not',
+  'of',
+  'on',
+  'or',
+  'such',
+  'that',
+  'the',
+  'their',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'to',
+  'was',
+  'will',
+  'with',
 ];
 
 export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plugin {
@@ -61,7 +90,7 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
     filterItems = () => true,
     stopwords = DEFAULT_STOPWORDS,
     snippetLength = 160,
-    _fs = null
+    _fs = null,
   } = options;
 
   // Use provided fs or require the real one
@@ -76,17 +105,17 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
    */
   function processText(text: string): string {
     if (!text) return '';
-    
+
     // Remove HTML tags
     const plainText = text.replace(/<[^>]*>/g, ' ');
-    
+
     // Remove special characters, convert to lowercase, and split into words
     const words = plainText
       .replace(/[^\w\s]/g, ' ')
       .toLowerCase()
       .split(/\s+/)
       .filter(word => word.length > 0 && !stopwords.includes(word));
-    
+
     return words.join(' ');
   }
 
@@ -95,59 +124,61 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
    */
   function extractExcerpt(html: string, length: number = snippetLength): string {
     if (!html) return '';
-    
+
     // Remove HTML tags
-    const plainText = html.replace(/<[^>]*>/g, ' ')
+    const plainText = html
+      .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    
+
     // Limit to specified length
-    return plainText.length > length
-      ? plainText.substring(0, length) + '...'
-      : plainText;
+    return plainText.length > length ? plainText.substring(0, length) + '...' : plainText;
   }
 
   /**
    * Generate search index from content files
    */
   function generateSearchIndex(): any[] {
-    return contentFiles
-      .filter(filterItems)
-      .map(file => {
-        const { route, frontmatter, content, html } = file;
-        
-        // Create search document
-        const document: any = {
-          id: route,
-          url: route,
-          excerpt: extractExcerpt(html)
-        };
+    return contentFiles.filter(filterItems).map(file => {
+      const { route, frontmatter, content, html } = file;
 
-        // Add frontmatter fields
-        if (frontmatter) {
-          if (fields.includes('title') && frontmatter.title) {
-            document.title = frontmatter.title;
-          }
-          
-          if (fields.includes('description') && frontmatter.description) {
-            document.description = frontmatter.description;
-          }
-          
-          // Add other frontmatter fields if specified
-          for (const field of fields) {
-            if (field !== 'title' && field !== 'description' && field !== 'content' && frontmatter[field]) {
-              document[field] = frontmatter[field];
-            }
-          }
+      // Create search document
+      const document: any = {
+        id: route,
+        url: route,
+        excerpt: extractExcerpt(html),
+      };
+
+      // Add frontmatter fields
+      if (frontmatter) {
+        if (fields.includes('title') && frontmatter.title) {
+          document.title = frontmatter.title;
         }
 
-        // Add content if specified
-        if (fields.includes('content')) {
-          document.content = processText(content);
+        if (fields.includes('description') && frontmatter.description) {
+          document.description = frontmatter.description;
         }
 
-        return document;
-      });
+        // Add other frontmatter fields if specified
+        for (const field of fields) {
+          if (
+            field !== 'title' &&
+            field !== 'description' &&
+            field !== 'content' &&
+            frontmatter[field]
+          ) {
+            document[field] = frontmatter[field];
+          }
+        }
+      }
+
+      // Add content if specified
+      if (fields.includes('content')) {
+        document.content = processText(content);
+      }
+
+      return document;
+    });
   }
 
   const plugin = {
@@ -173,24 +204,23 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
         console.log('Search index plugin: No content files found, simulating content...');
         simulateContentFiles(contentFiles);
       }
-      
+
       // Generate the search index
       const searchIndex = generateSearchIndex();
-      
+
       // Ensure output directory exists
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
-      
+
       // Write search index to file
-      fs.writeFileSync(
-        path.join(outputDir, filename),
-        JSON.stringify(searchIndex, null, 2)
+      fs.writeFileSync(path.join(outputDir, filename), JSON.stringify(searchIndex, null, 2));
+
+      console.log(
+        `Search index plugin: Generated ${filename} with ${searchIndex.length} documents`
       );
-      
-      console.log(`Search index plugin: Generated ${filename} with ${searchIndex.length} documents`);
     },
-    
+
     // Exposing methods for testing
     __test__: {
       addContentFile: (file: ContentFile) => contentFiles.push(file),
@@ -198,10 +228,10 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
       getContentFiles: () => [...contentFiles],
       generateSearchIndex,
       processText,
-      extractExcerpt
-    }
+      extractExcerpt,
+    },
   };
-  
+
   return plugin as Plugin & {
     __test__: {
       addContentFile: (file: ContentFile) => void;
@@ -210,7 +240,7 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
       generateSearchIndex: () => any[];
       processText: (text: string) => string;
       extractExcerpt: (html: string, length?: number) => string;
-    }
+    };
   };
 }
 
@@ -224,10 +254,10 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
       route: '/',
       frontmatter: {
         title: 'BunPress - Fast Static Site Generator',
-        description: 'Create lightning-fast static sites with BunPress, powered by Bun'
+        description: 'Create lightning-fast static sites with BunPress, powered by Bun',
       },
       content: '# BunPress\n\nA fast static site generator built with Bun.',
-      html: '<h1>BunPress</h1><p>A fast static site generator built with Bun.</p>'
+      html: '<h1>BunPress</h1><p>A fast static site generator built with Bun.</p>',
     },
     {
       path: '/path/to/docs/getting-started.md',
@@ -235,10 +265,11 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
       frontmatter: {
         title: 'Getting Started with BunPress',
         description: 'Learn how to create your first BunPress site',
-        tags: ['tutorial', 'beginner']
+        tags: ['tutorial', 'beginner'],
       },
-      content: '# Getting Started\n\nFollow these steps to create your first BunPress site.\n\n## Installation\n\nInstall BunPress using npm:\n\n```bash\nnpm install -g bunpress\n```',
-      html: '<h1>Getting Started</h1><p>Follow these steps to create your first BunPress site.</p><h2>Installation</h2><p>Install BunPress using npm:</p><pre><code class="language-bash">npm install -g bunpress</code></pre>'
+      content:
+        '# Getting Started\n\nFollow these steps to create your first BunPress site.\n\n## Installation\n\nInstall BunPress using npm:\n\n```bash\nnpm install -g bunpress\n```',
+      html: '<h1>Getting Started</h1><p>Follow these steps to create your first BunPress site.</p><h2>Installation</h2><p>Install BunPress using npm:</p><pre><code class="language-bash">npm install -g bunpress</code></pre>',
     },
     {
       path: '/path/to/docs/plugins.md',
@@ -246,10 +277,11 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
       frontmatter: {
         title: 'BunPress Plugins',
         description: 'Learn how to use and create plugins for BunPress',
-        tags: ['plugins', 'advanced']
+        tags: ['plugins', 'advanced'],
       },
-      content: '# Plugins\n\nBunPress has a powerful plugin system that allows you to extend functionality.\n\n## Using Plugins\n\nAdd plugins to your `bunpress.config.ts` file.',
-      html: '<h1>Plugins</h1><p>BunPress has a powerful plugin system that allows you to extend functionality.</p><h2>Using Plugins</h2><p>Add plugins to your <code>bunpress.config.ts</code> file.</p>'
+      content:
+        '# Plugins\n\nBunPress has a powerful plugin system that allows you to extend functionality.\n\n## Using Plugins\n\nAdd plugins to your `bunpress.config.ts` file.',
+      html: '<h1>Plugins</h1><p>BunPress has a powerful plugin system that allows you to extend functionality.</p><h2>Using Plugins</h2><p>Add plugins to your <code>bunpress.config.ts</code> file.</p>',
     },
     {
       path: '/path/to/blog/introduction.md',
@@ -259,13 +291,14 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
         description: 'Meet BunPress, the fastest static site generator for Bun',
         date: '2023-05-01',
         author: 'BunPress Team',
-        tags: ['announcement', 'release']
+        tags: ['announcement', 'release'],
       },
-      content: '# Introducing BunPress\n\nWe are excited to announce BunPress, a new static site generator built with Bun.',
-      html: '<h1>Introducing BunPress</h1><p>We are excited to announce BunPress, a new static site generator built with Bun.</p>'
-    }
+      content:
+        '# Introducing BunPress\n\nWe are excited to announce BunPress, a new static site generator built with Bun.',
+      html: '<h1>Introducing BunPress</h1><p>We are excited to announce BunPress, a new static site generator built with Bun.</p>',
+    },
   ];
-  
+
   // Add sample pages to content files
-  contentFiles.push(...pages as ContentFile[]);
-} 
+  contentFiles.push(...(pages as ContentFile[]));
+}

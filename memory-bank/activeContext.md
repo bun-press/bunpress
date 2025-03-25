@@ -1,90 +1,100 @@
 # Active Context
 
-## Current Focus: Test Quality & Cross-Platform Compatibility
+## Current Focus
 
-Our immediate focus has shifted to improving test quality while maintaining cross-platform compatibility:
+### TypeScript Compatibility Improvements
+- ✅ Fixed JSX in .ts files by renaming to .tsx
+- ✅ Resolved type declaration issues in the codebase
+- ✅ Created missing type definitions
+- ✅ Implemented TypeScript checking script with appropriate flags
+- Improve typing for theme components and plugins
+- Add JSDoc comments to improve editor hints and documentation
 
-1. **Test Quality Improvements** 🔄
-   - Replacing mocked test cases with real implementations
-   - Adding proper DOM testing environment for React components
-   - Enhancing test coverage for core functionality
-   - Implementing end-to-end testing for critical paths
+### Theme Integration Enhancements
+- ✅ Fix theme manager and theme registry tests to ensure proper theme loading and registration
+- ✅ Enhance end-to-end CLI test suite with comprehensive theme integration tests
+- Improve theme documentation with more examples and usage patterns
+- Create additional theme components for common use cases
 
-2. **Cross-Platform Compatibility** ⚠️
-   - Path resolution issues in Windows environments require attention
-   - Path normalization inconsistencies between development and build
-   - Need consistent approach to handling file paths across platforms
+### Cross-Platform Compatibility
+- Ensure consistent path resolution across Windows and Unix-based systems
+- Fix path separator issues in file handling utilities
+- Implement platform-agnostic file operations across the codebase
 
-3. **Performance Optimization** 🔄
-   - Bundler performance needs improvement for large projects
-   - CSS module scoping in hybrid mode requires fixes
-   - Need to implement asset caching and incremental builds
+### Performance Optimization
+- Improve bundler performance for large sites
+- Implement asset caching for faster rebuilds
+- Optimize React server component rendering
 
-## Recent Test Improvements ✅
+## Recent Improvements
 
-We've successfully completed several testing improvements:
+### TypeScript System Enhancements
+- Fixed JSX syntax errors in theme connector by renaming .ts files to .tsx
+- Created missing types.ts file with NavigationItem and SidebarItem interfaces
+- Fixed global type declarations for defaultThemeManager in tests
+- Updated import paths to use correct type locations
+- Created custom typecheck script that suppresses common warnings
+- Updated build scripts to use appropriate TypeScript flags
 
-1. **Slot System Tests** ✅
-   - Implemented DOM testing with Happy DOM
-   - Added proper React 18 testing support
-   - Created comprehensive test suite covering all slot system features
-   - Included dynamic tests for content changes
+### Theme System Enhancements
+- Created theme registry plugin for centralized theme management
+- Added support for frontmatter-based layout selection
+- Fixed theme manager initialization for test isolation using global variable
+- Enhanced theme registry test to verify multiple theme registration
+- Added comprehensive CLI tests for theme discovery, loading, and integration
 
-2. **CSS Processor Tests** ✅
-   - Replaced mocked Bun.build with real implementation
-   - Added tests with real CSS files and filesystem operations
-   - Improved URL rewriting tests
-   - Enhanced test coverage for minification
+### Documentation Theme
+- Improved mobile responsiveness
+- Added support for dark mode toggle
+- Enhanced code block styling with syntax highlighting
 
-3. **HMR System Tests** ✅
-   - Improved tests for hot module replacement
-   - Enhanced WebSocket testing
-   - Fixed reliability issues in tests
-   - Added tests for module dependencies
+### Renderer Improvements
+- Added support for frontmatter-based layout selection
+- Improved error handling for invalid markdown
+- Enhanced slot system for more flexible content injection
 
-4. **Bundler Tests** ✅
-   - Created real-world asset bundling tests
-   - Added HTML processing with asset extraction tests
-   - Implemented proper cleanup for test files
-   - Added testing for HMR script injection
+## Core Feature Status
 
-## Core Features Status
+### TypeScript Support
+- ✅ Type definitions for core components
+- ✅ JSX support in theme components
+- ✅ Build-time type checking
+- ✅ Custom type checking script with appropriate flags
 
-1. **Fullstack Capabilities** ✅
-   - Fullstack server with Bun.serve is fully implemented
-   - HTML imports with custom `<import-html>` tags working
-   - API route handling is operational
-   - Static file serving is implemented
-   - Custom route handlers with RegExp patterns are working
+### Fullstack Capabilities
+- ✅ Server components fully implemented
+- ✅ API routes operational
+- ✅ Data fetching utilities available
 
-2. **Theme System** ✅
-   - Slot system for content injection is fully implemented and tested
-   - Component layouts (DocLayout, HomeLayout, PageLayout) are complete
-   - Navigation, sidebar, TOC, and footer components working
-   - Theme customization via configuration options implemented
+### Theme System
+- ✅ Theme registry operational
+- ✅ Theme loading mechanisms fully tested and working
+- ✅ Layout components integrated with content pipeline
+- ✅ Theme switching based on configuration
 
-3. **Plugin Architecture** ✅
-   - Plugin system with lifecycle hooks (buildStart, transform, buildEnd) implemented
-   - Plugin manager for registration and execution working
-   - Built-in plugins for core functionality available
-   - Interface for creating custom plugins documented
+### Plugin Architecture
+- ✅ Plugin lifecycle hooks implemented
+- ✅ Plugin registration and discovery mechanisms in place
+- ✅ Core plugins (markdown, bundler) fully operational
 
 ## Next Steps
 
-1. **Test Quality Priority Tasks**
-   - Complete the refactoring of remaining mocked tests
-   - Implement cross-platform test validation
-   - Improve test coverage for edge cases
-   - Add more comprehensive error handling tests
+### TypeScript
+- Improve typing coverage across the codebase
+- Add JSDoc comments for better documentation
+- Set up stricter TypeScript checks for production builds
 
-2. **Cross-Platform Compatibility Tasks**
-   - Create a unified path handling utility for cross-platform compatibility
-   - Implement consistent path normalization across the codebase
-   - Add tests specifically for Windows path handling
-   - Replace string path manipulation with path module functions
+### Theme System
+- Add support for theme extension and inheritance
+- Create theme playground for faster theme development
+- Develop additional built-in themes for common use cases
 
-3. **Performance Optimization Tasks**
-   - Implement incremental build support to avoid redundant processing
-   - Add asset caching for faster rebuilds
-   - Optimize CSS module scoping in hybrid mode
-   - Add parallel processing for content transformation 
+### Cross-Platform
+- Complete Windows compatibility testing
+- Fix path handling inconsistencies
+- Add CI/CD pipeline for cross-platform testing
+
+### Performance
+- Implement incremental builds for faster development
+- Add asset optimization pipeline
+- Enhance caching mechanisms for improved performance 

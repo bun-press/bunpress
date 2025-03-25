@@ -23,24 +23,30 @@ export interface MarkdownItOptions {
       options?: any;
     }>;
   };
-  anchor?: false | {
-    level?: number[];
-    permalink?: boolean;
-    permalinkSymbol?: string;
-    slugify?: ((str: string) => string);
-  };
-  toc?: false | {
-    level?: number[];
-    containerClass?: string;
-    listClass?: string;
-    itemClass?: string;
-    linkClass?: string;
-  };
-  codeHighlight?: false | {
-    theme?: string;
-    register?: Record<string, string>;
-    ignoreIllegals?: boolean;
-  };
+  anchor?:
+    | false
+    | {
+        level?: number[];
+        permalink?: boolean;
+        permalinkSymbol?: string;
+        slugify?: (str: string) => string;
+      };
+  toc?:
+    | false
+    | {
+        level?: number[];
+        containerClass?: string;
+        listClass?: string;
+        itemClass?: string;
+        linkClass?: string;
+      };
+  codeHighlight?:
+    | false
+    | {
+        theme?: string;
+        register?: Record<string, string>;
+        ignoreIllegals?: boolean;
+      };
 }
 
 /**
@@ -51,7 +57,7 @@ function renderContainer(_md: MarkdownIt, name: string): (tokens: any[], idx: nu
     const token = tokens[idx];
     const info = token.info.trim().slice(name.length).trim();
     const title = info || name.charAt(0).toUpperCase() + name.slice(1);
-    
+
     if (token.nesting === 1) {
       return `<div class="custom-container ${name}">
               <p class="custom-container-title">${title}</p>\n`;
@@ -74,24 +80,24 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
 
   // Add container support
   const containers = options.containers || {};
-  
+
   // Add default containers (tip, info, warning, danger)
   if (containers.tip !== false) {
     md.use(markdownItContainer, 'tip', { render: renderContainer(md, 'tip') });
   }
-  
+
   if (containers.info !== false) {
     md.use(markdownItContainer, 'info', { render: renderContainer(md, 'info') });
   }
-  
+
   if (containers.warning !== false) {
     md.use(markdownItContainer, 'warning', { render: renderContainer(md, 'warning') });
   }
-  
+
   if (containers.danger !== false) {
     md.use(markdownItContainer, 'danger', { render: renderContainer(md, 'danger') });
   }
-  
+
   // Add details container for collapsible content
   if (containers.details !== false) {
     md.use(markdownItContainer, 'details', {
@@ -100,7 +106,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       },
       render: (tokens: any[], idx: number) => {
         const token = tokens[idx];
-        
+
         if (token.nesting === 1) {
           const m = token.info.trim().match(/^details\s+(.*)$/);
           const summary = m ? m[1] : 'Details';
@@ -108,7 +114,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
         } else {
           return '</details>\n';
         }
-      }
+      },
     });
   }
 
@@ -118,7 +124,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       if (container.name) {
         md.use(markdownItContainer, container.name, {
           ...container.options,
-          render: container.options?.render || renderContainer(md, container.name)
+          render: container.options?.render || renderContainer(md, container.name),
         });
       }
     }
@@ -130,7 +136,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       level: options.anchor?.level || [1, 2, 3, 4, 5, 6],
       permalink: options.anchor?.permalink !== false,
       permalinkSymbol: options.anchor?.permalinkSymbol || '#',
-      slugify: options.anchor?.slugify
+      slugify: options.anchor?.slugify,
     });
   }
 
@@ -141,7 +147,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       containerClass: options.toc?.containerClass || 'table-of-contents',
       listClass: options.toc?.listClass || 'toc-list',
       itemClass: options.toc?.itemClass || 'toc-item',
-      linkClass: options.toc?.linkClass || 'toc-link'
+      linkClass: options.toc?.linkClass || 'toc-link',
     });
   }
 
@@ -152,7 +158,7 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       code: true,
       register: options.codeHighlight?.register,
       ignoreIllegals: options.codeHighlight?.ignoreIllegals !== false,
-      inline: true
+      inline: true,
     });
   }
 
@@ -163,4 +169,4 @@ export default function markdownItPlugin(options: MarkdownItOptions = {}): Plugi
       return md.render(content);
     },
   };
-} 
+}

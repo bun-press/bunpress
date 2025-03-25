@@ -66,12 +66,12 @@ export default function analyticsPlugin(options: AnalyticsOptions = {}): Plugin 
     umamiWebsiteId = '',
     umamiSrcUrl = 'https://analytics.umami.is/script.js',
     customCode = '',
-    includeDevelopment = false
+    includeDevelopment = false,
   } = options;
 
   // Check if we're in development mode
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
+
   return {
     name: 'analytics',
     options,
@@ -81,7 +81,7 @@ export default function analyticsPlugin(options: AnalyticsOptions = {}): Plugin 
       if (isDevelopment && !includeDevelopment) {
         return content;
       }
-      
+
       // Only transform HTML content
       if (!id || !id.endsWith('.html')) {
         return content;
@@ -91,33 +91,34 @@ export default function analyticsPlugin(options: AnalyticsOptions = {}): Plugin 
       const analyticsCode = getAnalyticsCode(type, {
         googleAnalyticsId,
         googleTagManagerId,
-        fathomSiteId, 
+        fathomSiteId,
         plausibleDomain,
         umamiWebsiteId,
         umamiSrcUrl,
-        customCode
+        customCode,
       });
-      
+
       if (!analyticsCode) {
         return content;
       }
-      
+
       // Insert analytics code before closing head tag
       return content.replace('</head>', `${analyticsCode}\n</head>`);
-    }
+    },
   };
 }
 
 function getAnalyticsCode(
-  type: AnalyticsOptions['type'], 
-  options: Pick<AnalyticsOptions, 
-    'googleAnalyticsId' | 
-    'googleTagManagerId' | 
-    'fathomSiteId' | 
-    'plausibleDomain' | 
-    'umamiWebsiteId' | 
-    'umamiSrcUrl' | 
-    'customCode'
+  type: AnalyticsOptions['type'],
+  options: Pick<
+    AnalyticsOptions,
+    | 'googleAnalyticsId'
+    | 'googleTagManagerId'
+    | 'fathomSiteId'
+    | 'plausibleDomain'
+    | 'umamiWebsiteId'
+    | 'umamiSrcUrl'
+    | 'customCode'
   >
 ): string {
   switch (type) {
@@ -166,4 +167,4 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     default:
       return '';
   }
-} 
+}

@@ -1,34 +1,86 @@
 import type { BunPressConfig } from '../../bunpress.config';
-import { ThemeManager } from './theme-manager';
+import { getThemeManager, initThemeManager } from './theme-manager';
+import path from 'path';
 
-// Cache the theme manager instance
-let themeManager: ThemeManager | null = null;
+export interface RenderOptions {
+  /**
+   * The layout type to use (doc, page, home, etc)
+   */
+  layout?: string;
 
-export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: string): string {
+  /**
+   * Path to CSS files to include
+   */
+  styles?: string[];
+
+  /**
+   * Path to JS files to include
+   */
+  scripts?: string[];
+
+  /**
+   * Additional head tags
+   */
+  head?: string[];
+}
+
+export interface ContentData {
+  html: string;
+  frontmatter: Record<string, any>;
+  toc?: Array<{
+    level: number;
+    id: string;
+    text: string;
+  }>;
+}
+
+/**
+ * Render HTML content with the appropriate theme
+ */
+export function renderHtml(
+  content: ContentData,
+  config: BunPressConfig,
+  workspaceRoot: string,
+  options: RenderOptions = {}
+): string {
   const { html, frontmatter } = content;
-  
-  // Initialize theme manager if not already created
-  if (!themeManager) {
-    themeManager = new ThemeManager(workspaceRoot);
+
+  // Initialize or get theme manager
+  const themeManager = getThemeManager(workspaceRoot) || initThemeManager(workspaceRoot);
+
+  // Set the theme based on config if not already set
+  const activeTheme = themeManager.getActiveTheme();
+  if (!activeTheme) {
     themeManager.setThemeFromConfig(config);
   }
-  
-  // Get theme styles
+
+  // Get theme styles and choose layout type
   const themeStyles = themeManager.getThemeStyleContent();
-  const activeTheme = themeManager.getActiveTheme();
-  
-  // If no theme is active, fall back to a simple template
-  if (!activeTheme) {
+  const layoutType =
+    options.layout || frontmatter.layout || config.themeConfig?.defaultLayout || 'doc';
+
+  // If no theme is active after trying to set it, fall back to a simple template
+  if (!themeManager.getActiveTheme()) {
     return renderFallbackTemplate(html, frontmatter, config);
   }
 
   // Extract TOC items from the HTML content
-  const tocItems = extractTocItems(html);
-  
+  const tocItems = content.toc || extractTocItems(html);
+
   // Get navigation and sidebar data from the config
   const navItems = config.navigation || [];
   const sidebarItems = config.sidebar || [];
-  
+
+  // Get the layout component path
+  const layoutComponent = themeManager.getThemeComponent(layoutType);
+  if (!layoutComponent) {
+    console.warn(`Layout component for '${layoutType}' not found in theme`);
+    return renderFallbackTemplate(html, frontmatter, config);
+  }
+
+  // Convert layout path to web path
+  const layoutUrl = getWebPath(layoutComponent, workspaceRoot);
+
   // Prepare rendering parameters for React components
   const layoutParams = JSON.stringify({
     frontmatter,
@@ -36,49 +88,115 @@ export function renderHtml(content: any, config: BunPressConfig, workspaceRoot: 
     navItems,
     sidebarItems,
     tocItems,
-    config
+    currentPath: frontmatter.path || '/',
+    config,
   });
 
   // Apply theme class
-  const themeClass = 'bunpress-theme';
+  const themeClass = getThemeClasses(config);
+
+  // Build additional CSS and script tags
+  const additionalStyles = options.styles
+    ? options.styles.map(style => `<link rel="stylesheet" href="${style}">`).join('\n    ')
+    : '';
+
+  const additionalScripts = options.scripts
+    ? options.scripts
+        .map(script => `<script type="module" src="${script}"></script>`)
+        .join('\n    ')
+    : '';
+
+  // Build additional head tags
+  const additionalHeadTags = options.head ? options.head.join('\n    ') : '';
 
   // Return the rendered HTML with theme styles and layout
   return `
-    <!DOCTYPE html>
-    <html lang="en" class="${themeClass}">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${frontmatter.title || config.title}</title>
-        <style>${themeStyles}</style>
-      </head>
-      <body>
-        <div id="app" data-layout-params='${layoutParams}'></div>
-        <script type="module" src="${activeTheme.layoutComponent}"></script>
-      </body>
-    </html>
-  `;
+<!DOCTYPE html>
+<html lang="en" class="${themeClass}">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${frontmatter.title || config.title}</title>
+    <meta name="description" content="${frontmatter.description || config.description}">
+    <style id="theme-styles">${themeStyles}</style>
+    ${additionalStyles}
+    ${additionalHeadTags}
+  </head>
+  <body>
+    <div id="app" data-layout-params='${layoutParams}'></div>
+    <script type="module">
+      import { hydrate } from 'react-dom/client';
+      import Layout from '${layoutUrl}';
+      
+      // Get the layout parameters
+      const appElement = document.getElementById('app');
+      const params = JSON.parse(appElement.getAttribute('data-layout-params'));
+      
+      // Hydrate the React component
+      const root = hydrate(
+        <Layout {...params} />,
+        appElement
+      );
+    </script>
+    ${additionalScripts}
+  </body>
+</html>
+`;
 }
 
-// Extract TOC items from HTML content
+/**
+ * Extract TOC items from HTML content
+ */
 function extractTocItems(html: string) {
   const tocItems = [];
   const headingRegex = /<h([2-6])[^>]*id="([^"]+)"[^>]*>(.*?)<\/h\1>/g;
   let match;
-  
+
   while ((match = headingRegex.exec(html)) !== null) {
     const level = parseInt(match[1], 10);
     const id = match[2];
     // Simple HTML tag stripping for the text
     const text = match[3].replace(/<[^>]*>/g, '');
-    
+
     tocItems.push({ level, id, text });
   }
-  
+
   return tocItems;
 }
 
-// Fallback to a simple template if theme is not available
+/**
+ * Get theme classes for the HTML element
+ */
+function getThemeClasses(config: BunPressConfig): string {
+  const classes = ['bunpress-theme'];
+
+  // Add theme name class
+  if (config.themeConfig?.name) {
+    classes.push(`theme-${config.themeConfig.name}`);
+  }
+
+  // Add dark mode class if needed
+  if (config.themeConfig?.options?.darkMode) {
+    classes.push('dark');
+  }
+
+  return classes.join(' ');
+}
+
+/**
+ * Convert file system path to web path
+ */
+function getWebPath(filePath: string, workspaceRoot: string): string {
+  // Convert absolute file path to relative web path
+  const relativePath = path.relative(workspaceRoot, filePath);
+
+  // Normalize path separators for web
+  return relativePath.replace(/\\/g, '/');
+}
+
+/**
+ * Fallback to a simple template if theme is not available
+ */
 function renderFallbackTemplate(html: string, frontmatter: any, config: BunPressConfig): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -127,4 +245,4 @@ function renderFallbackTemplate(html: string, frontmatter: any, config: BunPress
   </footer>
 </body>
 </html>`;
-} 
+}

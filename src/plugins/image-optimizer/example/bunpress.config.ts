@@ -9,13 +9,13 @@ export default defineConfig({
   outputDir: 'dist',
   themeConfig: {
     name: 'default',
-    options: {}
+    options: {},
   },
   // Configure plugins
   plugins: [
     // Basic usage with defaults
     imageOptimizerPlugin(),
-    
+
     // Advanced usage with custom configuration
     // imageOptimizerPlugin({
     //   inputDir: 'public/images',
@@ -32,5 +32,5 @@ export default defineConfig({
     //   extensions: ['.jpg', '.jpeg', '.png', '.gif'],
     //   keepOriginal: false
     // })
-  ]
-}); 
+  ],
+});

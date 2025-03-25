@@ -1,6 +1,6 @@
 /**
  * Fullstack development server with HTML import routes for BunPress
- * 
+ *
  * This module implements support for HTML imports as routes for the Bun.serve API,
  * enabling fullstack capabilities in BunPress sites.
  */
@@ -33,8 +33,8 @@ function defaultNotFoundHandler(req: Request): Response {
   return new Response(`Not found: ${req.url}`, {
     status: 404,
     headers: {
-      'Content-Type': 'text/plain'
-    }
+      'Content-Type': 'text/plain',
+    },
   });
 }
 
@@ -51,7 +51,7 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
     publicDir,
     routes = [],
     websocketHandler,
-    notFoundHandler = defaultNotFoundHandler
+    notFoundHandler = defaultNotFoundHandler,
   } = config;
 
   const htmlDirPath = resolve(htmlDir);
@@ -61,16 +61,16 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
   // Function to serve HTML files
   async function serveHtml(path: string): Promise<Response | null> {
     const filePath = join(htmlDirPath, path.endsWith('/') ? `${path}index.html` : path);
-    
+
     if (!existsSync(filePath)) {
       return null;
     }
 
     const file = Bun.file(filePath);
     const content = await file.text();
-    
+
     const processedHtml = await processHtmlImports(content, dirname(filePath));
-    
+
     return new Response(processedHtml, {
       headers: {
         'Content-Type': 'text/html',
@@ -85,7 +85,7 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
     }
 
     const filePath = join(publicDirPath, path);
-    
+
     if (!existsSync(filePath)) {
       return null;
     }
@@ -102,15 +102,15 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
 
     // Remove /api prefix
     const apiPath = path.startsWith('/api/') ? path.slice(4) : path;
-    
+
     try {
       // Try to import the API handler
       const modulePath = join(apiDirPath, `${apiPath}.ts`);
-      
+
       if (!existsSync(modulePath)) {
         return null;
       }
-      
+
       const module = await import(`file://${modulePath}`);
       const handler = module.default;
 
@@ -138,7 +138,7 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
         if (src) {
           imports.push({ tag: el.tagName, src });
         }
-      }
+      },
     });
 
     await rewriter.transform(new Response(html)).text();
@@ -146,7 +146,7 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
     // Process found imports
     for (const imp of imports) {
       const importPath = join(basePath, imp.src);
-      
+
       if (existsSync(importPath)) {
         const importContent = await Bun.file(importPath).text();
         // Replace the import tag with the content
@@ -163,16 +163,17 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
     port,
     hostname,
     development,
-    fetch: async (req) => {
+    fetch: async req => {
       const url = new URL(req.url);
       const path = url.pathname;
 
       // 1. Check custom route handlers first
       for (const route of routes) {
-        const pattern = route.pattern instanceof RegExp 
-          ? route.pattern 
-          : new RegExp(`^${route.pattern.replace(/\//g, '\\/').replace(/\*/g, '.*')}$`);
-        
+        const pattern =
+          route.pattern instanceof RegExp
+            ? route.pattern
+            : new RegExp(`^${route.pattern.replace(/\//g, '\\/').replace(/\*/g, '.*')}$`);
+
         const match = path.match(pattern);
         if (match) {
           try {
@@ -218,8 +219,10 @@ export function createFullstackServer(config: FullstackServerConfig): Server {
 /**
  * Create middleware for the fullstack server
  */
-export function createMiddleware(handler: (req: Request, next: () => Promise<Response>) => Promise<Response>) {
+export function createMiddleware(
+  handler: (req: Request, next: () => Promise<Response>) => Promise<Response>
+) {
   return async (req: Request, next: () => Promise<Response>) => {
     return await handler(req, next);
   };
-} 
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/index.ts", "bin/bunpress.js"],
+  "project": ["src/**/*.ts", "!src/**/__tests__/**"],
+  "ignoreDependencies": [
+    "react",
+    "react-dom",
+    "@types/react",
+    "@types/react-dom",
+    "happy-dom",
+    "jsdom",
+    "ws",
+    "@types/ws"
+  ],
+  "ignoreBinaries": ["bun", "prettier"],
+  "ignoreExportsUsedInFile": true,
+  "paths": {
+    "@/*": ["./themes/docs/*"]
+  },
+  "rules": {
+    "dependencies": "error",
+    "devDependencies": "warn",
+    "exports": {
+      "level": "warn",
+      "include": [
+        "src/core/index.ts",
+        "src/plugins/index.ts"
+      ]
+    }
+  }
+} 

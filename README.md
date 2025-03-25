@@ -274,9 +274,47 @@ async function main() {
 main();
 ```
 
+## Code Quality & Maintenance
+
+BunPress maintains high code quality standards through automated tools and practices:
+
+### Cleanup & Optimization
+
+Run the cleanup script to ensure your codebase is optimized and follows best practices:
+
+```bash
+bun run cleanup
+```
+
+The cleanup script:
+- Runs the formatter to ensure consistent code style
+- Checks exports to ensure all components are properly exported
+- Validates tests to ensure quality
+- Provides a summary of the codebase status
+
+### Dependency Management
+
+We use [knip](https://github.com/webpro/knip) to detect unused files, exports, and dependencies:
+
+```bash
+bun run knip
+```
+
+### TypeScript Configuration
+
+BunPress uses a strict TypeScript configuration to ensure type safety. See `tsconfig.json` for details.
+
+### Testing
+
+Run the test suite to ensure everything is working correctly:
+
+```bash
+bun test
+```
+
 ## Contributing
 
-Contributions are welcome! Please check out our [contributing guide](CONTRIBUTING.md) for details.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to BunPress.
 
 ## License
 

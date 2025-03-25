@@ -1,5 +1,137 @@
 # Technical Context
 
+## Technology Stack
+
+### Core Technologies
+- **Bun**: JavaScript/TypeScript runtime and package manager
+- **TypeScript**: Typed superset of JavaScript for improved developer experience
+- **React**: UI library for components and theme development
+- **ESBuild** (via Bun): Fast JavaScript/TypeScript bundler
+
+### Key Dependencies
+- **markdown-it**: Markdown processing and rendering
+- **happy-dom**: DOM implementation for testing
+- **gray-matter**: YAML frontmatter parsing
+- **chalk**: Terminal styling for CLI
+- **sharp**: Image processing and optimization
+- **ws**: WebSocket implementation for HMR
+
+## Development Tools
+
+### TypeScript Configuration
+- **TypeScript 5.8+**: Using the latest TypeScript for improved type checking and performance
+- **Custom TypeChecking**: Custom script that suppresses unused variable warnings with appropriate flags
+- **Declaration Files**: TypeScript declaration files generation for better module consumption
+- **tsconfig.json**: Project-specific TypeScript configuration with appropriate compiler options
+- **JSX Support**: Support for React components in .tsx files
+
+### Testing
+- **Bun's Test Runner**: Used for unit and integration testing
+- **Happy DOM**: For DOM manipulation in tests
+- **Test Isolation**: Global variable management for proper test isolation
+
+### Code Quality
+- **ESLint**: JavaScript/TypeScript linting
+- **Prettier**: Code formatting
+- **TypeScript Checking**: Static type analysis for catching errors
+
+## Project Structure
+
+### Core Module System
+```
+src/
+  core/           - Core functionality
+    plugin.ts     - Plugin system interfaces and utilities
+    router.ts     - Routing and URL handling
+    bundler.ts    - Asset bundling logic
+    renderer.ts   - Content rendering pipeline
+    theme-manager.ts - Theme loading and management
+    slot-system.ts   - Component slot architecture
+    types.ts      - Core type definitions
+  plugins/        - Built-in plugins
+  cli/            - Command-line interface
+  lib/            - Shared utilities
+  index.ts        - Main exports
+```
+
+### Plugin Architecture
+- **Plugin Interface**: Consistent API for all plugins
+- **Lifecycle Hooks**: Registration, initialization, and content processing
+- **Configuration Options**: Type-safe plugin configuration
+
+### Theme System
+- **Theme Registration**: Auto-discovery of themes in the project
+- **Component Architecture**: Layout components with slots
+- **Style Processing**: CSS/Sass handling
+- **JSX Support**: React components for theming
+- **Type Definitions**: TypeScript interfaces for themes
+
+## Build Pipeline
+
+### Development Flow
+1. Source TypeScript files (.ts/.tsx)
+2. TypeScript type checking (via custom script with appropriate flags)
+3. Bun's bundler (based on esbuild)
+4. Output JavaScript with source maps
+
+### Production Build
+1. Source TypeScript files
+2. Type checking and declaration file generation
+3. Bundling with minification
+4. Asset optimization
+5. Output distribution files
+
+### Type Generation
+- **Declaration Files**: Generated with `--emitDeclarationOnly` for type exports
+- **Type Exports**: Package exports include type definitions
+- **Skipped Checks**: Using `--skipLibCheck`, `--noUnusedLocals false`, and `--noUnusedParameters false` for improved build experience
+
+## Key Architectural Concepts
+
+### Content Pipeline
+1. **Discovery**: Finding markdown and MDX files
+2. **Parsing**: Extracting frontmatter and content
+3. **Transformation**: Applying plugins and processors
+4. **Rendering**: Converting to HTML
+5. **Theming**: Applying layout components
+
+### Rendering Strategy
+- **Server-Side Rendering**: Pre-rendered HTML for fast loading
+- **Hydration**: Client-side interactivity where needed
+- **Asset Optimization**: Image processing and CSS minification
+
+### Plugin System
+- **Registration**: Plugins are registered with the core
+- **Discovery**: Auto-discovery of plugins in the project
+- **Configuration**: Type-safe config options
+- **Execution**: Lifecycle-based execution
+
+### Theme Architecture
+- **Component-Based**: React components for layouts
+- **Slot System**: Content injection points
+- **Style Integration**: CSS modules or global styles
+- **Layout Selection**: Based on content type or frontmatter
+
+## Development Workflows
+
+### Local Development
+1. `bun run dev`: Start development server with HMR
+2. `bun run build`: Build the project
+3. `bun run lint`: Run TypeScript checks
+4. `bun test`: Run test suite
+
+### Testing Approach
+- **Unit Tests**: Individual component functionality
+- **Integration Tests**: Component interactions
+- **End-to-End Tests**: Full workflow testing
+- **Test Isolation**: Using global variables and mocking
+
+### Deployment
+- **Static Outputs**: Generated HTML, JS, and CSS
+- **Asset Optimization**: Minification and tree-shaking
+- **Platform Support**: Node.js, Bun, and static hosting
+- **CI/CD Integration**: Test and build on push
+
 ## Core Technologies
 
 ### Primary Technologies
@@ -49,23 +181,6 @@
 - Tailwind CSS IntelliSense
 - ESLint
 - Prettier
-
-## Project Structure
-
-```
-bunpress/
-├── src/                    # Source code
-│   ├── core/              # Core functionality
-│   ├── plugins/           # Built-in plugins
-│   ├── cli/               # CLI commands
-│   ├── templates/         # Default templates
-│   └── utils/             # Utility functions
-├── dist/                  # Compiled code
-├── types/                 # TypeScript declarations
-├── themes/                # Theme components
-│   └── default/           # Default theme
-└── memory-bank/           # Project documentation
-```
 
 ## Technical Constraints
 

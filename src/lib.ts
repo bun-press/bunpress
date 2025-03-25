@@ -5,4 +5,4 @@ export * from './core';
 export * as plugins from './plugins';
 
 // Export utils
-export * from './lib/utils'; 
+export * from './lib/utils';

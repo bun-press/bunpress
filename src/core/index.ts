@@ -1,12 +1,24 @@
-// Core components
+// Core components - Re-export all sub-modules
 export * from './plugin';
-export * from './content-processor';
 export * from './router';
-export * from './builder';
+export * from './content-processor';
+export * from './bundler';
+export * from './dev-server';
+export * from './fullstack-server';
 export * from './config-loader';
 export * from './theme-manager';
+export * from './builder';
+export * from './hmr';
+export * from './css-processor';
+export * from './slot-system';
+export * from './renderer';
+export * from './path-aliases';
 
 // Types
+export type { Plugin } from './plugin';
 export type { ContentFile } from './content-processor';
-export type { BunPressConfig } from '../../bunpress.config';
-export type { Theme } from './theme-manager'; 
+// DevServerConfig is defined in bunpress.config.ts
+// ThemeConfig is defined in bunpress.config.ts
+export type { NavigationItem, SidebarItem } from './types';
+// FullstackRoute type export
+export type { RouteHandler } from './fullstack-server';

@@ -31,12 +31,14 @@ describe('SEO Plugin', () => {
 
     const htmlContent = '<html><head></head><body>Test</body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Check meta tags
     expect(transformed).toContain('<meta property="og:title" content="Test Site" />');
     expect(transformed).toContain('<meta property="og:description" content="Test Description" />');
     expect(transformed).toContain('<meta property="og:url" content="https://example.com/" />');
-    expect(transformed).toContain('<meta property="og:image" content="https://example.com/image.png" />');
+    expect(transformed).toContain(
+      '<meta property="og:image" content="https://example.com/image.png" />'
+    );
     expect(transformed).toContain('<meta name="twitter:card" content="summary_large_image" />');
     expect(transformed).toContain('<meta name="twitter:site" content="@testhandle" />');
     expect(transformed).toContain('<link rel="canonical" href="https://example.com/" />');
@@ -48,7 +50,7 @@ describe('SEO Plugin', () => {
       siteDescription: 'Default Description',
       siteUrl: 'https://example.com',
     });
-    
+
     const htmlContent = `
       <html>
       <head>
@@ -58,9 +60,9 @@ describe('SEO Plugin', () => {
       <body></body>
       </html>
     `;
-    
+
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Check if page-specific metadata was used
     expect(transformed).toContain('<meta property="og:title" content="Page Title" />');
     expect(transformed).toContain('<meta property="og:description" content="Page Description" />');
@@ -73,22 +75,22 @@ describe('SEO Plugin', () => {
       siteUrl: 'https://example.com',
       addJsonLd: true,
     });
-    
+
     const htmlContent = '<html><head></head><body></body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Check if JSON-LD was injected
     expect(transformed).toContain('<script type="application/ld+json">');
     expect(transformed).toContain('"@context": "https://schema.org"');
     expect(transformed).toContain('"@type": "WebPage"');
   });
-  
+
   test('should not modify non-HTML content', () => {
     const plugin = seoPlugin();
-    
+
     const markdownContent = '# Heading\n\nThis is some markdown content.';
     const transformed = plugin.transform?.(markdownContent) || '';
-    
+
     // No changes should be made
     expect(transformed).toBe(markdownContent);
   });
@@ -101,7 +103,7 @@ describe('SEO Plugin', () => {
       siteDescription: 'Test Description',
       siteUrl: 'https://example.com',
     });
-    
+
     const htmlContent = `
       <html>
       <head>
@@ -113,12 +115,14 @@ describe('SEO Plugin', () => {
       <body></body>
       </html>
     `;
-    
+
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Should add SEO tags but not duplicate or remove existing ones
     expect(transformed).toContain('<meta charset="UTF-8">');
-    expect(transformed).toContain('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+    expect(transformed).toContain(
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+    );
     expect(transformed).toContain('<meta name="robots" content="index, follow">');
     expect(transformed).toContain('<meta property="og:title" content="Existing Title" />');
   });
@@ -129,24 +133,28 @@ describe('SEO Plugin', () => {
       siteUrl: 'https://example.com',
       defaultImage: '/images/default.jpg',
     });
-    
+
     const htmlContent = '<html><head></head><body></body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Should convert relative image path to absolute URL
-    expect(transformed).toContain('<meta property="og:image" content="https://example.com/images/default.jpg" />');
-    
+    expect(transformed).toContain(
+      '<meta property="og:image" content="https://example.com/images/default.jpg" />'
+    );
+
     // Test with absolute image URL
     const pluginWithAbsoluteImage = seoPlugin({
       siteTitle: 'Test Site',
       siteUrl: 'https://example.com',
       defaultImage: 'https://cdn.example.com/images/default.jpg',
     });
-    
+
     const transformedWithAbsoluteImage = pluginWithAbsoluteImage.transform?.(htmlContent) || '';
-    
+
     // Should preserve absolute image URL
-    expect(transformedWithAbsoluteImage).toContain('<meta property="og:image" content="https://cdn.example.com/images/default.jpg" />');
+    expect(transformedWithAbsoluteImage).toContain(
+      '<meta property="og:image" content="https://cdn.example.com/images/default.jpg" />'
+    );
   });
 
   test('should handle special characters in metadata properly', () => {
@@ -155,13 +163,15 @@ describe('SEO Plugin', () => {
       siteDescription: 'Testing < and > characters & "quotes"',
       siteUrl: 'https://example.com',
     });
-    
+
     const htmlContent = '<html><head></head><body></body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Verify special characters are properly handled
     expect(transformed).toContain('<meta property="og:title" content="Test & Demo Site" />');
-    expect(transformed).toContain('<meta property="og:description" content="Testing < and > characters & "quotes"" />');
+    expect(transformed).toContain(
+      '<meta property="og:description" content="Testing < and > characters & "quotes"" />'
+    );
   });
 
   test('should generate appropriate Twitter card tags', () => {
@@ -172,24 +182,28 @@ describe('SEO Plugin', () => {
       defaultImage: '/image.png',
       twitterHandle: 'testhandle',
     });
-    
+
     const htmlContent = '<html><head></head><body></body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Check Twitter card tags
     expect(transformed).toContain('<meta name="twitter:card" content="summary_large_image" />');
     expect(transformed).toContain('<meta name="twitter:site" content="@testhandle" />');
     expect(transformed).toContain('<meta name="twitter:title" content="Test Site" />');
     expect(transformed).toContain('<meta name="twitter:description" content="Test Description" />');
-    expect(transformed).toContain('<meta name="twitter:image" content="https://example.com/image.png" />');
-    
+    expect(transformed).toContain(
+      '<meta name="twitter:image" content="https://example.com/image.png" />'
+    );
+
     // Test with Twitter handle that already has @
     const pluginWithAtHandle = seoPlugin({
       twitterHandle: '@otherhandle',
     });
-    
+
     const transformedWithAtHandle = pluginWithAtHandle.transform?.(htmlContent) || '';
-    expect(transformedWithAtHandle).toContain('<meta name="twitter:site" content="@otherhandle" />');
+    expect(transformedWithAtHandle).toContain(
+      '<meta name="twitter:site" content="@otherhandle" />'
+    );
   });
 
   test('should respect generateRobotsTxt and generateSitemap options', () => {
@@ -199,7 +213,7 @@ describe('SEO Plugin', () => {
       generateRobotsTxt: false,
       generateSitemap: false,
     });
-    
+
     // Plugin should exist with the correct options
     expect(plugin.options).toEqual({
       siteUrl: 'https://example.com',
@@ -213,23 +227,25 @@ describe('SEO Plugin', () => {
       siteUrl: 'https://example.com',
       addCanonicalUrls: true,
     });
-    
+
     const htmlContent = '<html><head></head><body data-page-path="/test-page"></body></html>';
     const transformed = plugin.transform?.(htmlContent) || '';
-    
+
     // Should add canonical URL for the specific page
     expect(transformed).toContain('<link rel="canonical" href="https://example.com/test-page" />');
-    
+
     // Test with trailing slash in site URL
     const pluginWithTrailingSlash = seoPlugin({
       siteUrl: 'https://example.com/',
       addCanonicalUrls: true,
     });
-    
+
     const transformedWithTrailingSlash = pluginWithTrailingSlash.transform?.(htmlContent) || '';
-    
+
     // Should handle URL concatenation correctly
-    expect(transformedWithTrailingSlash).toContain('<link rel="canonical" href="https://example.com/test-page" />');
+    expect(transformedWithTrailingSlash).toContain(
+      '<link rel="canonical" href="https://example.com/test-page" />'
+    );
     expect(transformedWithTrailingSlash).not.toContain('//test-page');
   });
-}); 
+});

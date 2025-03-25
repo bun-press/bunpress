@@ -180,18 +180,18 @@ export function createHmrContext(): HmrContext {
   return {
     websocket: Bun.serve({
       port: 3001,
-      fetch: () => new Response("Not Found", { status: 404 }),
+      fetch: () => new Response('Not Found', { status: 404 }),
       websocket: {
         open: () => {
           console.log('HMR WebSocket server running on port 3001');
         },
         message: () => {},
-        close: () => {}
-      }
+        close: () => {},
+      },
     }),
     connectedClients: new Set(),
     moduleDependencies: new Map(),
-    moduleLastUpdate: new Map()
+    moduleLastUpdate: new Map(),
   };
 }
 
@@ -203,14 +203,14 @@ export function addHmrToJavaScript(source: string, filePath: string): string {
   if (filePath.includes('node_modules')) {
     return source;
   }
-  
+
   const hmrWrapped = `
 // HMR Support
 import.meta.hot = window.__bunpress_setup_hmr("${filePath}");
 
 ${source}
 `;
-  
+
   return hmrWrapped;
 }
 
@@ -221,26 +221,26 @@ export function broadcastHmrUpdate(context: HmrContext, filePath: string): void 
   const event: HmrEvent = {
     type: 'update',
     path: filePath,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
-  
+
   // Update the module's last update timestamp
   context.moduleLastUpdate.set(filePath, event.timestamp!);
-  
+
   // Find all dependent modules
   const dependents = new Set<string>();
   collectDependents(context, filePath, dependents);
-  
+
   // Send the update to all connected clients
   for (const client of context.connectedClients) {
     client.send(JSON.stringify(event));
-    
+
     // Also send updates for dependent modules
     for (const dependent of dependents) {
       const dependentEvent: HmrEvent = {
         type: 'update',
         path: dependent,
-        timestamp: event.timestamp
+        timestamp: event.timestamp,
       };
       client.send(JSON.stringify(dependentEvent));
     }
@@ -250,11 +250,7 @@ export function broadcastHmrUpdate(context: HmrContext, filePath: string): void 
 /**
  * Recursively collect all modules that depend on the given module
  */
-function collectDependents(
-  context: HmrContext, 
-  filePath: string, 
-  collected: Set<string>
-): void {
+function collectDependents(context: HmrContext, filePath: string, collected: Set<string>): void {
   for (const [module, dependencies] of context.moduleDependencies.entries()) {
     if (dependencies.has(filePath) && !collected.has(module)) {
       collected.add(module);
@@ -267,14 +263,14 @@ function collectDependents(
  * Register a module dependency
  */
 export function registerModuleDependency(
-  context: HmrContext, 
-  module: string, 
+  context: HmrContext,
+  module: string,
   dependency: string
 ): void {
   if (!context.moduleDependencies.has(module)) {
     context.moduleDependencies.set(module, new Set());
   }
-  
+
   context.moduleDependencies.get(module)!.add(dependency);
 }
 
@@ -285,9 +281,9 @@ export function broadcastHmrError(context: HmrContext, message: string): void {
   const event: HmrEvent = {
     type: 'error',
     message,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
-  
+
   for (const client of context.connectedClients) {
     client.send(JSON.stringify(event));
   }
@@ -299,10 +295,10 @@ export function broadcastHmrError(context: HmrContext, message: string): void {
 export function requestPageReload(context: HmrContext): void {
   const event: HmrEvent = {
     type: 'reload',
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
-  
+
   for (const client of context.connectedClients) {
     client.send(JSON.stringify(event));
   }
-} 
+}

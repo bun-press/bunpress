@@ -17,6 +17,15 @@
 - Use file-based logging in addition to console output to capture results reliably.
 - Test with both direct file execution and module imports to verify behavior in both contexts.
 
+## Theme Management and Testing
+
+- The theme manager is implemented as a singleton using a global variable `global.defaultThemeManager` to ensure proper test isolation.
+- When testing theme-related functionality, always reset the theme manager between tests using `global.defaultThemeManager = undefined` in afterEach blocks.
+- The theme registry plugin logs messages with expected theme counts - tests should verify these exact counts.
+- CLI tests for themes should create minimal theme structures with required files (index.tsx/Layout.tsx, styles.css, layouts directory).
+- Theme integration tests should verify theme discovery, loading, layout switching, and TOC rendering from an end-user perspective.
+- For theme tests, create temporary theme directories with the necessary structure to avoid relying on existing themes.
+
 ## Debugging Techniques
 
 - When debugging Bun-specific behavior, create minimal test cases outside the main application.

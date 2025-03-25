@@ -65,13 +65,13 @@ export interface RssFeedOptions {
    * @default 'http://purl.org/rss/1.0/modules/content/'
    */
   contentNamespace?: string;
-  
+
   /**
    * Output directory
    * @default 'dist'
    */
   outputDir?: string;
-  
+
   /**
    * File system module (for testing)
    * @internal
@@ -93,7 +93,7 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
     filterItems = () => true,
     contentNamespace = 'http://purl.org/rss/1.0/modules/content/',
     outputDir = 'dist',
-    _fs = null
+    _fs = null,
   } = options;
 
   // Use provided fs or require the real one
@@ -102,7 +102,7 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
 
   // Collection of all content files for RSS generation
   const contentFiles: ContentFile[] = [];
-  
+
   // Default sort function (by date, newest first)
   function defaultSortItems(a: ContentFile, b: ContentFile) {
     const dateA = a.frontmatter?.date ? new Date(a.frontmatter.date) : new Date(0);
@@ -114,20 +114,17 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
   function formatRFC822Date(date: Date): string {
     return date.toUTCString();
   }
-  
+
   // Generate the RSS feed XML
   function generateFeed(): string {
     // Filter, sort, and limit content files
-    const feedItems = contentFiles
-      .filter(filterItems)
-      .sort(sortItems)
-      .slice(0, limit);
+    const feedItems = contentFiles.filter(filterItems).sort(sortItems).slice(0, limit);
 
     // Build the RSS feed XML
     const now = new Date();
     const buildDate = formatRFC822Date(now);
     const copyrightText = copyright || `Copyright ${now.getFullYear()} ${title || ''}`;
-    
+
     let feedContent = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="${contentNamespace}">
   <channel>
@@ -141,7 +138,7 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
     <generator>${escapeXml(generator)}</generator>
     <atom:link href="${new URL(filename, siteUrl).toString()}" rel="self" type="application/rss+xml" />
 `;
-    
+
     // Add feed items
     for (const item of feedItems) {
       const { frontmatter, route, content, html } = item;
@@ -149,7 +146,7 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
       const itemDate = frontmatter.date ? formatRFC822Date(new Date(frontmatter.date)) : buildDate;
       const itemTitle = frontmatter.title || route;
       const itemDescription = frontmatter.description || extractExcerpt(content);
-      
+
       feedContent += `
     <item>
       <title>${escapeXml(itemTitle)}</title>
@@ -162,12 +159,12 @@ ${frontmatter.categories ? generateCategories(frontmatter.categories) : ''}
       <content:encoded><![CDATA[${html}]]></content:encoded>
     </item>`;
     }
-    
+
     // Close the feed
     feedContent += `
   </channel>
 </rss>`;
-    
+
     return feedContent;
   }
 
@@ -179,7 +176,7 @@ ${frontmatter.categories ? generateCategories(frontmatter.categories) : ''}
       console.log('RSS feed plugin: Starting RSS feed generation...');
       // Reset content files
       contentFiles.length = 0;
-      
+
       // In a real implementation, we'd need to hook into the content processor
       // to collect all content files. For now, this is a placeholder.
       // This would typically require extending the ContentProcessor to emit
@@ -205,12 +202,12 @@ ${frontmatter.categories ? generateCategories(frontmatter.categories) : ''}
         console.log('RSS feed plugin: Site URL not provided, skipping RSS feed generation.');
         return;
       }
-      
+
       if (!title) {
         console.log('RSS feed plugin: Feed title not provided, skipping RSS feed generation.');
         return;
       }
-      
+
       // Ensure output directory exists
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
@@ -222,31 +219,33 @@ ${frontmatter.categories ? generateCategories(frontmatter.categories) : ''}
       if (contentFiles.length === 0) {
         simulateContentFiles(contentFiles);
       }
-      
+
       // Generate the feed
       const feedContent = generateFeed();
-      
+
       // Write the feed file
       fs.writeFileSync(path.join(outputDir, filename), feedContent);
-      console.log(`RSS feed plugin: Generated ${filename} with ${contentFiles.filter(filterItems).length} items`);
+      console.log(
+        `RSS feed plugin: Generated ${filename} with ${contentFiles.filter(filterItems).length} items`
+      );
     },
-    
+
     // Exposing methods for testing
     __test__: {
       addContentFile: (file: ContentFile) => contentFiles.push(file),
       clearContentFiles: () => contentFiles.splice(0, contentFiles.length),
       getContentFiles: () => [...contentFiles],
-      generateFeed
-    }
+      generateFeed,
+    },
   };
-  
+
   return plugin as Plugin & {
     __test__: {
       addContentFile: (file: ContentFile) => void;
       clearContentFiles: () => void;
       getContentFiles: () => ContentFile[];
       generateFeed: () => string;
-    }
+    };
   };
 }
 
@@ -263,10 +262,10 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
         description: 'Learn how to create your first BunPress site',
         date: '2023-05-15',
         author: 'BunPress Team',
-        categories: ['Tutorial', 'BunPress']
+        categories: ['Tutorial', 'BunPress'],
       },
       content: `# Getting Started with BunPress\n\nWelcome to BunPress, the fastest static site generator built with Bun!`,
-      html: '<h1>Getting Started with BunPress</h1><p>Welcome to BunPress, the fastest static site generator built with Bun!</p>'
+      html: '<h1>Getting Started with BunPress</h1><p>Welcome to BunPress, the fastest static site generator built with Bun!</p>',
     },
     {
       path: '/path/to/blog/creating-plugins.md',
@@ -276,10 +275,10 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
         description: 'Learn how to extend BunPress with custom plugins',
         date: '2023-06-10',
         author: 'BunPress Team',
-        categories: ['Advanced', 'Plugins', 'BunPress']
+        categories: ['Advanced', 'Plugins', 'BunPress'],
       },
       content: `# Creating Plugins for BunPress\n\nPlugins allow you to extend BunPress with custom functionality.`,
-      html: '<h1>Creating Plugins for BunPress</h1><p>Plugins allow you to extend BunPress with custom functionality.</p>'
+      html: '<h1>Creating Plugins for BunPress</h1><p>Plugins allow you to extend BunPress with custom functionality.</p>',
     },
     {
       path: '/path/to/blog/optimizing-performance.md',
@@ -289,15 +288,15 @@ function simulateContentFiles(contentFiles: ContentFile[]) {
         description: 'Tips and tricks for optimizing your BunPress site',
         date: '2023-07-20',
         author: 'BunPress Team',
-        categories: ['Performance', 'BunPress']
+        categories: ['Performance', 'BunPress'],
       },
       content: `# Optimizing Performance in BunPress\n\nLearn how to make your BunPress site even faster!`,
-      html: '<h1>Optimizing Performance in BunPress</h1><p>Learn how to make your BunPress site even faster!</p>'
-    }
+      html: '<h1>Optimizing Performance in BunPress</h1><p>Learn how to make your BunPress site even faster!</p>',
+    },
   ];
-  
+
   // Add sample posts to content files
-  contentFiles.push(...posts as ContentFile[]);
+  contentFiles.push(...(posts as ContentFile[]));
 }
 
 // Utility functions
@@ -320,7 +319,7 @@ function escapeXml(text: string): string {
 function extractExcerpt(content: string, length: number = 200): string {
   // Remove frontmatter if present
   const contentWithoutFrontmatter = content.replace(/^---[\s\S]*?---/, '').trim();
-  
+
   // Remove markdown headings, links, images, etc.
   const plainText = contentWithoutFrontmatter
     .replace(/#+\s+/g, '') // Remove headings
@@ -332,11 +331,9 @@ function extractExcerpt(content: string, length: number = 200): string {
     .replace(/\n/g, ' ') // Replace newlines with spaces
     .replace(/\s+/g, ' ') // Replace multiple spaces with one
     .trim();
-  
+
   // Limit to specified length
-  return plainText.length > length
-    ? plainText.substring(0, length) + '...'
-    : plainText;
+  return plainText.length > length ? plainText.substring(0, length) + '...' : plainText;
 }
 
 /**
@@ -344,9 +341,9 @@ function extractExcerpt(content: string, length: number = 200): string {
  */
 function generateCategories(categories: string | string[]): string {
   if (!categories) return '';
-  
+
   const categoryArray = Array.isArray(categories) ? categories : [categories];
   return categoryArray
     .map(category => `      <category>${escapeXml(category)}</category>`)
     .join('\n');
-} 
+}

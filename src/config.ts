@@ -1,4 +1,4 @@
-import type { BunPressConfig } from './core';
+import type { BunPressConfig } from '../bunpress.config';
 import type { Plugin } from './core/plugin';
 
 /**
@@ -13,4 +13,4 @@ export function defineConfig(config: BunPressConfig): BunPressConfig {
  */
 export function definePlugin(plugin: Plugin): Plugin {
   return plugin;
-} 
+}

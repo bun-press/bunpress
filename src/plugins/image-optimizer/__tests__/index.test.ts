@@ -15,7 +15,7 @@ describe('Image Optimizer Plugin', () => {
 
     const content = '![Alt text](image.jpg) ![Another](path/to/image.png "Title")';
     const transformed = plugin.transform?.(content) || '';
-    
+
     expect(transformed).toContain('![Alt text](image.webp)');
     expect(transformed).toContain('![Another](path/to/image.webp "Title")');
   });
@@ -27,7 +27,7 @@ describe('Image Optimizer Plugin', () => {
 
     const content = '![Alt text](image.jpg) ![Another](path/to/image.png)';
     const transformed = plugin.transform?.(content) || '';
-    
+
     expect(transformed).toContain('![Alt text](image.avif)');
     expect(transformed).toContain('![Another](path/to/image.avif)');
   });
@@ -39,7 +39,7 @@ describe('Image Optimizer Plugin', () => {
 
     const content = '![Alt text](image.jpg) ![Another](path/to/image.png)';
     const transformed = plugin.transform?.(content) || '';
-    
+
     // No transformation should happen
     expect(transformed).toBe(content);
   });
@@ -51,7 +51,7 @@ describe('Image Optimizer Plugin', () => {
 
     const content = '![Alt text](image.jpg) ![Another](path/to/image.png)';
     const transformed = plugin.transform?.(content) || '';
-    
+
     // No transformation should happen
     expect(transformed).toBe(content);
   });
@@ -72,9 +72,9 @@ describe('Image Optimizer Plugin', () => {
       
       ![Image 4](./path/to/image4.jpg)
     `;
-    
+
     const transformed = plugin.transform?.(content) || '';
-    
+
     expect(transformed).toContain('![Image 1](image1.webp)');
     expect(transformed).toContain('![Image 2](assets/image2.webp "Description")');
     expect(transformed).toContain('![Image 3](../images/image3.webp)');
@@ -96,10 +96,10 @@ describe('Image Optimizer Plugin', () => {
       const image = "image.jpg";
       \`\`\`
     `;
-    
+
     const transformed = plugin.transform?.(content) || '';
-    
+
     // Should not change links or code blocks
     expect(transformed).toBe(content);
   });
-}); 
+});

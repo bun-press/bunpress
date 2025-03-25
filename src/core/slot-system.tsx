@@ -21,11 +21,7 @@ export function SlotProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  return (
-    <SlotContext.Provider value={{ slots, registerSlot }}>
-      {children}
-    </SlotContext.Provider>
-  );
+  return <SlotContext.Provider value={{ slots, registerSlot }}>{children}</SlotContext.Provider>;
 }
 
 interface SlotProps {
@@ -63,4 +59,4 @@ export function SlotContent({ slot, children }: SlotContentProps) {
   }, [slot, children, registerSlot]);
 
   return null;
-} 
+}

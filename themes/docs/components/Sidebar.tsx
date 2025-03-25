@@ -1,5 +1,6 @@
 import React from 'react';
-import { cn } from '../../../src/lib/utils';
+import { cn } from "@bunpress/lib/utils";
+import { ChevronRight } from 'lucide-react';
 
 export interface SidebarItem {
   text: string;
@@ -93,51 +94,67 @@ export function Sidebar({ items, currentPath = '', config, className }: SidebarP
           'sidebar-item',
           `level-${level}`,
           isActive && 'active',
-          hasChildren && 'has-children'
+          hasChildren && 'has-children',
+          "animate-in fade-in-50 duration-300",
+          "my-[2px]"
         )}>
-          <div className="sidebar-item-header">
+          <div className={cn(
+            "sidebar-item-header",
+            "flex items-center justify-between",
+            "rounded transition-colors",
+            isActive && !item.link && "bg-accent/50",
+          )}>
             {item.link ? (
               <a 
                 href={item.link}
                 className={cn(
                   'sidebar-link',
-                  isActive && 'active'
+                  'w-full rounded-md px-2 py-1.5 text-sm transition-colors',
+                  'hover:bg-accent hover:text-primary',
+                  isActive && 'active bg-accent/50 text-primary font-medium'
                 )}
               >
                 {item.text}
               </a>
             ) : (
-              <span className="sidebar-text">{item.text}</span>
+              <span className={cn(
+                "sidebar-text",
+                "block w-full rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors",
+                hasChildren && "cursor-pointer hover:text-foreground",
+                isActive && "text-foreground"
+              )}
+                onClick={hasChildren ? () => toggleExpanded(itemId) : undefined}
+              >
+                {item.text}
+              </span>
             )}
             {hasChildren && (
               <button
                 className={cn(
                   'sidebar-toggle',
+                  'flex h-6 w-6 items-center justify-center rounded-md',
+                  'text-muted-foreground hover:bg-accent hover:text-primary',
+                  'transition-all duration-200',
                   isExpandedOrAuto && 'expanded'
                 )}
                 onClick={() => toggleExpanded(itemId)}
                 aria-expanded={isExpandedOrAuto}
               >
-                <svg
-                  className="sidebar-toggle-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6l4 4 4-4"
-                  />
-                </svg>
+                <ChevronRight 
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isExpandedOrAuto && "rotate-90"
+                  )}
+                />
               </button>
             )}
           </div>
           {hasChildren && isExpandedOrAuto && (
-            <ul className="sidebar-children">
+            <ul className={cn(
+              "sidebar-children",
+              "mt-1 pl-4 border-l border-border/50 dark:border-border-dark/50",
+              "animate-in fade-in-50 slide-in-from-left-1 duration-200",
+            )}>
               {renderItems(item.items || [], level + 1, [...path, item.text])}
             </ul>
           )}
@@ -148,7 +165,7 @@ export function Sidebar({ items, currentPath = '', config, className }: SidebarP
 
   return (
     <nav className={cn('sidebar', className)}>
-      <ul className="sidebar-items">
+      <ul className="sidebar-items space-y-1">
         {renderItems(items)}
       </ul>
     </nav>
@@ -200,24 +217,21 @@ export function generateSidebarFromFiles(
           link: currentPath,
         });
       } else {
-        // Check if we already have a section for this path segment
-        let section = sections[currentPath];
+        // Create or get a section
+        const sectionKey = segments.slice(0, i + 1).join('/');
         
-        if (!section) {
+        if (!sections[sectionKey]) {
           // Create a new section
-          section = {
+          const section: SidebarItem = {
             text: displayText,
-            link: currentPath + 'index', // Link to index.md if it exists
-            items: [],
-            collapsed: true,
+            items: []
           };
           
+          sections[sectionKey] = section;
           currentItems.push(section);
-          sections[currentPath] = section;
         }
         
-        // Move to the children of this section for the next iteration
-        currentItems = section.items!;
+        currentItems = sections[sectionKey].items || [];
       }
     }
   }
