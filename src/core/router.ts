@@ -13,24 +13,32 @@ export async function generateRoutes(pagesDir: string): Promise<Routes> {
 
   // Helper function to process files recursively
   async function processDirectory(directory: string) {
-    const files = readdirSync(directory);
+    try {
+      const files = readdirSync(directory);
 
-    for (const file of files) {
-      const filePath = path.join(directory, file);
-      const stat = statSync(filePath);
+      for (const file of files) {
+        const filePath = path.join(directory, file);
+        try {
+          const stat = statSync(filePath);
 
-      if (stat.isDirectory()) {
-        // Recursively process subdirectories
-        await processDirectory(filePath);
-      } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
-        // Process markdown files using the now async version
-        const contentFile = await processMarkdownContent(filePath, pagesDir);
-        if (contentFile.route) {
-          routes[contentFile.route] = contentFile;
-        } else {
-          console.warn(`Warning: Content file at ${filePath} has no route defined`);
+          if (stat.isDirectory()) {
+            // Recursively process subdirectories
+            await processDirectory(filePath);
+          } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
+            // Process markdown files using the now async version
+            const contentFile = await processMarkdownContent(filePath, pagesDir);
+            if (contentFile.route) {
+              routes[contentFile.route] = contentFile;
+            } else {
+              console.warn(`Warning: Content file at ${filePath} has no route defined`);
+            }
+          }
+        } catch (err) {
+          console.warn(`Warning: Error processing file ${filePath}: ${err}`);
         }
       }
+    } catch (err) {
+      console.warn(`Warning: Could not read directory ${directory}: ${err}`);
     }
   }
 
@@ -58,29 +66,37 @@ export async function generateRoutesAsync(
 
   // Helper function to process files recursively
   async function processDirectory(directory: string) {
-    const files = readdirSync(directory);
+    try {
+      const files = readdirSync(directory);
 
-    for (const file of files) {
-      const filePath = path.join(directory, file);
-      const stat = statSync(filePath);
+      for (const file of files) {
+        const filePath = path.join(directory, file);
+        try {
+          const stat = statSync(filePath);
 
-      if (stat.isDirectory()) {
-        // Recursively process subdirectories
-        await processDirectory(filePath);
-      } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
-        // Process markdown files with plugin support
-        const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
-        if (contentFile.route) {
-          routes[contentFile.route] = contentFile;
-          
-          // Register the content file with i18n plugin if available
-          if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
-            (i18nPlugin as any).registerContentFile(contentFile);
+          if (stat.isDirectory()) {
+            // Recursively process subdirectories
+            await processDirectory(filePath);
+          } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
+            // Process markdown files with plugin support
+            const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
+            if (contentFile.route) {
+              routes[contentFile.route] = contentFile;
+              
+              // Register the content file with i18n plugin if available
+              if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
+                (i18nPlugin as any).registerContentFile(contentFile);
+              }
+            } else {
+              console.warn(`Warning: Content file at ${filePath} has no route defined`);
+            }
           }
-        } else {
-          console.warn(`Warning: Content file at ${filePath} has no route defined`);
+        } catch (err) {
+          console.warn(`Warning: Error processing file ${filePath}: ${err}`);
         }
       }
+    } catch (err) {
+      console.warn(`Warning: Could not read directory ${directory}: ${err}`);
     }
   }
 

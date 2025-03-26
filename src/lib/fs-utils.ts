@@ -1,18 +1,19 @@
 /**
- * File system utilities shared across the codebase
+ * File System Utilities
+ * Provides centralized utilities for file system operations
  */
 
-import { dirname, join, resolve, extname, relative, sep } from 'path';
-import { mkdir, readdir, readFile, writeFile, copyFile as fsCopyFile, existsSync, rmdir, unlink, statSync } from 'fs';
+import { mkdir, readdir, writeFile, copyFile as fsCopyFile, existsSync, rmdir, 
+unlink, statSync } from 'fs';
 import { stat } from 'fs/promises';
-import { minimatch } from './server-utils';
+import { resolve, join, dirname, extname, relative, sep } from 'path';
 import { 
   ErrorCode, 
-  BunPressError, 
-  createFileSystemError, 
+  createFileSystemError,
   tryCatch,
   tryCatchWithCode
 } from './error-utils';
+import { minimatch } from './server-utils';
 
 /**
  * Check if a file exists

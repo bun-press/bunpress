@@ -7,7 +7,7 @@
 // Layouts
 import { HomeLayout } from './layouts/HomeLayout';
 import { PageLayout } from './layouts/PageLayout';
-import { DocLayout } from './layouts/DocLayout';
+import DocLayout from './layouts/DocLayout';
 
 // Components
 import { Navigation } from './components/Navigation';

@@ -3,6 +3,11 @@
  * Provides a centralized system for error creation, formatting, and handling
  */
 
+import { getNamespacedLogger } from './logger-utils';
+
+// Create a namespaced logger for error utils
+const logger = getNamespacedLogger('error');
+
 /**
  * Error codes for different categories of errors
  */
@@ -56,7 +61,41 @@ export enum ErrorCode {
 }
 
 /**
- * Error context containing additional information
+ * Helper function to check if a value is a string or number
+ */
+function isStringOrNumber(value: any): value is string | number {
+  return typeof value === 'string' || typeof value === 'number';
+}
+
+/**
+ * Helper function to format a value for display in error messages
+ */
+function formatValue(value: any): string {
+  if (value === undefined) {
+    return 'undefined';
+  }
+  
+  if (value === null) {
+    return 'null';
+  }
+  
+  if (isStringOrNumber(value)) {
+    return String(value);
+  }
+  
+  if (value instanceof Error) {
+    return value.message;
+  }
+  
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    return '[Object]';
+  }
+}
+
+/**
+ * Extended error context
  */
 export interface ErrorContext {
   [key: string]: any;
@@ -90,7 +129,7 @@ export class BunPressError extends Error {
    * Format error for logging
    */
   formatForLog(): string {
-    return `[BunPressError-${this.code}] ${this.message}${this.formatContext()}`;
+    return `${this.code}: ${this.message}${this.formatContext()}`;
   }
   
   /**
@@ -109,140 +148,106 @@ export class BunPressError extends Error {
 }
 
 /**
- * Format a value for display in error messages
+ * Create a new BunPress error
  */
-function formatValue(value: any): string {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'function') return '[Function]';
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch (error) {
-      return '[Object]';
-    }
-  }
-  return String(value);
+export function createError(
+  code: ErrorCode,
+  message: string,
+  context?: ErrorContext
+): BunPressError {
+  return new BunPressError(code, message, context);
 }
 
 /**
- * Factory functions for creating specific error types
+ * Create and throw a BunPress error
  */
+export function throwError(
+  code: ErrorCode,
+  message: string,
+  context?: ErrorContext
+): never {
+  const error = createError(code, message, context);
+  throw error;
+}
 
 /**
- * Create a file system error
+ * Create a file system specific error
  */
 export function createFileSystemError(
-  code: ErrorCode.FILE_NOT_FOUND | ErrorCode.PERMISSION_DENIED | ErrorCode.FILE_ALREADY_EXISTS | ErrorCode.DIRECTORY_NOT_FOUND,
+  code: ErrorCode,
   message: string,
-  filePath: string,
+  path: string,
   originalError?: Error
 ): BunPressError {
-  return new BunPressError(code, message, {
-    filePath,
-    originalError: originalError?.message
-  });
+  return createError(code, message, { path, originalError });
 }
 
 /**
- * Create a content processing error
+ * Get a human-readable error message for an error code
  */
-export function createContentError(
-  code: ErrorCode.INVALID_MARKDOWN | ErrorCode.INVALID_FRONTMATTER | ErrorCode.CONTENT_TRANSFORM_FAILED,
-  message: string,
-  filePath?: string,
-  details?: string,
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    filePath,
-    details,
-    originalError: originalError?.message
-  });
-}
-
-/**
- * Create a server error
- */
-export function createServerError(
-  code: ErrorCode.SERVER_START_ERROR | ErrorCode.SERVER_STOP_ERROR,
-  message: string,
-  details?: string,
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    details,
-    originalError: originalError?.message
-  });
-}
-
-/**
- * Create a plugin error
- */
-export function createPluginError(
-  code: ErrorCode.PLUGIN_LOAD_ERROR | ErrorCode.PLUGIN_NOT_FOUND,
-  message: string,
-  pluginName: string,
-  details?: string,
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    pluginName,
-    details,
-    originalError: originalError?.message
-  });
-}
-
-/**
- * Create a theme error
- */
-export function createThemeError(
-  code: ErrorCode.THEME_LOAD_ERROR | ErrorCode.THEME_NOT_FOUND | ErrorCode.LAYOUT_NOT_FOUND | ErrorCode.COMPONENT_ERROR,
-  message: string,
-  themeName: string,
-  details?: string,
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    themeName,
-    details,
-    originalError: originalError?.message
-  });
-}
-
-/**
- * Create a configuration error
- */
-export function createConfigError(
-  code: ErrorCode.CONFIG_VALIDATION_ERROR | ErrorCode.CONFIG_PARSE_ERROR | ErrorCode.CONFIG_NOT_FOUND,
-  message: string,
-  configPath?: string,
-  details?: string,
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    configPath,
-    details,
-    originalError: originalError?.message
-  });
-}
-
-/**
- * Create a CLI error
- */
-export function createCliError(
-  code: ErrorCode.COMMAND_ERROR | ErrorCode.INVALID_ARGUMENTS,
-  message: string,
-  command?: string,
-  args?: string[],
-  originalError?: Error
-): BunPressError {
-  return new BunPressError(code, message, {
-    command,
-    args,
-    originalError: originalError?.message
-  });
+export function getErrorDescription(code: ErrorCode): string {
+  switch (code) {
+    case ErrorCode.UNKNOWN_ERROR:
+      return 'An unknown error occurred';
+    case ErrorCode.VALIDATION_ERROR:
+      return 'Validation failed';
+    case ErrorCode.FILE_NOT_FOUND:
+      return 'File not found';
+    case ErrorCode.FILE_READ_ERROR:
+      return 'Failed to read file';
+    case ErrorCode.FILE_WRITE_ERROR:
+      return 'Failed to write file';
+    case ErrorCode.FILE_DELETE_ERROR:
+      return 'Failed to delete file';
+    case ErrorCode.FILE_COPY_ERROR:
+      return 'Failed to copy file';
+    case ErrorCode.FILE_ALREADY_EXISTS:
+      return 'File already exists';
+    case ErrorCode.DIRECTORY_NOT_FOUND:
+      return 'Directory not found';
+    case ErrorCode.DIRECTORY_DELETE_ERROR:
+      return 'Failed to delete directory';
+    case ErrorCode.PERMISSION_DENIED:
+      return 'Permission denied';
+    case ErrorCode.PLUGIN_NOT_FOUND:
+      return 'Plugin not found';
+    case ErrorCode.PLUGIN_LOAD_ERROR:
+      return 'Failed to load plugin';
+    case ErrorCode.SERVER_START_ERROR:
+      return 'Failed to start server';
+    case ErrorCode.SERVER_STOP_ERROR:
+      return 'Failed to stop server';
+    case ErrorCode.CONTENT_PARSE_ERROR:
+      return 'Failed to parse content';
+    case ErrorCode.CONTENT_RENDER_ERROR:
+      return 'Failed to render content';
+    case ErrorCode.INVALID_MARKDOWN:
+      return 'Invalid markdown content';
+    case ErrorCode.INVALID_FRONTMATTER:
+      return 'Invalid frontmatter';
+    case ErrorCode.CONTENT_TRANSFORM_FAILED:
+      return 'Content transformation failed';
+    case ErrorCode.THEME_LOAD_ERROR:
+      return 'Failed to load theme';
+    case ErrorCode.THEME_NOT_FOUND:
+      return 'Theme not found';
+    case ErrorCode.LAYOUT_NOT_FOUND:
+      return 'Layout not found';
+    case ErrorCode.COMPONENT_ERROR:
+      return 'Component error';
+    case ErrorCode.CONFIG_VALIDATION_ERROR:
+      return 'Configuration validation failed';
+    case ErrorCode.CONFIG_PARSE_ERROR:
+      return 'Failed to parse configuration';
+    case ErrorCode.CONFIG_NOT_FOUND:
+      return 'Configuration not found';
+    case ErrorCode.COMMAND_ERROR:
+      return 'Command error';
+    case ErrorCode.INVALID_ARGUMENTS:
+      return 'Invalid arguments';
+    default:
+      return `Error code: ${code}`;
+  }
 }
 
 /**
@@ -254,7 +259,11 @@ export type ErrorHandler = (error: Error | BunPressError) => void;
  * Global error handler configuration
  */
 let globalErrorHandler: ErrorHandler = (error) => {
-  console.error(error instanceof BunPressError ? error.formatForLog() : error);
+  if (error instanceof BunPressError) {
+    logger.error(error.formatForLog());
+  } else {
+    logger.error(error.message, { stack: error.stack });
+  }
 };
 
 /**
@@ -311,12 +320,13 @@ export async function tryCatchWithCode<T>(
   try {
     return await fn();
   } catch (error) {
+    const errorStr = error instanceof Error ? error.message : String(error);
     const bunPressError = new BunPressError(
       errorCode,
-      `${errorMessage}: ${(error as Error).message}`,
+      `${errorMessage}: ${errorStr}`,
       {
         ...context,
-        originalError: (error as Error).message
+        originalError: errorStr
       }
     );
     
@@ -363,12 +373,13 @@ export function tryCatchWithCodeSync<T>(
   try {
     return fn();
   } catch (error) {
+    const errorStr = error instanceof Error ? error.message : String(error);
     const bunPressError = new BunPressError(
       errorCode,
-      `${errorMessage}: ${(error as Error).message}`,
+      `${errorMessage}: ${errorStr}`,
       {
         ...context,
-        originalError: (error as Error).message
+        originalError: errorStr
       }
     );
     

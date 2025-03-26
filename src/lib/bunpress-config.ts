@@ -5,6 +5,7 @@
 
 import { join } from 'path';
 import { createConfig, ConfigSchema, loadEnvFile } from './config-utils';
+import { NavigationItem as BaseNavigationItem, SidebarItem as BaseSidebarItem, SidebarSubItem } from './ui-utils';
 
 /**
  * BunPress development server configuration
@@ -142,18 +143,18 @@ export interface DocumentationConfig {
 }
 
 /**
- * BunPress navigation item
+ * BunPress navigation item extending base navigation item
  */
-export interface NavigationItem {
+export interface NavigationItem extends BaseNavigationItem {
   /**
-   * Item title
+   * Item text label
    */
-  title: string;
+  label: string;
   
   /**
    * Item URL
    */
-  href: string;
+  url: string;
   
   /**
    * Whether the item is active
@@ -172,18 +173,13 @@ export interface NavigationItem {
 }
 
 /**
- * BunPress sidebar item
+ * BunPress sidebar item extending base sidebar item
  */
-export interface SidebarItem {
+export interface SidebarItem extends BaseSidebarItem {
   /**
-   * Item title
+   * Item URL (using url property from ui-utils)
    */
-  title: string;
-  
-  /**
-   * Item URL
-   */
-  href?: string;
+  url: string;
   
   /**
    * Whether the section is collapsed
@@ -203,7 +199,7 @@ export interface SidebarItem {
   /**
    * Child items
    */
-  items?: SidebarItem[];
+  items?: SidebarSubItem[];
 }
 
 /**
@@ -336,25 +332,27 @@ const DEFAULT_CONFIG: BunPressConfig = {
     cssChunking: true
   },
   navigation: [
-    { title: 'Home', href: '/' },
-    { title: 'Documentation', href: '/docs/' }
+    { label: 'Home', url: '/' },
+    { label: 'Documentation', url: '/docs/' }
   ],
   sidebar: [
     {
       title: 'Introduction',
+      url: '/docs/introduction/',
       items: [
-        { title: 'Getting Started', href: '/docs/getting-started/' },
-        { title: 'Installation', href: '/docs/installation/' }
+        { title: "Getting Started", url: "/docs/getting-started/" },
+        { title: "Installation", url: "/docs/installation/" }
       ]
     },
     {
       title: 'Guides',
+      url: '/docs/guides/',
       collapsed: false,
       items: [
-        { title: 'Basic Usage', href: '/docs/guides/basic-usage/' },
-        { title: 'Configuration', href: '/docs/guides/configuration/' },
-        { title: 'Themes', href: '/docs/guides/themes/' },
-        { title: 'Plugins', href: '/docs/guides/plugins/' }
+        { title: "Basic Usage", url: "/docs/guides/basic-usage/" },
+        { title: "Configuration", url: "/docs/guides/configuration/" },
+        { title: "Themes", url: "/docs/guides/themes/" },
+        { title: "Plugins", url: "/docs/guides/plugins/" }
       ]
     }
   ],

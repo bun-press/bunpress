@@ -11,7 +11,6 @@ import path from 'path';
 import fs from 'fs';
 import { createSlotSystem } from '../core/slot-system';
 import {
-  readMarkdownFile,
   markdownToHtml,
   ContentFile as BaseContentFile,
   processMarkdownString

@@ -34,12 +34,12 @@ export interface ContentData {
 /**
  * Render HTML content with the appropriate theme
  */
-export function renderHtml(
+export async function renderHtml(
   content: ContentData,
   config: BunPressConfig,
   workspaceRoot: string,
   options: RenderOptions = {}
-): string {
+): Promise<string> {
   const { html, frontmatter } = content;
 
   // Initialize or get theme manager
@@ -51,8 +51,8 @@ export function renderHtml(
     themeManager.setThemeFromConfig(config);
   }
 
-  // Get theme styles and choose layout type
-  const themeStyles = themeManager.getThemeStyleContent();
+  // Get theme styles and choose layout type - need to await the promise
+  const themeStyles = await themeManager.getThemeStyleContent();
   const layoutType =
     options.layout || frontmatter.layout || config.themeConfig?.defaultLayout || 'doc';
 
@@ -79,7 +79,7 @@ export function renderHtml(
   const layoutUrl = getWebPath(layoutComponent, workspaceRoot);
 
   // Prepare rendering parameters for React components
-  const layoutParams = JSON.stringify({
+  const layoutParams = {
     frontmatter,
     content: html,
     navItems,
@@ -87,7 +87,14 @@ export function renderHtml(
     tocItems,
     currentPath: frontmatter.path || '/',
     config,
-  });
+  };
+  
+  // Safely serialize the layout params with proper escaping
+  const layoutParamsSerialized = JSON.stringify(layoutParams)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/'/g, '\\u0027');
 
   // Apply theme class
   const themeClass = getThemeClasses(config);
@@ -120,7 +127,7 @@ export function renderHtml(
     ${additionalHeadTags}
   </head>
   <body>
-    <div id="app" data-layout-params='${layoutParams}'></div>
+    <div id="app" data-layout-params='${layoutParamsSerialized}'></div>
     ${
       isReactLayout(layoutUrl)
         ? `

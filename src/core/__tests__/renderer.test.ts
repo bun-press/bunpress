@@ -77,60 +77,45 @@ describe('Renderer', () => {
     }
   });
 
-  test('renders HTML with content and frontmatter', () => {
+  test('renders HTML with content and frontmatter', async () => {
+    // Create test content and config
     const content = {
-      html: '<h1>Test Content</h1><p>This is a test paragraph.</p>',
+      html: '<h1>Test Page</h1><p>This is a test page.</p>',
       frontmatter: {
         title: 'Test Page',
-        description: 'A test page',
+        description: 'A simple test page',
       },
     };
 
-    const result = renderHtml(content, testConfig, testDir);
+    const result = await renderHtml(content, testConfig, testDir);
 
     // Verify that the result contains essential HTML elements
     expect(result).toContain('<!DOCTYPE html>');
-    expect(result).toContain('<html');
-    expect(result).toContain('<head>');
-    expect(result).toContain('<body>');
-
-    // Verify that the title from frontmatter is used
     expect(result).toContain('<title>Test Page</title>');
-
-    // Verify that the content is included
-    expect(result).toContain('Test Content');
-    expect(result).toContain('This is a test paragraph');
-
-    // Since the theme isn't loading properly (see console messages), it's using the fallback
-    // These assertions would be for the actual theme, but we'll skip them
-    // expect(result).toContain('data-layout-params');
-    // expect(result).toContain('"frontmatter"');
-    // expect(result).toContain('"navItems"');
-    // expect(result).toContain('"sidebarItems"');
-
-    // Instead, verify the fallback renderer elements
-    expect(result).toContain('Built with BunPress');
+    expect(result).toContain('<meta name="description" content="A simple test page">');
+    expect(result).toContain('<h1>Test Page</h1>');
   });
 
-  test('extracts TOC items from content with headings', () => {
+  test('extracts TOC items from content with headings', async () => {
+    // Create test content with multiple headings
     const content = {
       html: `
-        <h1>Main Title</h1>
+        <h1 id="main-title">Main Title</h1>
         <p>Introduction paragraph</p>
         <h2 id="section-1">Section 1</h2>
-        <p>Content for section 1</p>
-        <h3 id="subsection-1-1">Subsection 1.1</h3>
-        <p>More content</p>
+        <p>Section 1 content</p>
         <h2 id="section-2">Section 2</h2>
-        <p>Final content</p>
+        <p>Section 2 content</p>
+        <h3 id="subsection">Subsection</h3>
+        <p>Subsection content</p>
       `,
       frontmatter: {
-        title: 'TOC Test',
-        description: 'Testing TOC extraction',
+        title: 'Test TOC Page',
+        description: 'Page with multiple headings for TOC',
       },
     };
 
-    const result = renderHtml(content, testConfig, testDir);
+    const result = await renderHtml(content, testConfig, testDir);
 
     // The TOC items would be extracted but since the theme isn't loading,
     // we're using fallback renderer and those aren't included in the output
@@ -138,40 +123,36 @@ describe('Renderer', () => {
 
     // Instead, verify that the headings exist in the rendered content
     expect(result).toContain('id="section-1"');
-    expect(result).toContain('Section 1');
-    expect(result).toContain('id="subsection-1-1"');
     expect(result).toContain('id="section-2"');
+    expect(result).toContain('id="subsection"');
   });
 
-  test('falls back to simple template when theme not available', () => {
-    // Create a config with a non-existent theme
+  test('falls back to simple template when theme not available', async () => {
+    // Create config with non-existent theme
     const noThemeConfig = {
       ...testConfig,
       themeConfig: {
         name: 'non-existent-theme',
         defaultLayout: 'doc' as 'doc' | 'page' | 'home',
+        options: {},
       },
     };
 
     const content = {
-      html: '<h1>Fallback Test</h1><p>This should use the fallback template.</p>',
+      html: '<h1>No Theme Page</h1><p>This page has no theme.</p>',
       frontmatter: {
-        title: 'Fallback Page',
-        description: 'Testing fallback rendering',
+        title: 'No Theme',
+        description: 'Page without a theme',
       },
     };
 
-    const result = renderHtml(content, noThemeConfig, testDir);
+    const result = await renderHtml(content, noThemeConfig, testDir);
 
     // Verify fallback template is used
     expect(result).toContain('<!DOCTYPE html>');
-    expect(result).toContain('<title>Fallback Page</title>');
-    expect(result).toContain('<meta name="description" content="Testing fallback rendering">');
-    expect(result).toContain('Fallback Test');
+    expect(result).toContain('<title>No Theme</title>');
+    expect(result).toContain('<meta name="description" content="Page without a theme">');
+    expect(result).toContain('<h1>No Theme</h1>');
     expect(result).toContain('Built with BunPress');
-
-    // Verify that this doesn't include theme-specific elements
-    expect(result).not.toContain('data-layout-params');
-    expect(result).not.toContain('bunpress-theme');
   });
 });

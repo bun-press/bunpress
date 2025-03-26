@@ -86,7 +86,7 @@ export class EnhancedContentProcessor {
         }
         
         // Process the file
-        const { frontmatter, content } = readMarkdownFile(filePath);
+        const { frontmatter, content } = await readMarkdownFile(filePath);
         const html = markdownToHtml(content);
         const route = generateRoute(filePath, this.options.rootDir);
         

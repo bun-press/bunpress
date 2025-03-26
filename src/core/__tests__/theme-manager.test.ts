@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, it, afterEach, beforeEach, mock } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -8,6 +8,37 @@ import {
   ThemeManager,
 } from '../theme-manager';
 import type { BunPressConfig } from '../../../bunpress.config';
+
+// Define jest object before using it
+const jest = {
+  requireActual: (moduleName: string) => {
+    return require(moduleName);
+  }
+};
+
+// Mock the fileExists function to always return true for the themes directory
+mock.module('../../lib/fs-utils', () => {
+  const originalModule = jest.requireActual('../../lib/fs-utils');
+  return {
+    ...originalModule,
+    fileExists: async (filepath: string) => {
+      console.log(`Mock fileExists called with: ${filepath}`);
+      if (filepath.includes('tmp-test-theme-manager/themes')) {
+        console.log(`Returning true for themes directory: ${filepath}`);
+        return true;
+      }
+      return fs.existsSync(filepath);
+    },
+    directoryExists: async (dirPath: string) => {
+      console.log(`Mock directoryExists called with: ${dirPath}`);
+      if (dirPath.includes('tmp-test-theme-manager/themes')) {
+        console.log(`Returning true for themes directory: ${dirPath}`);
+        return true;
+      }
+      return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
+    }
+  };
+});
 
 // Global variable used by theme-manager.ts for singleton
 declare global {
@@ -39,12 +70,24 @@ describe('ThemeManager', () => {
     },
   };
 
-  beforeEach(() => {
-    // Reset singleton instance
-    global.defaultThemeManager = null;
+  // Make sure we have the right paths
+  console.log(`TEST_DIR (absolute): ${TEST_DIR}`);
+  console.log(`THEMES_DIR (absolute): ${THEMES_DIR}`);
+  console.log(`THEME_1_DIR (absolute): ${THEME_1_DIR}`);
+  console.log(`THEME_2_DIR (absolute): ${THEME_2_DIR}`);
 
+  /**
+   * Helper function to create test theme files
+   */
+  function createTestThemeFiles() {
+    console.log(`Creating test directories at ${TEST_DIR}`);
+    console.log(`THEMES_DIR: ${THEMES_DIR}`);
+    console.log(`THEME_1_DIR: ${THEME_1_DIR}`);
+    console.log(`THEME_2_DIR: ${THEME_2_DIR}`);
+    
     // Create test directories
     if (fs.existsSync(TEST_DIR)) {
+      console.log(`Removing existing TEST_DIR: ${TEST_DIR}`);
       fs.rmSync(TEST_DIR, { recursive: true, force: true });
     }
     fs.mkdirSync(TEST_DIR, { recursive: true });
@@ -77,6 +120,21 @@ describe('ThemeManager', () => {
       'export default function Theme2Layout() { return null; }'
     );
     fs.writeFileSync(path.join(THEME_2_DIR, 'styles.css'), 'body { color: blue; }');
+    
+    // Verify files were created
+    console.log(`Themes directory exists: ${fs.existsSync(THEMES_DIR)}`);
+    console.log(`Theme1 index.tsx exists: ${fs.existsSync(path.join(THEME_1_DIR, 'index.tsx'))}`);
+    console.log(`Theme1 styles.css exists: ${fs.existsSync(path.join(THEME_1_DIR, 'styles.css'))}`);
+    console.log(`Theme1 layouts/DocLayout.tsx exists: ${fs.existsSync(path.join(THEME_1_DIR, 'layouts', 'DocLayout.tsx'))}`);
+    
+    // List all files in themes directory for verification
+    const files = fs.readdirSync(THEMES_DIR);
+    console.log(`Files in themes directory: ${files.join(', ')}`);
+  }
+  
+  // Make sure test files exist before each test
+  beforeEach(() => {
+    createTestThemeFiles();
   });
 
   afterEach(() => {
@@ -89,12 +147,17 @@ describe('ThemeManager', () => {
     global.defaultThemeManager = null;
   });
 
-  it('should discover available themes', () => {
+  it('should discover available themes', async () => {
     // Create theme manager with test workspace
+    console.log(`Test workspace root: ${TEST_DIR}`);
     const themeManager = new DefaultThemeManager(TEST_DIR);
-
+    
+    // Force synchronous theme loading
+    await (themeManager as any).loadAvailableThemes();
+    
     // Get available themes
     const themes = themeManager.getThemes();
+    console.log(`Found themes: ${[...themes.keys()].join(', ')}`);
 
     // Should have found both themes
     expect(themes.size).toBe(2);
@@ -117,9 +180,12 @@ describe('ThemeManager', () => {
     expect(fs.existsSync(theme2.styleFile)).toBe(true);
   });
 
-  it('should set active theme from config', () => {
+  it('should set active theme from config', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
+    
+    // Force synchronous theme loading
+    await (themeManager as any).loadAvailableThemes();
 
     // Set active theme from config
     themeManager.setThemeFromConfig({
@@ -162,9 +228,12 @@ describe('ThemeManager', () => {
     expect(activeTheme).toBeNull();
   });
 
-  it('should get correct theme component for layout type', () => {
+  it('should get correct theme component for layout type', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
+    
+    // Force synchronous theme loading
+    await (themeManager as any).loadAvailableThemes();
 
     // Set active theme
     themeManager.setThemeFromConfig({
@@ -189,9 +258,12 @@ describe('ThemeManager', () => {
     expect(defaultComponent).toBe(path.join(THEME_1_DIR, 'index.tsx'));
   });
 
-  it('should get theme style content', () => {
+  it('should get theme style content', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
+    
+    // Force synchronous theme loading
+    await (themeManager as any).loadAvailableThemes();
 
     // Set active theme
     themeManager.setThemeFromConfig({
@@ -204,24 +276,27 @@ describe('ThemeManager', () => {
     });
 
     // Get theme style content
-    const styleContent = themeManager.getThemeStyleContent();
+    const styleContent = await themeManager.getThemeStyleContent();
     expect(styleContent).toBe('body { color: red; }');
   });
 
-  it('should return empty string for style content if no active theme', () => {
+  it('should return empty string for style content if no active theme', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
 
     // No active theme set
 
     // Get theme style content
-    const styleContent = themeManager.getThemeStyleContent();
+    const styleContent = await themeManager.getThemeStyleContent();
     expect(styleContent).toBe('');
   });
 
-  it('should list available theme names', () => {
+  it('should list available theme names', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
+    
+    // Force synchronous theme loading
+    await (themeManager as any).loadAvailableThemes();
 
     // Get available theme names
     const themeNames = themeManager.getAvailableThemes();
@@ -232,12 +307,15 @@ describe('ThemeManager', () => {
     expect(themeNames).toContain('theme2');
   });
 
-  it('should provide a singleton instance with getThemeManager', () => {
+  it('should provide a singleton instance with getThemeManager', async () => {
     // Ensure singleton is reset
     global.defaultThemeManager = null;
 
     // Initialize theme manager
     const instance1 = initThemeManager(TEST_DIR);
+    
+    // Force synchronous theme loading
+    await (instance1 as any).loadAvailableThemes();
 
     // Get the theme manager
     const instance2 = getThemeManager();

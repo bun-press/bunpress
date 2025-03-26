@@ -2,6 +2,14 @@
  * Server utilities shared across development and production servers
  */
 
+import { Server } from 'bun';
+import fs from 'fs';
+import path from 'path';
+import { getNamespacedLogger } from './logger-utils';
+
+// Create namespaced logger for server utils
+const logger = getNamespacedLogger('server-utils');
+
 /**
  * Server configuration options used by both dev and production servers
  */
@@ -272,4 +280,90 @@ export function openBrowser(url: string): void {
   }
 
   Bun.spawn(['sh', '-c', openCommand]);
+}
+
+/**
+ * Create a server with the provided configuration
+ * @param config Server configuration
+ * @param requestHandler Main request handler
+ * @returns Server instance
+ */
+export function createServer(
+  config: ServerConfig,
+  requestHandler: (req: Request) => Promise<Response>
+): Server {
+  // Create a server with the provided configuration
+  const server = Bun.serve({
+    port: config.port,
+    hostname: config.hostname,
+    development: config.development ?? process.env.NODE_ENV !== 'production',
+    
+    // Handle CORS preflight requests
+    async fetch(req: Request) {
+      // Handle CORS preflight
+      if (config.cors && req.method === 'OPTIONS') {
+        return handleCORS(req, config);
+      }
+
+      // Apply middleware chain if available
+      if (config.middleware && config.middleware.length > 0) {
+        const chain = createMiddlewareChain(config.middleware, requestHandler);
+        return await chain(req);
+      }
+
+      // Otherwise, just call the request handler
+      return await requestHandler(req);
+    },
+    
+    // Handle server errors
+    error(error) {
+      logger.error('Server error:', error);
+      return new Response(`Server error: ${error.message}`, { status: 500 });
+    }
+  });
+
+  logger.info(`Server started at http://${config.hostname}:${config.port}`);
+  
+  // Open browser if configured
+  if (config.open) {
+    openBrowser(`http://${config.hostname}:${config.port}`);
+  }
+  
+  return server;
+}
+
+/**
+ * Handle a request for a static file
+ * @param filePath Path to the file
+ * @param cacheControlMap Optional cache control map
+ * @returns Response with file contents and appropriate headers
+ */
+export function handleStaticFileRequest(filePath: string, cacheControlMap?: Record<string, string>): Response {
+  try {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return new Response('File not found', { status: 404 });
+    }
+    
+    // Get file info
+    const ext = path.extname(filePath);
+    const contentType = getContentType(ext);
+    const cacheControl = getCacheControl(contentType, cacheControlMap);
+    
+    // Set up headers
+    const headers: Record<string, string> = {
+      'Content-Type': contentType
+    };
+    
+    // Add cache control if available
+    if (cacheControl) {
+      headers['Cache-Control'] = cacheControl;
+    }
+    
+    // Return file as response
+    return new Response(Bun.file(filePath), { headers });
+  } catch (error) {
+    logger.error(`Error serving static file ${filePath}:`, error as Record<string, any>);
+    return new Response(`Error serving file: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
+  }
 } 

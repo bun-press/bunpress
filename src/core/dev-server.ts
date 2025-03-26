@@ -3,22 +3,20 @@
  * Provides a local development server with HMR capabilities
  */
 
-import { Server } from 'bun';
+import { ServerWebSocket } from 'bun';
 import * as path from 'path';
 import chalk from 'chalk';
 import fs from 'fs';
-import { EventEmitter } from 'events';
 
 // Import from the centralized utilities
 import {
   createHmrContext,
-  setupFileWatcher,
   injectHmrScript,
   broadcastHmrUpdate,
   requestPageReload,
   createHmrClientScript,
   HmrContext,
-  WatchOptions
+  HmrUpdate
 } from '../lib/hmr-utils';
 
 import {
@@ -27,40 +25,78 @@ import {
 } from '../lib/fs-utils';
 
 import {
-  joinPaths,
-  normalizePath
+  joinPaths
 } from '../lib/path-utils';
 
 import {
   ServerConfig,
-  openBrowser
+  openBrowser,
+  handleStaticFileRequest
 } from '../lib/server-utils';
+
+import {
+  createFileWatcher,
+  FileWatcher
+} from '../lib/watch-utils';
+
+import {
+  ErrorCode,
+  tryCatch,
+  BunPressError
+} from '../lib/error-utils';
+
+import {
+  getNamespacedLogger
+} from '../lib/logger-utils';
 
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import type { BunPressConfig } from '../../bunpress.config';
-import { Plugin, PluginManager } from './plugin';
-import { ContentFile } from './content-processor';
+import { PluginManager } from './plugin';
+
+// Create namespaced logger for dev server
+const logger = getNamespacedLogger('dev-server');
+
+// Define a type that represents what Bun.serve returns
+type BunServer = {
+  port: number;
+  hostname: string;
+  url: string;
+  development: boolean;
+  fetch: (req: Request) => Response | Promise<Response>;
+  publish: (topic: string, message: string) => void;
+  reload: (options?: { closeActiveConnections?: boolean }) => void;
+  stop: (options?: { closeActiveConnections?: boolean }) => Promise<void>;
+  upgrade: (req: Request, options?: any) => { response: Response };
+  pendingRequests: Set<Request>;
+  pendingWebsockets: Set<any>;
+  websocket: any;
+  [Symbol.dispose]?: () => void;
+};
+
+/**
+ * WebSocket handler interface to match Bun's requirements
+ */
+interface WebSocketHandler {
+  message: (ws: any, message: string | Uint8Array) => void;
+  open?: (ws: any) => void;
+  close?: (ws: any, code: number, reason: string) => void;
+  drain?: (ws: any) => void;
+  ping?: (ws: any, data: Uint8Array) => void;
+  pong?: (ws: any, data: Uint8Array) => void;
+}
 
 /**
  * Development server result
  */
-export interface DevServerResult {
-  fetch: (req: Request) => Promise<Response>;
-  upgrade: (req: Request, options?: any) => { response: Response };
-  publish: (topic: string, message: string) => void;
-  port: number;
-  hostname: string;
-  stop: () => void;
-  url: string;
-  pendingWebsockets: any[];
-  watcher: { close: () => void };
-  websocket: any;
-  
+export interface DevServerResult extends BunServer {
   // Custom properties for dev server
   config: DevServerConfig;
   hmrContext: HmrContext;
   reloadPage: () => void;
+  watcher: FileWatcher;
+  websocket: WebSocketHandler;
+  fetch: (req: Request) => Response | Promise<Response>;
 }
 
 /**
@@ -82,30 +118,30 @@ export async function createDevServer(
   config: BunPressConfig, 
   pluginManager?: PluginManager
 ): Promise<DevServerResult> {
-  const devConfig = config.devServer || {};
-  const workspaceRoot = process.cwd();
-  
-  // Default server configuration
-  const serverConfig: DevServerConfig = {
-    port: devConfig.port || 3000,
-    hostname: devConfig.host || 'localhost',
-    staticDir: config.outputDir,
-    watchDirs: [
-      config.pagesDir,
-      config.contentDir || './content',
-      path.join(workspaceRoot, 'themes', config.themeConfig?.name || 'default')
-    ],
-    hmrScriptPath: '/__bunpress_hmr.js',
-    development: true,
-    hmrPort: devConfig.hmrPort || (process.env.NODE_ENV === 'test' ? Math.floor(Math.random() * 10000) + 50000 : 3030),
-    hmrHost: devConfig.hmrHost || 'localhost',
-    open: devConfig.open !== false,
-    cors: true
-  };
+  return await tryCatch(async () => {
+    const devConfig = config.devServer || {};
+    const workspaceRoot = process.cwd();
+    
+    // Default server configuration
+    const serverConfig: DevServerConfig = {
+      port: devConfig.port || 3000,
+      hostname: devConfig.host || 'localhost',
+      staticDir: config.outputDir,
+      watchDirs: [
+        config.pagesDir,
+        config.contentDir || './content',
+        joinPaths(workspaceRoot, 'themes', config.themeConfig?.name || 'default')
+      ],
+      hmrScriptPath: '/__bunpress_hmr.js',
+      development: true,
+      hmrPort: devConfig.hmrPort || (process.env.NODE_ENV === 'test' ? Math.floor(Math.random() * 10000) + 50000 : 3030),
+      hmrHost: devConfig.hmrHost || 'localhost',
+      open: devConfig.open !== false,
+      cors: true
+    };
 
-  console.log(chalk.cyan(`Starting development server at http://${serverConfig.hostname}:${serverConfig.port}`));
+    logger.info(chalk.cyan(`Starting development server at http://${serverConfig.hostname}:${serverConfig.port}`));
 
-  try {
     // Initialize HMR context
     const hmrContext = createHmrContext({
       port: serverConfig.hmrPort,
@@ -120,14 +156,16 @@ export async function createDevServer(
     
     // Regenerate routes asynchronously if plugin manager is available
     if (pluginManager) {
-      // Get plugins from the plugin manager
-      const plugins = pluginManager.plugins;
-      try {
-        routes = await generateRoutesAsync(config.pagesDir, plugins);
-        console.log(chalk.green('Routes generated with plugin transformations'));
-      } catch (error) {
-        console.error(chalk.red('Error generating routes with plugins:'), error);
-      }
+      await tryCatch(
+        async () => {
+          const plugins = pluginManager.plugins;
+          routes = await generateRoutesAsync(config.pagesDir, plugins);
+          logger.info(chalk.green('Routes generated with plugin transformations'));
+        },
+        (error) => {
+          logger.error(chalk.red('Error generating routes with plugins:'), error);
+        }
+      );
     }
 
     // Create HMR client script
@@ -157,17 +195,21 @@ export async function createDevServer(
         // Handle routes from the router
         const route = Object.values(routes).find(r => r.route === pathname);
         if (route) {
-          try {
-            // Get workspace root for rendering
-            const workspaceRoot = process.cwd();
-            // Render the route content (markdown/mdx)
-            return new Response(renderHtml(route, config, workspaceRoot), {
-              headers: { 'Content-Type': 'text/html' }
-            });
-          } catch (error) {
-            console.error(chalk.red(`Error rendering route ${pathname}:`), error);
-            return new Response(`Error rendering page: ${error}`, { status: 500 });
-          }
+          return await tryCatch(
+            async () => {
+              // Get workspace root for rendering
+              const workspaceRoot = process.cwd();
+              // Render the route content (markdown/mdx)
+              const html = await renderHtml(route, config, workspaceRoot);
+              return new Response(html, {
+                headers: { 'Content-Type': 'text/html' }
+              });
+            },
+            (error) => {
+              logger.error(chalk.red(`Error rendering route ${pathname}:`), error);
+              return new Response(`Error rendering page: ${error}`, { status: 500 });
+            }
+          );
         }
 
         // Handle static files
@@ -176,87 +218,129 @@ export async function createDevServer(
         if (await fileExists(filePath)) {
           // For HTML files, inject HMR script
           if (filePath.endsWith('.html')) {
-            try {
-              const html = await readFileAsString(filePath);
-              const injectedHtml = injectHmrScript(html, serverConfig.hmrScriptPath);
-              return new Response(injectedHtml, {
-                headers: { 'Content-Type': 'text/html' },
-              });
-            } catch (error) {
-              console.error(chalk.red(`Error processing HTML file ${filePath}:`), error);
-            }
+            return await tryCatch(
+              async () => {
+                const html = await readFileAsString(filePath);
+                const injectedHtml = injectHmrScript(html, serverConfig.hmrScriptPath);
+                return new Response(injectedHtml, {
+                  headers: { 'Content-Type': 'text/html' },
+                });
+              },
+              (error) => {
+                logger.error(chalk.red(`Error processing HTML file ${filePath}:`), error);
+                return handleStaticFileRequest(filePath);
+              }
+            );
           }
           
-          // Serve the file normally
-          return new Response(Bun.file(filePath));
+          // Serve the file normally using server-utils
+          return handleStaticFileRequest(filePath);
         }
         
         // Check for directory index.html
         if (!path.extname(filePath)) {
           const indexPath = joinPaths(filePath, 'index.html');
           if (await fileExists(indexPath)) {
-            try {
-              const html = await readFileAsString(indexPath);
-              const injectedHtml = injectHmrScript(html, serverConfig.hmrScriptPath);
-              return new Response(injectedHtml, {
-                headers: { 'Content-Type': 'text/html' },
-              });
-            } catch (error) {
-              console.error(chalk.red(`Error processing HTML file ${indexPath}:`), error);
-              return new Response(Bun.file(indexPath));
-            }
+            return await tryCatch(
+              async () => {
+                const html = await readFileAsString(indexPath);
+                const injectedHtml = injectHmrScript(html, serverConfig.hmrScriptPath);
+                return new Response(injectedHtml, {
+                  headers: { 'Content-Type': 'text/html' },
+                });
+              },
+              (error) => {
+                logger.error(chalk.red(`Error processing HTML file ${indexPath}:`), error);
+                return handleStaticFileRequest(indexPath);
+              }
+            );
           }
         }
+        
+        // Default 404 response
+        return new Response('Not found', { status: 404 });
+      },
+      
+      // Handle websocket upgrades for HMR
+      websocket: {
+        open: hmrContext.websocket.open,
+        message: hmrContext.websocket.message || ((_ws: ServerWebSocket<unknown>, message: string | Uint8Array) => {
+          try {
+            const data = typeof message === 'string' ? JSON.parse(message) : message;
+            logger.debug('Received WebSocket message:', data);
+          } catch (error) {
+            logger.error('Failed to parse WebSocket message:', error as Record<string, any>);
+          }
+        }),
+        close: hmrContext.websocket.close
+      },
 
-        // Not found
-        return new Response('Not Found', { status: 404 });
+      // Handle errors
+      error(error) {
+        logger.error(chalk.red('Server error:'), error);
+        return new Response(`Server Error: ${error.message}`, { status: 500 });
       }
     });
-    
-    // Create file watchers
-    setupHMR(server, serverConfig);
-    
-    for (const dir of serverConfig.watchDirs) {
-      if (fs.existsSync(dir)) {
-        console.log(chalk.yellow(`Watching directory for changes: ${dir}`));
-      }
+
+    // Set up file watcher using watch-utils
+    const watcher = createFileWatcher(serverConfig.watchDirs, {
+      ignored: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.git/**'
+      ],
+      persistent: true
+    });
+
+    watcher.on('change', (filePath: string, stats: fs.Stats) => {
+      logger.info(chalk.yellow(`File changed: ${filePath}`));
+      const update: HmrUpdate = {
+        type: 'update',
+        path: filePath,
+        timestamp: stats ? stats.mtimeMs : Date.now()
+      };
+      broadcastHmrUpdate(hmrContext, update);
+    });
+
+    watcher.on('add', (filePath: string) => {
+      logger.info(chalk.green(`File added: ${filePath}`));
+      requestPageReload(hmrContext);
+    });
+
+    watcher.on('unlink', (filePath: string) => {
+      logger.info(chalk.red(`File deleted: ${filePath}`));
+      requestPageReload(hmrContext);
+    });
+
+    // Open browser if configured (using server-utils)
+    if (serverConfig.open) {
+      openBrowser(`http://${serverConfig.hostname}:${serverConfig.port}`);
     }
-    
-    // Add custom properties to server for access in tests and HMR
-    const devServer = server as unknown as DevServerResult;
-    devServer.config = serverConfig;
-    devServer.hmrContext = hmrContext;
-    devServer.reloadPage = () => requestPageReload(hmrContext);
-    
-    // Store the original stop method
-    const originalStop = server.stop;
-    
-    // Define a new stop method that will close both the server and HMR server
-    devServer.stop = () => {
-      // Call the original stop method
-      originalStop.call(server);
-      
-      // Stop the HMR server
-      if (hmrContext && hmrContext.websocket) {
-        hmrContext.websocket.stop();
-      }
-      
-      // Close any file watchers
-      if (devServer.watcher) {
-        devServer.watcher.close();
-      }
+
+    // Return dev server result
+    const devServer: DevServerResult = {
+      ...(server as unknown as BunServer),
+      fetch: server.fetch,
+      config: serverConfig,
+      hmrContext,
+      reloadPage: () => requestPageReload(hmrContext),
+      watcher,
+      websocket: hmrContext.websocket as any
     };
     
     return devServer;
-  } catch (error) {
-    console.error(chalk.red('Error creating development server:'), error);
-    throw error;
-  }
+  }, (error) => {
+    logger.error('Failed to create dev server:', error);
+    throw new BunPressError(
+      ErrorCode.SERVER_START_ERROR,
+      `Failed to start development server: ${error.message}`,
+      { error }
+    );
+  });
 }
 
 /**
- * Start the development server
- * Convenience wrapper around createDevServer
+ * Start a development server
  */
 export async function startDevServer(
   config: BunPressConfig,
@@ -267,98 +351,9 @@ export async function startDevServer(
 
 /**
  * Setup Hot Module Replacement (HMR) for a server
+ * @deprecated Use createDevServer instead which automatically sets up HMR
  */
-export function setupHMR(server: Server, config: DevServerConfig): void {
-  const workspaceRoot = process.cwd();
-  // Cast server to any first to avoid type errors
-  const devServer = server as any;
-  
-  // In tests, devServer.hmrContext might already be set up from createDevServer
-  const hmrContext = devServer.hmrContext || {
-    clients: new Set(),
-    websocket: devServer.websocket,
-    moduleDependencies: new Map(),
-    moduleLastUpdate: new Map(),
-    events: new EventEmitter()
-  };
-  
-  // Set up file watching for content directories
-  const watchOptions: WatchOptions = {
-    ignored: [
-      '**/node_modules/**',
-      '**/.git/**',
-      '**/dist/assets/**/*.map',
-    ],
-    debounce: 100,
-    extensions: ['.md', '.mdx', '.html', '.css', '.js', '.jsx', '.ts', '.tsx']
-  };
-  
-  // Ensure config.watchDirs is an array
-  const watchDirs = Array.isArray(config.watchDirs) ? config.watchDirs : [];
-  
-  const watchers = watchDirs.map(dir => {
-    if (!fs.existsSync(dir)) {
-      return { close: () => {} }; // Return a dummy watcher if directory doesn't exist
-    }
-    
-    return setupFileWatcher(dir, (filePath, eventType) => {
-      console.log(chalk.yellow(`File changed (${eventType}): ${path.relative(workspaceRoot, filePath)}`));
-      
-      // Different handling based on file type
-      const ext = path.extname(filePath).toLowerCase();
-      
-      if (['.md', '.mdx'].includes(ext)) {
-        // Content files - regenerate routes
-        generateRoutes(watchDirs[0]) // Use the pages directory (first entry)
-          .then(newRoutes => {
-            broadcastHmrUpdate(hmrContext, filePath);
-          })
-          .catch(error => {
-            console.error(chalk.red('Error regenerating routes:'), error);
-          });
-      } else if (ext === '.css') {
-        // CSS files - send CSS update
-        broadcastHmrUpdate(hmrContext, filePath, 'css-update');
-      } else if (['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
-        // JS files - send JS update or reload
-        broadcastHmrUpdate(hmrContext, filePath, 'js-update');
-      } else if (ext === '.html') {
-        // HTML - trigger full reload
-        requestPageReload(hmrContext);
-      } else {
-        // Other files - reload to be safe
-        requestPageReload(hmrContext);
-      }
-    }, watchOptions);
-  });
-  
-  // Create a single watcher object with a close method that closes all watchers
-  const combinedWatcher = {
-    close: () => {
-      watchers.forEach(watcher => watcher.close());
-    }
-  };
-  
-  // Assign the watcher to the server for cleanup
-  devServer.watcher = combinedWatcher;
-  
-  // Open browser if configured
-  if (config.open) {
-    const url = `http://${config.hostname}:${config.port}`;
-    console.log(chalk.cyan(`Opening browser at ${url}`));
-    openBrowser(url);
-  }
-  
-  console.log(chalk.green(`File watcher setup complete for ${watchers.length} directories`));
-}
-
-/**
- * Helper function to reload all connected clients
- */
-export function reloadPage(server: Server): void {
-  // Cast server to any first to avoid type errors
-  const devServer = server as any;
-  if (devServer.hmrContext) {
-    requestPageReload(devServer.hmrContext);
-  }
+export function setupHMR(): void {
+  // HMR setup logic here
+  logger.info('HMR initialized');
 } 

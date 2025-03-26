@@ -194,7 +194,7 @@ describe('Fullstack Server', () => {
     });
     
     // Add a custom route
-    server.addRoute('/api/user/:id', async (req: Request) => {
+    server.addRoute('/api/user/:id', async (req) => {
       const url = new URL(req.url);
       const match = url.pathname.match(/\/api\/user\/(\w+)/);
       const id = match ? match[1] : null;

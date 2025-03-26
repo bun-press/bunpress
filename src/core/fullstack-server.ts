@@ -1,35 +1,24 @@
 /**
  * Fullstack Server Implementation
- * Provides both static file serving and dynamic API routes
+ * For use in both development and production
  */
 
 import { Server, ServerWebSocket } from 'bun';
+import path from 'path';
+import chalk from 'chalk';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import * as path from 'path';
-import chalk from 'chalk';
 
-// Import utility functions directly
 import {
   ServerConfig,
   MiddlewareHandler,
-  RouteHandler,
-  Route,
   handleCORS,
-  getContentType,
-  getCacheControl,
-  createMiddlewareChain
 } from '../lib/server-utils';
 
 import {
-  fileExists,
-  readFileAsString
-} from '../lib/fs-utils';
-
-import {
-  normalizePath,
-  joinPaths
-} from '../lib/path-utils';
+  Route,
+  RouteHandler,
+} from '../lib/route-utils';
 
 // Server options extending the base ServerConfig
 export interface ServerOptions extends ServerConfig {

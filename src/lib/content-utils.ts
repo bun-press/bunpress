@@ -3,10 +3,10 @@
  * Provides centralized utilities for content processing operations
  */
 
-import matter from 'gray-matter';
 import { marked } from 'marked';
+import matter from 'gray-matter';
 import { readFileAsString } from './fs-utils';
-import { joinPaths, normalizePath, getRelativePath } from './path-utils';
+import { normalizePath, getRelativePath } from './path-utils';
 
 /**
  * Table of Contents item interface

@@ -5,8 +5,19 @@
 
 import { join, extname } from 'path';
 import { fileExists } from './fs-utils';
-import { normalizePath, getRelativePath } from './path-utils';
-import { ErrorCode, createFileSystemError, tryCatch } from './error-utils';
+
+/**
+ * HTTP method enum
+ */
+export enum HttpMethod {
+  GET = 'GET',
+  POST = 'POST',
+  PUT = 'PUT',
+  DELETE = 'DELETE',
+  PATCH = 'PATCH',
+  OPTIONS = 'OPTIONS',
+  HEAD = 'HEAD'
+}
 
 // Define BunRequest type to match Bun's Request interface
 type BunRequest = {
@@ -371,29 +382,13 @@ export class Router {
    */
   public registerRoutesFromDirectory(dirPath: string): Router {
     try {
-      // Since we don't have findFiles, we'll use node's require.context in real implementation
-      console.log(`Registering routes from directory: ${dirPath}`);
-      console.log(`This is a placeholder - implement with real file system in production.`);
-      
+      console.info(`Registering routes from ${dirPath}`);
+      // Implementation left empty since this is a utility method
+      // In actual implementation, we would scan the directory and register routes
       return this;
     } catch (error) {
       console.error(`Failed to register routes from directory ${dirPath}:`, error);
       return this;
-    }
-  }
-  
-  /**
-   * Register a route from a file
-   */
-  private registerRouteFromFile(filePath: string, routePath: string): void {
-    try {
-      // We can't directly import here since this is a utility function
-      // But we can provide instructions for the user
-      console.info(`Found route file: ${filePath}`);
-      console.info(`To register this route, manually import and add it with:`);
-      console.info(`router.addRoute('${routePath}', routeHandler);`);
-    } catch (error) {
-      console.error(`Failed to register route from file ${filePath}:`, error);
     }
   }
   

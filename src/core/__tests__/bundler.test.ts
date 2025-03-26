@@ -176,6 +176,8 @@ describe('Bundler', () => {
     const result = await bundleAssets([simpleJsFile], simpleOutputDir, testConfig, {
       minify: false,
       sourcemap: false,
+      target: 'browser',
+      splitting: true,
     });
 
     // Verify the bundle was created

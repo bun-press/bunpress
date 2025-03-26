@@ -171,7 +171,7 @@ describe('Renderer Integration Tests', () => {
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
-  it('should render HTML with theme', () => {
+  it('should render HTML with theme', async () => {
     // Initialize theme manager for testing
     initThemeManager(TEST_DIR);
 
@@ -180,7 +180,7 @@ describe('Renderer Integration Tests', () => {
       layout: 'doc',
     };
 
-    const html = renderHtml(testContent, testConfig, TEST_DIR, renderOptions);
+    const html = await renderHtml(testContent, testConfig, TEST_DIR, renderOptions);
 
     // Validate the rendered HTML
     expect(html).toContain('<!DOCTYPE html>');
@@ -203,12 +203,12 @@ describe('Renderer Integration Tests', () => {
     expect(html).toContain('Getting Started');
   });
 
-  it('should extract and include TOC items', () => {
+  it('should extract and include TOC items', async () => {
     // Initialize theme manager for testing
     initThemeManager(TEST_DIR);
 
     // Render the HTML
-    const html = renderHtml(testContent, testConfig, TEST_DIR);
+    const html = await renderHtml(testContent, testConfig, TEST_DIR);
 
     // Use JSDOM to parse the HTML
     const dom = new JSDOM(html);
@@ -236,7 +236,7 @@ describe('Renderer Integration Tests', () => {
     expect(params.tocItems[2].level).toBe(2);
   });
 
-  it('should use different layout types based on frontmatter', () => {
+  it('should use different layout types based on frontmatter', async () => {
     // Initialize theme manager for testing
     initThemeManager(TEST_DIR);
 
@@ -266,7 +266,7 @@ describe('Renderer Integration Tests', () => {
     };
 
     // Render with home layout
-    const html = renderHtml(homeContent, testConfig, TEST_DIR);
+    const html = await renderHtml(homeContent, testConfig, TEST_DIR);
 
     // Check for home layout specific elements in the rendered HTML
     const dom = new JSDOM(html);
@@ -284,7 +284,7 @@ describe('Renderer Integration Tests', () => {
     expect(html).toContain('Home page content.');
   });
 
-  it('should fall back to a basic template if theme is not found', () => {
+  it('should fall back to a basic template if theme is not found', async () => {
     // Create a config with non-existent theme
     const invalidConfig = {
       ...testConfig,
@@ -299,7 +299,7 @@ describe('Renderer Integration Tests', () => {
     initThemeManager(TEST_DIR);
 
     // Render with invalid theme
-    const html = renderHtml(testContent, invalidConfig, TEST_DIR);
+    const html = await renderHtml(testContent, invalidConfig, TEST_DIR);
 
     // Should fall back to simple template
     expect(html).toContain('<!DOCTYPE html>');

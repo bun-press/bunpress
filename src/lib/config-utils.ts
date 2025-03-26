@@ -1,11 +1,15 @@
 /**
- * Configuration utilities for centralized configuration management
- * Provides a unified way to handle configuration from various sources
+ * Configuration Utilities
+ * Provides centralized utilities for configuration management with schema validation
  */
 
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { readFileAsString, writeFileString } from './fs-utils';
-import { ErrorCode, createFileSystemError, tryCatch, tryCatchWithCode } from './error-utils';
+import { ErrorCode, tryCatch, tryCatchWithCode, BunPressError } from './error-utils';
+import { getNamespacedLogger } from './logger-utils';
+
+// Create namespaced logger for config utils
+const logger = getNamespacedLogger('config-utils');
 
 /**
  * Configuration source types
@@ -395,12 +399,12 @@ export class ConfigManager<T extends Record<string, any> = Record<string, any>> 
       // Check type
       const valueType = Array.isArray(value) ? 'array' : typeof value;
       if (field.type !== valueType) {
-        throw new Error(`Invalid type for ${key}: expected ${field.type}, got ${valueType}`);
+        throw new Error(`Invalid type for ${String(key)}: expected ${field.type}, got ${valueType}`);
       }
       
       // Run validation if provided
       if (field.validate && !field.validate(value)) {
-        throw new Error(`Validation failed for ${key}`);
+        throw new Error(`Validation failed for ${String(key)}`);
       }
     }
   }
@@ -539,4 +543,104 @@ export async function loadEnvFile(path: string = '.env'): Promise<void> {
       throw new Error(`Failed to load .env file: ${error instanceof Error ? error.message : String(error)}`);
     }
   );
+}
+
+/**
+ * Default BunPress configuration
+ */
+export const defaultConfig = {
+  title: 'BunPress Site',
+  description: 'A site built with BunPress',
+  siteUrl: 'https://example.com',
+  pagesDir: 'pages',
+  contentDir: 'content',
+  outputDir: 'dist',
+  plugins: [],
+  themeConfig: {
+    name: 'default',
+    options: {}
+  },
+  devServer: {
+    port: 3000,
+    host: 'localhost'
+  }
+};
+
+/**
+ * Validate a BunPress configuration object
+ * @param config The configuration to validate
+ * @returns The validated config
+ */
+export function validateConfig(config: any): any {
+  if (!config) {
+    throw new BunPressError(
+      ErrorCode.CONFIG_VALIDATION_ERROR,
+      'Configuration object is required',
+      { config }
+    );
+  }
+
+  // Required fields
+  const requiredFields = ['title', 'pagesDir', 'outputDir'];
+  for (const field of requiredFields) {
+    if (!config[field]) {
+      throw new BunPressError(
+        ErrorCode.CONFIG_VALIDATION_ERROR,
+        `Missing required configuration field: ${field}`,
+        { config }
+      );
+    }
+  }
+
+  // Validate plugins is an array
+  if (config.plugins && !Array.isArray(config.plugins)) {
+    throw new BunPressError(
+      ErrorCode.CONFIG_VALIDATION_ERROR,
+      'Configuration field "plugins" must be an array',
+      { config }
+    );
+  }
+
+  logger.debug('Configuration validated successfully');
+  return config;
+}
+
+/**
+ * Merge a configuration object with default values
+ * @param config The configuration to merge
+ * @returns A new configuration object with defaults applied
+ */
+export function mergeConfigWithDefaults(config: any): any {
+  if (!config) {
+    return { ...defaultConfig };
+  }
+
+  // Deep merge the theme config if it exists
+  const themeConfig = config.themeConfig 
+    ? {
+        name: config.themeConfig.name || defaultConfig.themeConfig.name,
+        options: { 
+          ...defaultConfig.themeConfig.options, 
+          ...(config.themeConfig.options || {}) 
+        }
+      } 
+    : defaultConfig.themeConfig;
+
+  // Merge dev server config if it exists
+  const devServer = config.devServer
+    ? {
+        ...defaultConfig.devServer,
+        ...config.devServer
+      }
+    : defaultConfig.devServer;
+
+  const merged = {
+    ...defaultConfig,
+    ...config,
+    themeConfig,
+    devServer
+  };
+
+  logger.debug('Configuration merged with defaults');
+  return merged;
 } 

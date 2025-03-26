@@ -165,8 +165,8 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
 
       // Create search document
       const document: SearchDocument = {
-        id: route,
-        url: route,
+        id: route || `doc-${Math.random().toString(36).substring(2, 9)}`,
+        url: route || '/',
         excerpt: extractExcerpt(html),
       };
 

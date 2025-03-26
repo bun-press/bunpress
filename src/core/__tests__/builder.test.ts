@@ -165,9 +165,8 @@ This page is about the test site.
   });
 
   test('copies public assets to output directory', async () => {
-    // First create the public directory at the right location
-    const currentDir = process.cwd();
-    const publicDir = path.join(currentDir, 'public');
+    // Create a public directory within the test directory instead of in cwd
+    const publicDir = path.join(testDir, 'public');
 
     // Make sure it exists
     if (!fs.existsSync(publicDir)) {
@@ -177,9 +176,15 @@ This page is about the test site.
     // Create a test file in it
     fs.writeFileSync(path.join(publicDir, 'test-favicon.ico'), 'test favicon');
 
+    // Update the test config to point to our test public directory
+    const testConfigWithPublic = {
+      ...testConfig,
+      publicDir: publicDir
+    };
+
     try {
       // Run the build
-      await buildSite(testConfig);
+      await buildSite(testConfigWithPublic);
 
       // Verify public directory was copied
       expect(fs.existsSync(path.join(outputDir, 'public', 'test-favicon.ico'))).toBe(true);
@@ -188,8 +193,7 @@ This page is about the test site.
       const favicon = fs.readFileSync(path.join(outputDir, 'public', 'test-favicon.ico'), 'utf-8');
       expect(favicon).toBe('test favicon');
     } finally {
-      // Clean up created files
-      fs.rmSync(path.join(publicDir, 'test-favicon.ico'), { force: true });
+      // No need to manually cleanup as afterAll will handle it
     }
   });
 });

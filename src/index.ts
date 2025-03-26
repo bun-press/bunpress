@@ -406,6 +406,25 @@ footer {
   );
 }
 
+// Helper function to get the local IP address for network access
+function getLocalIpAddress(): string | null {
+  try {
+    const networkInterfaces = require('os').networkInterfaces();
+    for (const interfaceName in networkInterfaces) {
+      const interfaces = networkInterfaces[interfaceName];
+      for (const iface of interfaces) {
+        // Skip internal, non-IPv4, and loopback interfaces
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get network interfaces:', error);
+  }
+  return null;
+}
+
 async function main() {
   try {
     // Track resources that need to be cleaned up
@@ -604,7 +623,7 @@ async function main() {
                     task.output = `Found ${htmlFiles.length} HTML entrypoints. Processing...`;
                     // Process HTML entrypoints
                     const outputDir = path.resolve(process.cwd(), config.outputDir);
-                    await processHTMLEntrypoints(htmlFiles, outputDir, config, {
+                    await processHTMLEntrypoints(htmlFiles, outputDir, {
                       minify: process.env.NODE_ENV === 'production',
                       sourcemap: process.env.NODE_ENV !== 'production',
                       target: 'browser',
@@ -708,7 +727,7 @@ async function main() {
 
           // Start the development server
           const devServerResult = await startDevServer(config, pluginManager);
-          const { watcher, server } = devServerResult;
+          const { watcher } = devServerResult;
 
           // Add cleanup handler for the watcher
           resources.push(() => {
@@ -719,8 +738,8 @@ async function main() {
 
           // Add cleanup handler for the server
           resources.push(() => {
-            if (server && typeof server.stop === 'function') {
-              server.stop();
+            if (devServerResult && typeof devServerResult.stop === 'function') {
+              devServerResult.stop();
             }
           });
 
@@ -792,82 +811,10 @@ async function main() {
   }
 }
 
-// Helper function to get the local IP address for network access
-function getLocalIpAddress(): string | null {
-  try {
-    const networkInterfaces = require('os').networkInterfaces();
-    for (const interfaceName in networkInterfaces) {
-      const interfaces = networkInterfaces[interfaceName];
-      for (const iface of interfaces) {
-        // Skip internal, non-IPv4, and loopback interfaces
-        if (iface.family === 'IPv4' && !iface.internal) {
-          return iface.address;
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Failed to get network interfaces:', error);
-  }
-  return null;
-}
-
-// Only run the CLI code if this file is executed directly (not imported)
-// The condition import.meta.url === Bun.main doesn't work because of URL format differences
-// Using a more reliable condition
-if (process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/index.ts')) {
-  console.log('BunPress CLI starting...');
-
-  // Special handling for test environment
-  if (process.env.BUNPRESS_TEST === 'true') {
-    // In test mode, provide predefined responses for common commands
-    const args = process.argv.slice(2);
-    const command = args[0];
-
-    if (command === 'help' || args.includes('--help') || args.includes('-h')) {
-      console.log('Usage:');
-      console.log('bunpress init [dir]');
-      console.log('bunpress dev');
-      console.log('bunpress build');
-      process.exit(0);
-    }
-
-    if (command === 'version' || args.includes('--version') || args.includes('-v')) {
-      console.log('v0.1.0');
-      process.exit(0);
-    }
-
-    if (command === 'unknown-command' || command === 'invalid-command') {
-      console.log('Unknown command: ' + command);
-      console.log('Usage:');
-      process.exit(0);
-    }
-
-    if (command === 'build') {
-      console.log('Build completed successfully');
-      process.exit(0);
-    }
-
-    if (command === 'dev') {
-      console.log('BunPress dev server running at http://localhost:3000');
-      // Just exit in test mode - we don't want to actually start a server
-      process.exit(0);
-    }
-
-    // For any other command in test mode, just exit successfully
-    process.exit(0);
-  }
-
-  // Improved help command detection - ensures we process all forms of help flags
-  const args = process.argv.slice(2);
-
-  if (args.includes('help') || args.includes('--help') || args.includes('-h')) {
-    console.log('Displaying help...');
-    showHelp();
-    process.exit(0); // Ensure we exit after displaying help
-  } else {
-    main();
-  }
-}
-
 // Export themes
 export * from '../themes';
+
+// Only run the CLI code if this file is executed directly
+if (import.meta.url === Bun.main) {
+  main();
+}

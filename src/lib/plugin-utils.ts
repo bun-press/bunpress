@@ -3,7 +3,7 @@
  */
 
 import path from 'path';
-import { fileExists } from './fs-utils';
+import fs from 'fs';
 
 /**
  * Types for plugin lifecycle hooks
@@ -74,8 +74,13 @@ export function resolvePluginPath(pluginName: string): string | null {
     const internalName = pluginName.replace('@bunpress/', '');
     const internalPath = path.join(process.cwd(), 'src', 'plugins', internalName);
     
-    if (fileExists(internalPath + '.ts') || fileExists(internalPath + '/index.ts')) {
-      return internalPath;
+    // Check internal path synchronously to avoid async complexity
+    try {
+      if (fs.existsSync(internalPath + '.ts') || fs.existsSync(internalPath + '/index.ts')) {
+        return internalPath;
+      }
+    } catch (error) {
+      // Ignore file system errors
     }
   }
   
@@ -99,9 +104,13 @@ export function resolvePluginPath(pluginName: string): string | null {
   ];
   
   for (const localPath of localPaths) {
-    if (fileExists(localPath + '.ts') || fileExists(localPath + '.js') || 
-        fileExists(path.join(localPath, 'index.ts')) || fileExists(path.join(localPath, 'index.js'))) {
-      return localPath;
+    try {
+      if (fs.existsSync(localPath + '.ts') || fs.existsSync(localPath + '.js') || 
+          fs.existsSync(path.join(localPath, 'index.ts')) || fs.existsSync(path.join(localPath, 'index.js'))) {
+        return localPath;
+      }
+    } catch (error) {
+      // Ignore file system errors
     }
   }
   

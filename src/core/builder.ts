@@ -1,10 +1,36 @@
-import { existsSync, mkdirSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import type { BunPressConfig } from '../../bunpress.config';
 import { generateRoutes, generateRoutesAsync } from './router';
 import { renderHtml } from './renderer';
 import { PluginManager } from './plugin';
 import { bundleAssets } from './bundler';
+// Import file system utilities
+import { 
+  createDirectory, 
+  writeFileString, 
+  copyDirectory as fsUtilsCopyDirectory,
+  directoryExists
+} from '../lib/fs-utils';
+
+// Import error handling utilities
+import {
+  ErrorCode,
+  tryCatch,
+  tryCatchWithCode
+} from '../lib/error-utils';
+
+// Import logger
+import { getNamespacedLogger } from '../lib/logger-utils';
+
+// Create namespaced logger for builder
+const logger = getNamespacedLogger('builder');
+
+// Extend the BunPressConfig interface with publicDir property
+declare module '../../bunpress.config' {
+  interface BunPressConfig {
+    publicDir?: string;
+  }
+}
 
 export interface BuildOptions {
   minify?: boolean;
@@ -35,10 +61,10 @@ export async function buildSite(
   pluginManager?: PluginManager,
   options: BuildOptions = {}
 ): Promise<void> {
-  try {
+  return await tryCatch(async () => {
     // Get workspace root
     const workspaceRoot = process.cwd();
-    console.log(`Workspace root: ${workspaceRoot}`);
+    logger.info(`Workspace root: ${workspaceRoot}`);
 
     // Execute plugin buildStart hooks if not already done by CLI
     if (pluginManager && !process.env.BUNPRESS_BUILD_STARTED) {
@@ -50,8 +76,8 @@ export async function buildSite(
     const outputDir = path.resolve(config.outputDir);
 
     // Make sure output directory exists
-    if (!existsSync(outputDir)) {
-      mkdirSync(outputDir, { recursive: true });
+    if (!(await directoryExists(outputDir))) {
+      await createDirectory(outputDir);
     }
 
     // Generate routes from pages - use async version if we have plugins
@@ -61,75 +87,92 @@ export async function buildSite(
 
     // Process each route and write to output
     for (const [route, contentFile] of Object.entries(routes)) {
-      try {
-        const html = renderHtml(contentFile, config, workspaceRoot);
+      await tryCatch(
+        async () => {
+          // Await the renderHtml promise since it's now an async function
+          const html = await renderHtml(contentFile, config, workspaceRoot);
 
-        // Determine output path
-        let outputPath: string;
-        if (route === '/') {
-          outputPath = path.join(outputDir, 'index.html');
-        } else {
-          // Create directory for nested routes
-          const routeDir = path.join(outputDir, route.substring(1));
-          mkdirSync(routeDir, { recursive: true });
-          outputPath = path.join(routeDir, 'index.html');
-        }
-
-        // Write HTML file
-        writeFileSync(outputPath, html);
-
-        // Process content file with plugins via the plugin manager
-        if (pluginManager) {
-          try {
-            await pluginManager.executeProcessContentFile(contentFile);
-          } catch (error) {
-            console.error(`Error executing processContentFile hooks:`, error);
+          // Determine output path
+          let outputPath: string;
+          if (route === '/') {
+            outputPath = path.join(outputDir, 'index.html');
+          } else {
+            // Create directory for nested routes
+            const routeDir = path.join(outputDir, route.substring(1));
+            await createDirectory(routeDir);
+            outputPath = path.join(routeDir, 'index.html');
           }
+
+          // Write HTML file
+          await writeFileString(outputPath, html);
+
+          // Process content file with plugins via the plugin manager
+          if (pluginManager) {
+            await tryCatch(
+              async () => {
+                await pluginManager.executeProcessContentFile(contentFile);
+              },
+              (error) => {
+                logger.error(`Error executing processContentFile hooks:`, error);
+              }
+            );
+          }
+        },
+        (error) => {
+          logger.error(`Error processing route ${route}:`, error);
         }
-      } catch (error) {
-        console.error(`Error processing route ${route}:`, error);
-      }
+      );
     }
 
     // Process theme assets
-    try {
-      // Set up bundle options
-      const bundleOptions: BundleOptions = {
-        minify: options.minify ?? process.env.NODE_ENV === 'production',
-        sourcemap: options.sourcemap ?? process.env.NODE_ENV !== 'production',
-        target: 'browser' as 'browser' | 'bun' | 'node',
-        splitting: options.splitting,
-        assetHashing: options.assetHashing,
-      };
+    await tryCatch(
+      async () => {
+        // Set up bundle options
+        const bundleOptions: BundleOptions = {
+          minify: options.minify ?? process.env.NODE_ENV === 'production',
+          sourcemap: options.sourcemap ?? process.env.NODE_ENV !== 'production',
+          target: 'browser' as 'browser' | 'bun' | 'node',
+          splitting: options.splitting,
+          assetHashing: options.assetHashing,
+        };
 
-      await bundleAssets(
-        [], // entrypoints
-        outputDir, // outputDir
-        config, // config
-        bundleOptions
-      );
-      console.log('Assets bundled successfully');
-    } catch (error) {
-      console.error('Error bundling assets:', error);
-    }
+        await bundleAssets(
+          [], // entrypoints
+          outputDir, // outputDir
+          config, // config
+          bundleOptions
+        );
+        logger.info('Assets bundled successfully');
+      },
+      (error) => {
+        logger.error('Error bundling assets:', error);
+      }
+    );
 
     // Copy static assets from public directory
-    if (existsSync('public')) {
-      try {
-        copyDirectory('public', path.join(outputDir, 'public'));
-        console.log('Static assets copied successfully');
-      } catch (error) {
-        console.error('Error copying static assets:', error);
-      }
+    const publicDir = config.publicDir || 'public';
+    if (await directoryExists(publicDir)) {
+      await tryCatch(
+        async () => {
+          await fsUtilsCopyDirectory(publicDir, path.join(outputDir, 'public'));
+          logger.info('Static assets copied successfully');
+        },
+        (error) => {
+          logger.error(`Error copying static assets from ${publicDir}:`, error);
+        }
+      );
     }
 
     // Generate sitemap.xml
-    try {
-      generateSitemap(routes, config);
-      console.log('Sitemap generated successfully');
-    } catch (error) {
-      console.error('Error generating sitemap:', error);
-    }
+    await tryCatch(
+      async () => {
+        await generateSitemap(routes, config);
+        logger.info('Sitemap generated successfully');
+      },
+      (error) => {
+        logger.error('Error generating sitemap:', error);
+      }
+    );
 
     // Execute plugin buildEnd hooks if not already done by CLI
     if (pluginManager && !process.env.BUNPRESS_BUILD_ENDED) {
@@ -137,19 +180,20 @@ export async function buildSite(
       process.env.BUNPRESS_BUILD_ENDED = 'true';
     }
 
-    console.log(`Build completed successfully. Output directory: ${outputDir}`);
-  } catch (error) {
-    console.error('Build failed with error:', error);
+    logger.info(`Build completed successfully. Output directory: ${outputDir}`);
+  }, (error) => {
+    logger.error('Build failed with error:', error);
     throw error;
-  }
+  });
 }
 
 /**
  * Generate a basic sitemap.xml file
  */
-function generateSitemap(routes: Record<string, any>, config: BunPressConfig) {
-  try {
-    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+async function generateSitemap(routes: Record<string, any>, config: BunPressConfig) {
+  return await tryCatchWithCode(
+    async () => {
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${Object.keys(routes)
   .map(
@@ -161,45 +205,12 @@ ${Object.keys(routes)
   .join('\n')}
 </urlset>`;
 
-    writeFileSync(path.join(config.outputDir, 'sitemap.xml'), sitemap);
-  } catch (error) {
-    console.error('Error generating sitemap:', error);
-    throw error;
-  }
-}
-
-/**
- * Helper function to recursively copy a directory
- */
-function copyDirectory(source: string, destination: string) {
-  try {
-    // Create destination directory if it doesn't exist
-    if (!existsSync(destination)) {
-      mkdirSync(destination, { recursive: true });
-    }
-
-    // Read the contents of the source directory
-    const files = readdirSync(source);
-
-    // Process each file/directory
-    for (const file of files) {
-      const sourcePath = path.join(source, file);
-      const destPath = path.join(destination, file);
-
-      const stats = statSync(sourcePath);
-
-      if (stats.isDirectory()) {
-        // Recursively copy subdirectories
-        copyDirectory(sourcePath, destPath);
-      } else {
-        // Copy file
-        copyFileSync(sourcePath, destPath);
-      }
-    }
-  } catch (error) {
-    console.error(`Error copying directory from ${source} to ${destination}:`, error);
-    throw error;
-  }
+      await writeFileString(path.join(config.outputDir, 'sitemap.xml'), sitemap);
+    },
+    ErrorCode.FILE_WRITE_ERROR,
+    'Error generating sitemap',
+    { outputDir: config.outputDir }
+  );
 }
 
 // For backward compatibility

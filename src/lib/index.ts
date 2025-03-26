@@ -16,6 +16,8 @@ export * from './content-processor-utils';
 export * from './config-utils';
 export * from './bunpress-config';
 export * from './route-utils';
+export * from './ui-utils';
+export * from './logger-utils';
 
 // Export common utility types from server-utils
 export type { ServerConfig, RouteHandler as ServerRouteHandler } from './server-utils';
@@ -46,8 +48,6 @@ export type {
   ThemeConfig,
   DocumentationConfig,
   BundleConfig,
-  NavigationItem,
-  SidebarItem,
   PluginConfig
 } from './bunpress-config';
 
@@ -64,8 +64,12 @@ export type {
 export type {
   HmrContext,
   HmrClient,
-  HmrEvent
+  HmrEventData,
+  HmrUpdate
 } from './hmr-utils';
+
+// Re-export enums from hmr-utils
+export { HmrEventType } from './hmr-utils';
 
 // Export types from error-utils
 export type {
@@ -74,6 +78,26 @@ export type {
   ErrorHandler,
   BunPressError
 } from './error-utils';
+
+// Export types from ui-utils
+export type {
+  NavigationItem,
+  SidebarItem,
+  SidebarSubItem,
+  TOCItem,
+  ThemeOption,
+  LanguageOption,
+  FooterNavigation,
+  UIComponentFactory
+} from './ui-utils';
+
+// Export types from logger-utils
+export type {
+  LogLevel,
+  LoggerConfig,
+  LogHandler,
+  Logger
+} from './logger-utils';
 
 // Export servers
 export { createDevServer, startDevServer } from '../core/dev-server';

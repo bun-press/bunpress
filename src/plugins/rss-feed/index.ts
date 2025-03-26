@@ -142,9 +142,9 @@ export default function rssFeedPlugin(options: RssFeedOptions = {}): Plugin {
     // Add feed items
     for (const item of feedItems) {
       const { frontmatter, route, content, html } = item;
-      const itemUrl = new URL(route, siteUrl).toString();
+      const itemUrl = route ? new URL(route, siteUrl).toString() : siteUrl;
       const itemDate = frontmatter.date ? formatRFC822Date(new Date(frontmatter.date)) : buildDate;
-      const itemTitle = frontmatter.title || route;
+      const itemTitle = frontmatter.title || route || 'Untitled';
       const itemDescription = frontmatter.description || extractExcerpt(content);
 
       feedContent += `

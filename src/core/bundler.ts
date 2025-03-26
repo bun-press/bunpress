@@ -1,7 +1,27 @@
 import path from 'path';
-import fs from 'fs';
 import type { BunPressConfig } from '../../bunpress.config';
 import { createPathAliasPlugin } from './path-aliases';
+import { 
+  readFileAsString, 
+  createDirectory,
+  writeFileString
+} from '../lib/fs-utils';
+import { 
+  resolvePath,
+  getRelativePath,
+  joinPaths
+} from '../lib/path-utils';
+import {
+  ErrorCode,
+  tryCatchWithCode,
+  BunPressError
+} from '../lib/error-utils';
+import {
+  getNamespacedLogger
+} from '../lib/logger-utils';
+
+// Create namespaced logger for bundler
+const logger = getNamespacedLogger('bundler');
 
 /**
  * Asset types that can be extracted from HTML
@@ -49,120 +69,116 @@ export async function processHtmlWithRewriter(
   htmlPath: string,
   options: HTMLProcessOptions = {}
 ): Promise<{ html: string; assets: AssetReference[] }> {
-  // Default options
-  const opts = {
-    injectHMR: process.env.NODE_ENV !== 'production',
-    extractAssets: true,
-    ...options,
-  };
+  return await tryCatchWithCode(
+    async () => {
+      // Default options
+      const opts = {
+        injectHMR: process.env.NODE_ENV !== 'production',
+        extractAssets: true,
+        ...options,
+      };
 
-  // Read the HTML file
-  const htmlContent = await Bun.file(htmlPath).text();
-  const htmlDir = path.dirname(htmlPath);
+      // Read the HTML file
+      const htmlContent = await readFileAsString(htmlPath);
+      
+      // Store extracted assets
+      const assets: AssetReference[] = [];
 
-  // Store extracted assets
-  const assets: AssetReference[] = [];
+      // Create a new HTML rewriter
+      const rewriter = new HTMLRewriter();
 
-  // Create a new HTML rewriter
-  const rewriter = new HTMLRewriter();
+      // Handle script tags
+      rewriter.on('script', {
+        element(el) {
+          const src = el.getAttribute('src');
+          if (src && !src.startsWith('http') && !src.startsWith('//')) {
+            // Store the asset reference - use original path as the path to preserve filename
+            assets.push({
+              type: 'script',
+              path: src,  // Keep the original src value instead of using relPath
+              originalPath: src,
+              attrs: {
+                type: el.getAttribute('type') || '',
+                defer: el.hasAttribute('defer') ? 'true' : '',
+                async: el.hasAttribute('async') ? 'true' : '',
+                module: el.getAttribute('type') === 'module' ? 'true' : '',
+              },
+            });
 
-  // Handle script tags
-  rewriter.on('script', {
-    element(el) {
-      const src = el.getAttribute('src');
-      if (src && !src.startsWith('http') && !src.startsWith('//')) {
-        // Convert relative path to absolute
-        const absolutePath = path.resolve(htmlDir, src);
-        const relativePath = path.relative(process.cwd(), absolutePath);
+            // Remove the src attribute if we're going to bundle
+            if (opts.extractAssets) {
+              el.removeAttribute('src');
+            }
+          }
+        },
+      });
 
-        // Store the asset reference
-        assets.push({
-          type: 'script',
-          path: relativePath,
-          originalPath: src,
-          attrs: {
-            type: el.getAttribute('type') || '',
-            defer: el.hasAttribute('defer') ? 'true' : '',
-            async: el.hasAttribute('async') ? 'true' : '',
-            module: el.getAttribute('type') === 'module' ? 'true' : '',
-          },
-        });
+      // Handle link tags (CSS)
+      rewriter.on('link', {
+        element(el) {
+          const rel = el.getAttribute('rel');
+          const href = el.getAttribute('href');
 
-        // Remove the src attribute if we're going to bundle
-        if (opts.extractAssets) {
-          el.removeAttribute('src');
-        }
-      }
+          if (rel === 'stylesheet' && href && !href.startsWith('http') && !href.startsWith('//')) {
+            // Store the asset reference - use original href as the path
+            assets.push({
+              type: 'style',
+              path: href,  // Keep the original href value
+              originalPath: href,
+              attrs: {
+                media: el.getAttribute('media') || '',
+              },
+            });
+
+            // Remove the href attribute if we're going to bundle
+            if (opts.extractAssets) {
+              el.removeAttribute('href');
+            }
+          }
+        },
+      });
+
+      // Handle image tags
+      rewriter.on('img', {
+        element(el) {
+          const src = el.getAttribute('src');
+          if (src && !src.startsWith('data:') && !src.startsWith('http') && !src.startsWith('//')) {
+            // Store the asset reference - use original src as the path
+            assets.push({
+              type: 'image',
+              path: src,  // Keep the original src value
+              originalPath: src,
+              attrs: {
+                alt: el.getAttribute('alt') || '',
+              },
+            });
+          }
+        },
+      });
+
+      // Inject HMR client if needed
+      rewriter.on('head', {
+        element(el) {
+          if (opts.injectHMR) {
+            el.append('<script src="/__bunpress_hmr.js"></script>', { html: true });
+          }
+        },
+      });
+
+      // Transform the HTML
+      const transformedHtml = await rewriter.transform(new Response(htmlContent)).text();
+
+      logger.debug(`Processed HTML file: ${htmlPath}, extracted ${assets.length} assets`);
+      
+      return {
+        html: transformedHtml,
+        assets,
+      };
     },
-  });
-
-  // Handle link tags (CSS)
-  rewriter.on('link', {
-    element(el) {
-      const rel = el.getAttribute('rel');
-      const href = el.getAttribute('href');
-
-      if (rel === 'stylesheet' && href && !href.startsWith('http') && !href.startsWith('//')) {
-        // Convert relative path to absolute
-        const absolutePath = path.resolve(htmlDir, href);
-        const relativePath = path.relative(process.cwd(), absolutePath);
-
-        // Store the asset reference
-        assets.push({
-          type: 'style',
-          path: relativePath,
-          originalPath: href,
-          attrs: {
-            media: el.getAttribute('media') || '',
-          },
-        });
-
-        // Remove the href attribute if we're going to bundle
-        if (opts.extractAssets) {
-          el.removeAttribute('href');
-        }
-      }
-    },
-  });
-
-  // Handle image tags
-  rewriter.on('img', {
-    element(el) {
-      const src = el.getAttribute('src');
-      if (src && !src.startsWith('data:') && !src.startsWith('http') && !src.startsWith('//')) {
-        // Convert relative path to absolute
-        const absolutePath = path.resolve(htmlDir, src);
-        const relativePath = path.relative(process.cwd(), absolutePath);
-
-        // Store the asset reference
-        assets.push({
-          type: 'image',
-          path: relativePath,
-          originalPath: src,
-          attrs: {
-            alt: el.getAttribute('alt') || '',
-          },
-        });
-      }
-    },
-  });
-
-  // Inject HMR client if needed
-  rewriter.on('head', {
-    element(el) {
-      if (opts.injectHMR) {
-        el.append('<script src="/__bunpress_hmr.js"></script>', { html: true });
-      }
-    },
-  });
-
-  // Transform the HTML
-  const transformedHtml = await rewriter.transform(new Response(htmlContent)).text();
-
-  return {
-    html: transformedHtml,
-    assets,
-  };
+    ErrorCode.CONTENT_PARSE_ERROR,
+    `Failed to process HTML file: ${htmlPath}`,
+    { htmlPath }
+  );
 }
 
 /**
@@ -170,215 +186,163 @@ export async function processHtmlWithRewriter(
  *
  * @param entrypoints List of entry point files
  * @param outputDir Output directory
- * @param config BunPress configuration
+ * @param config BunPress configuration (optional, can be empty object)
  * @param options Bundling options
  * @returns Build result
  */
 export async function bundleAssets(
   entrypoints: string[],
   outputDir: string,
-  config: BunPressConfig,
+  _config: Partial<BunPressConfig> = {},
   options: BundleOptions = {}
 ): Promise<any> {
-  // Skip if no entrypoints
-  if (!entrypoints.length) {
-    return { success: true, outputs: [] };
-  }
-
-  // Ensure output directory exists
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  // Default options
-  const isDev = process.env.NODE_ENV !== 'production';
-  const bundleOptions = {
-    minify: !isDev,
-    sourcemap: isDev ? 'inline' : false,
-    target: 'browser',
-    splitting: false,
-    ...options,
-  };
-
-  try {
-    // Separate entrypoints by type
-    const scriptEntries = entrypoints.filter(entry => {
-      const ext = path.extname(entry).toLowerCase();
-      return ['.js', '.ts', '.jsx', '.tsx'].includes(ext);
-    });
-
-    const styleEntries = entrypoints.filter(entry => {
-      const ext = path.extname(entry).toLowerCase();
-      return ['.css', '.scss', '.sass', '.less'].includes(ext);
-    });
-
-    const imageEntries = entrypoints.filter(entry => {
-      const ext = path.extname(entry).toLowerCase();
-      return ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'].includes(ext);
-    });
-
-    // Process scripts with Bun.build
-    const scriptBundle = scriptEntries.length
-      ? await Bun.build({
-          entrypoints: scriptEntries,
-          outdir: outputDir,
-          minify: bundleOptions.minify,
-          sourcemap:
-            bundleOptions.sourcemap === true
-              ? 'inline'
-              : bundleOptions.sourcemap === false
-                ? 'none'
-                : (bundleOptions.sourcemap as
-                    | 'none'
-                    | 'linked'
-                    | 'inline'
-                    | 'external'
-                    | undefined),
-          target: bundleOptions.target as any,
-          splitting: bundleOptions.splitting,
-          publicPath: bundleOptions.publicPath,
-          define: bundleOptions.define,
-          plugins: [createPathAliasPlugin()],
-        })
-      : { success: true, outputs: [] };
-
-    // Process styles (using the css-processor module)
-    let styleOutputs: any[] = [];
-    if (styleEntries.length) {
-      // Import dynamically to avoid circular dependencies
-      const { bundleCSS } = await import('./css-processor');
-      const cssOutputPath = path.join(outputDir, 'styles.css');
-      const cssResult = await bundleCSS(styleEntries, cssOutputPath, config);
-
-      if (cssResult.success) {
-        styleOutputs = [{ path: cssOutputPath }];
+  return await tryCatchWithCode(
+    async () => {
+      // Skip if no entrypoints
+      if (!entrypoints.length) {
+        logger.info('No entrypoints provided for bundling, skipping');
+        return { success: true, outputs: [] };
       }
-    }
 
-    // Process images (simple copy for now)
-    const imageOutputs = await Promise.all(
-      imageEntries.map(async imagePath => {
-        const filename = path.basename(imagePath);
-        const fileContent = fs.readFileSync(imagePath);
-        const hash = Bun.hash(fileContent).toString(16).slice(0, 8);
-        const ext = path.extname(filename);
-        const basename = path.basename(filename, ext);
-        const newFilename = `${basename}.${hash}${ext}`;
-        const outputPath = path.join(outputDir, 'images', newFilename);
+      // Ensure output directory exists
+      await createDirectory(outputDir);
 
-        // Ensure the directory exists
-        const imageDir = path.dirname(outputPath);
-        if (!fs.existsSync(imageDir)) {
-          fs.mkdirSync(imageDir, { recursive: true });
-        }
+      // Default options
+      const isDev = process.env.NODE_ENV !== 'production';
+      const bundleOptions = {
+        minify: !isDev,
+        sourcemap: isDev ? 'linked' : 'none',
+        target: 'browser',
+        splitting: true,
+        ...options,
+      };
 
-        // Copy the file
-        fs.copyFileSync(imagePath, outputPath);
+      logger.info(`Bundling ${entrypoints.length} entrypoints to ${outputDir}`);
+      logger.debug(`Bundle options: ${JSON.stringify(bundleOptions)}`);
+      
+      // Create path alias plugin for imports from aliases
+      const pathAliasPlugin = createPathAliasPlugin();
 
-        return { path: outputPath };
-      })
-    );
+      // Map our sourcemap option to what Bun expects
+      let sourcemapOption: 'none' | 'linked' | 'inline' | 'external';
+      if (bundleOptions.sourcemap === 'none' || bundleOptions.sourcemap === false) {
+        sourcemapOption = 'none';
+      } else if (['linked', 'inline', 'external'].includes(bundleOptions.sourcemap as string)) {
+        sourcemapOption = bundleOptions.sourcemap as 'linked' | 'inline' | 'external';
+      } else if (bundleOptions.sourcemap === true) {
+        sourcemapOption = 'inline';
+      } else {
+        sourcemapOption = 'none';
+      }
 
-    // Combine all outputs
-    const allOutputs = [...(scriptBundle.outputs || []), ...styleOutputs, ...imageOutputs];
+      // Run Bun.build
+      const result = await Bun.build({
+        entrypoints,
+        outdir: outputDir,
+        minify: bundleOptions.minify,
+        sourcemap: sourcemapOption,
+        target: bundleOptions.target as any,
+        splitting: bundleOptions.splitting,
+        plugins: [pathAliasPlugin],
+        define: bundleOptions.define || {},
+      });
 
-    return {
-      success: true,
-      outputs: allOutputs,
-    };
-  } catch (error) {
-    console.error('Error bundling assets:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+      if (!result.success) {
+        const errors = result.logs
+          .filter(log => log.level === 'error')
+          .map(log => log.message)
+          .join('\n');
+          
+        logger.error(`Bundling failed: ${errors}`);
+        throw new BunPressError(
+          ErrorCode.CONTENT_RENDER_ERROR,
+          `Failed to bundle assets: ${errors}`,
+          { entrypoints, outputDir }
+        );
+      }
+
+      logger.info(`Successfully bundled ${result.outputs.length} files`);
+      return result;
+    },
+    ErrorCode.CONTENT_RENDER_ERROR,
+    `Failed to bundle assets to ${outputDir}`,
+    { entrypoints, outputDir }
+  );
 }
 
 /**
- * Process HTML files and bundle their assets
+ * Process HTML entrypoints
  *
- * @param htmlFiles List of HTML files to process
+ * @param htmlFiles HTML files to process
  * @param outputDir Output directory
- * @param config BunPress configuration
- * @param bundleOptions Bundle options
- * @returns Build result
+ * @param bundleOptions Bundling options
+ * @returns Processing result
  */
 export async function processHTMLEntrypoints(
   htmlFiles: string[],
   outputDir: string,
-  config: BunPressConfig,
   bundleOptions: BundleOptions = {}
 ): Promise<any> {
-  // Process each HTML file
-  const results = await Promise.all(
-    htmlFiles.map(async htmlPath => {
-      // Extract assets from HTML
-      const { html, assets } = await processHtmlWithRewriter(htmlPath, {
-        injectHMR: process.env.NODE_ENV !== 'production',
-      });
-
-      // Get asset paths for bundling
-      const assetPaths = assets.map(asset => asset.path);
-
-      // Bundle the assets
-      const bundleResult = await bundleAssets(
-        assetPaths,
-        path.join(outputDir, 'assets'),
-        config,
-        bundleOptions
-      );
-
-      // Write the processed HTML to the output directory
-      const basename = path.basename(htmlPath);
-      const outputHtmlPath = path.join(outputDir, basename);
-
-      // Ensure the output directory exists
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
+  return await tryCatchWithCode(
+    async () => {
+      // Process each HTML file
+      const results = [];
+      
+      logger.info(`Processing ${htmlFiles.length} HTML entrypoints`);
+      
+      for (const htmlFile of htmlFiles) {
+        // Get relative output path
+        const relPath = getRelativePath(process.cwd(), htmlFile);
+        const outputPath = joinPaths(outputDir, relPath);
+        
+        // Create output directory
+        await createDirectory(path.dirname(outputPath));
+        
+        // Process HTML
+        const { html, assets } = await processHtmlWithRewriter(htmlFile, {
+          injectHMR: process.env.NODE_ENV !== 'production',
+          extractAssets: true,
+        });
+        
+        // Write processed HTML
+        await writeFileString(outputPath, html);
+        
+        // Bundle assets
+        const scriptAssets = assets.filter(a => a.type === 'script').map(a => resolvePath(path.dirname(htmlFile), a.path));
+        const styleAssets = assets.filter(a => a.type === 'style').map(a => resolvePath(path.dirname(htmlFile), a.path));
+        
+        // Bundle scripts
+        let scriptResult = { success: true, outputs: [] };
+        if (scriptAssets.length > 0) {
+          const scriptsOutDir = joinPaths(outputDir, 'assets', 'js');
+          scriptResult = await bundleAssets(scriptAssets, scriptsOutDir, {}, bundleOptions);
+        }
+        
+        // Bundle styles
+        let styleResult = { success: true, outputs: [] };
+        if (styleAssets.length > 0) {
+          const stylesOutDir = joinPaths(outputDir, 'assets', 'css');
+          styleResult = await bundleAssets(styleAssets, stylesOutDir, {}, {
+            ...bundleOptions,
+            target: 'browser',
+          });
+        }
+        
+        // Store results
+        results.push({
+          htmlFile,
+          outputPath,
+          scriptResult,
+          styleResult,
+        });
+        
+        logger.info(`Processed HTML entrypoint: ${relPath}`);
       }
-
-      // Update HTML to reference bundled assets
-      let processedHtml = html;
-
-      // Add bundled script reference
-      const scriptOutputs = bundleResult.outputs.filter(
-        (output: any) => output.path.endsWith('.js') || output.path.endsWith('.mjs')
-      );
-
-      if (scriptOutputs.length) {
-        const scriptPath = '/assets/' + path.basename(scriptOutputs[0].path);
-        processedHtml = processedHtml.replace(
-          '</head>',
-          `  <script src="${scriptPath}" defer></script>\n  </head>`
-        );
-      }
-
-      // Add bundled style reference
-      const styleOutputs = bundleResult.outputs.filter((output: any) =>
-        output.path.endsWith('.css')
-      );
-
-      if (styleOutputs.length) {
-        const stylePath = '/assets/' + path.basename(styleOutputs[0].path);
-        processedHtml = processedHtml.replace(
-          '</head>',
-          `  <link rel="stylesheet" href="${stylePath}">\n  </head>`
-        );
-      }
-
-      // Write the final HTML
-      fs.writeFileSync(outputHtmlPath, processedHtml);
-
-      return {
-        htmlPath: outputHtmlPath,
-        bundleResult,
-      };
-    })
+      
+      return results;
+    },
+    ErrorCode.CONTENT_RENDER_ERROR,
+    `Failed to process HTML entrypoints`,
+    { htmlFiles, outputDir }
   );
-
-  return {
-    success: true,
-    results,
-  };
 }
