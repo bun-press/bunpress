@@ -1,7 +1,12 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
-import { DefaultThemeManager, getThemeManager, initThemeManager, ThemeManager } from '../theme-manager';
+import {
+  DefaultThemeManager,
+  getThemeManager,
+  initThemeManager,
+  ThemeManager,
+} from '../theme-manager';
 import type { BunPressConfig } from '../../../bunpress.config';
 
 // Global variable used by theme-manager.ts for singleton
@@ -12,7 +17,7 @@ declare global {
 // Integration tests for theme manager
 describe('ThemeManager', () => {
   // Set up test environment
-  const TEST_DIR = path.join(process.cwd(), 'test-workspace');
+  const TEST_DIR = path.join(process.cwd(), 'tmp-test-theme-manager');
   const THEMES_DIR = path.join(TEST_DIR, 'themes');
   const THEME_1_DIR = path.join(THEMES_DIR, 'theme1');
   const THEME_2_DIR = path.join(THEMES_DIR, 'theme2');

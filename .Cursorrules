@@ -53,22 +53,41 @@
 - Keep tests alongside code in __tests__ directories
 - Use the .tsx extension only for React components
 
-## Folder Structure Cleanup
-1. Consolidate test directories:
-   - Keep tests alongside the code they test
-   - Use __tests__ naming convention consistently
+## Project Cleanup Processes
 
-2. Remove redundant folders:
-   - Merge overlapping test directories
-   - Remove empty directories
+### Manual Cleanup (Run with `bun deepclean`)
+1. **Unused Files Removal**:
+   - Remove files identified by static analysis tools (knip) as unused
+   - Specifically target `src/core/theme-builder.ts`, `src/lib/index.ts`, and plugin examples
 
-3. Reorganize example content:
-   - Move all examples to examples directory
-   - Structure examples by feature (basic, fullstack, etc.)
+2. **Test Directories**:
+   - Remove standalone test directories like `test-input` and `test-project`
+   - Keep individual tests alongside their code in `__tests__` directories
 
-4. Clean up development artifacts:
-   - Move test content to test-content directory
-   - Keep temporary build outputs separate from source
+3. **Examples Handling**:
+   - Remove or simplify example directories to reduce codebase size
+   - Consider creating a separate examples repository for extensive demos
+
+4. **Temporary Files**:
+   - Clean up fix directories and temporary implementation files
+   - Remove example configuration files once proper documentation exists
+
+5. **Empty Directory Cleanup**:
+   - After removing files, clean up empty directories
+   - Maintain consistent directory structure
+
+### Unused Dependencies
+- Remove unnecessary dependencies identified by knip:
+  - `@mdx-js/mdx`
+  - `@types/markdown-it`
+  - `@types/markdown-it-container`
+  - `@types/ws`
+- Keep reactivity-related dependencies when they're core to functionality
+
+### Interface Improvements
+- Fix interface definitions to match actual usage patterns
+- Ensure theme-related interfaces properly define all used properties
+- Update exports in index files to include all needed modules
 
 ## Naming Conventions
 - Use kebab-case for file names

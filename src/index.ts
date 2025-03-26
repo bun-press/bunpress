@@ -124,7 +124,14 @@ async function initializeProject(_args: string[] = []) {
   const configPath = path.join(absoluteTargetDir, 'bunpress.config.ts');
   if (!fs.existsSync(configPath)) {
     const configContent = `import { defineConfig } from 'bunpress';
-import { markdownItPlugin, prismPlugin, seoPlugin } from 'bunpress/plugins';
+import { 
+  markdownItPlugin, 
+  prismPlugin, 
+  seoPlugin, 
+  i18nPlugin, 
+  imageOptimizerPlugin,
+  searchIndexPlugin
+} from 'bunpress/plugins';
 
 export default defineConfig({
   title: 'My BunPress Site',
@@ -152,6 +159,30 @@ export default defineConfig({
       generateSitemap: true,
       robotsTxt: true,
     }),
+    imageOptimizerPlugin({
+      formats: [
+        { format: 'webp', quality: 80 },
+        { format: 'avif', quality: 65 }
+      ],
+      sizes: [
+        { width: 640 },
+        { width: 828 },
+        { width: 1200 },
+        { width: 1920 }
+      ]
+    }),
+    i18nPlugin({
+      defaultLocale: 'en',
+      locales: ['en', 'fr', 'es'],
+      prefixLocaleInUrl: true,
+      forceDefaultLocalePrefix: false,
+      generateLocaleRoutes: true
+    }),
+    searchIndexPlugin({
+      filename: 'search-index.json',
+      fields: ['title', 'description', 'content'],
+      snippetLength: 160
+    })
   ],
 });
 `;
@@ -428,123 +459,108 @@ async function main() {
             {
               title: 'Processing content files',
               task: async task => {
-                // Implement actual content processing instead of simulation
-                task.output = 'Scanning content directories...';
+                try {
+                  // Use the proper ContentProcessor implementation instead of simulation
+                  task.output = 'Scanning content directories...';
 
-                // Get content directory from config
-                const contentDir = path.resolve(process.cwd(), config.contentDir || 'content');
-                const outputDir = path.resolve(process.cwd(), config.outputDir || 'dist');
+                  // Get content directory from config
+                  const contentDir = path.resolve(process.cwd(), config.contentDir || 'content');
+                  const pagesDir = path.resolve(process.cwd(), config.pagesDir || 'pages');
+                  const outputDir = path.resolve(process.cwd(), config.outputDir || 'dist');
 
-                // Ensure output directory exists
-                fs.mkdirSync(outputDir, { recursive: true });
+                  // Ensure output directory exists
+                  fs.mkdirSync(outputDir, { recursive: true });
 
-                // Find all markdown files
-                const contentPattern = path.join(contentDir, '**/*.{md,mdx}');
-                task.output = `Finding markdown files in ${contentDir}...`;
-                const contentFiles = [];
-                for await (const file of new Glob(contentPattern).scan()) {
-                  contentFiles.push(file);
-                }
+                  // Determine which directories to scan
+                  const dirsToScan = [];
 
-                if (contentFiles.length === 0) {
-                  task.output = 'No content files found.';
-                  return;
-                }
-
-                task.output = `Found ${contentFiles.length} content files. Processing...`;
-
-                // Create content processor
-                const contentProcessor = new ContentProcessor({
-                  plugins: pluginManager,
-                });
-
-                // Process each file
-                const processedFiles: ContentFile[] = [];
-                let processed = 0;
-
-                for (const filePath of contentFiles) {
-                  try {
-                    const contentFile = await contentProcessor.processMarkdownContent(
-                      filePath,
-                      contentDir
-                    );
-                    processedFiles.push(contentFile);
-                    processed++;
-
-                    // Update progress
-                    if (processed % 10 === 0 || processed === contentFiles.length) {
-                      task.output = `Processed ${processed}/${contentFiles.length} files...`;
-                    }
-                  } catch (error: any) {
-                    console.error(`Error processing file ${filePath}: ${error.message}`);
+                  // Always include pages directory
+                  if (fs.existsSync(pagesDir)) {
+                    dirsToScan.push(pagesDir);
                   }
+
+                  // Include content directory if it exists and is different from pages
+                  if (fs.existsSync(contentDir) && contentDir !== pagesDir) {
+                    dirsToScan.push(contentDir);
+                  }
+
+                  if (dirsToScan.length === 0) {
+                    task.output = 'No content directories found. Creating pages directory...';
+                    fs.mkdirSync(pagesDir, { recursive: true });
+                    dirsToScan.push(pagesDir);
+                  }
+
+                  // Find all markdown files in all directories
+                  task.output = `Finding markdown files in ${dirsToScan.join(', ')}...`;
+                  const contentFiles = [];
+
+                  for (const dir of dirsToScan) {
+                    const contentPattern = path.join(dir, '**/*.{md,mdx}');
+                    for await (const file of new Glob(contentPattern).scan()) {
+                      contentFiles.push(file);
+                    }
+                  }
+
+                  if (contentFiles.length === 0) {
+                    task.output = 'No markdown content files found.';
+                    return;
+                  }
+
+                  task.output = `Found ${contentFiles.length} content files. Processing...`;
+
+                  // Create content processor with the plugin manager
+                  const contentProcessor = new ContentProcessor({
+                    plugins: pluginManager,
+                  });
+
+                  // Process each file
+                  const processedFiles: ContentFile[] = [];
+                  let processed = 0;
+                  let errors = 0;
+
+                  for (const filePath of contentFiles) {
+                    try {
+                      // Use the appropriate root directory depending on which directory the file is in
+                      const rootDir =
+                        dirsToScan.find(dir => filePath.startsWith(dir)) || contentDir;
+                      const contentFile = await contentProcessor.processMarkdownContent(
+                        filePath,
+                        rootDir
+                      );
+                      processedFiles.push(contentFile);
+                      processed++;
+
+                      // Update progress
+                      if (processed % 5 === 0 || processed === contentFiles.length) {
+                        task.output = `Processed ${processed}/${contentFiles.length} files...`;
+                      }
+                    } catch (error: any) {
+                      errors++;
+                      console.error(`Error processing file ${filePath}: ${error.message}`);
+                    }
+                  }
+
+                  if (errors > 0) {
+                    task.output = `Processed ${processed} content files with ${errors} errors. Applying transformations...`;
+                  } else {
+                    task.output = `Processed ${processed} content files successfully. Applying transformations...`;
+                  }
+
+                  // Generate routes from content files
+                  const routes = processedFiles.map(file => ({
+                    path: file.route,
+                    component: file.html,
+                    meta: file.frontmatter,
+                  }));
+
+                  // Store routes for use in generating output
+                  ctx.routes = routes;
+                  ctx.processedFiles = processedFiles;
+                } catch (error: any) {
+                  console.error('Error in content processing:', error);
+                  task.output = `Content processing failed: ${error.message}`;
+                  throw error;
                 }
-
-                task.output = `Processed ${processed} content files. Applying transformations...`;
-
-                // Generate routes from content files
-                const routes = processedFiles.map(file => ({
-                  path: file.route,
-                  component: file.html,
-                  meta: file.frontmatter,
-                }));
-
-                // Store routes for use in generating output
-                ctx.routes = routes;
-                ctx.processedFiles = processedFiles;
-
-                return task.newListr(
-                  [
-                    {
-                      title: 'Generating routes',
-                      task: async () => {
-                        // Generate routes file
-                        const routesData = routes.map(route => ({
-                          path: route.path,
-                          meta: route.meta,
-                        }));
-
-                        // Write routes data for client-side navigation
-                        const routesFilePath = path.join(outputDir, 'routes.json');
-                        fs.writeFileSync(routesFilePath, JSON.stringify(routesData, null, 2));
-                      },
-                    },
-                    {
-                      title: 'Optimizing assets',
-                      task: async () => {
-                        // Process and copy assets from content directory to output
-                        const assetPattern = path.join(
-                          contentDir,
-                          '**/*.{png,jpg,jpeg,gif,svg,webp,pdf,zip}'
-                        );
-                        const assetFiles = [];
-                        for await (const file of new Glob(assetPattern).scan()) {
-                          assetFiles.push(file);
-                        }
-
-                        if (assetFiles.length > 0) {
-                          // Create assets directory
-                          const assetsDir = path.join(outputDir, 'assets');
-                          fs.mkdirSync(assetsDir, { recursive: true });
-
-                          // Copy each asset
-                          for (const assetPath of assetFiles) {
-                            const relativePath = path.relative(contentDir, assetPath);
-                            const outputPath = path.join(assetsDir, relativePath);
-
-                            // Create directory if it doesn't exist
-                            const outputDir = path.dirname(outputPath);
-                            fs.mkdirSync(outputDir, { recursive: true });
-
-                            // Copy the file
-                            fs.copyFileSync(assetPath, outputPath);
-                          }
-                        }
-                      },
-                    },
-                  ],
-                  { concurrent: false }
-                );
               },
               rendererOptions: { persistentOutput: true },
             },
@@ -849,3 +865,6 @@ if (process.argv[1]?.endsWith('src/index.ts') || import.meta.url.endsWith('src/i
     main();
   }
 }
+
+// Export themes
+export * from '../themes';

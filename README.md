@@ -1,321 +1,170 @@
 # BunPress
 
-A modern static site generator built with Bun's native capabilities for blazing-fast performance.
-
-[![npm version](https://img.shields.io/npm/v/bunpress.svg)](https://www.npmjs.com/package/bunpress)
-[![License](https://img.shields.io/npm/l/bunpress.svg)](https://github.com/bunpress/bunpress/blob/main/LICENSE)
-[![Bun](https://img.shields.io/badge/built%20with-bun-yellow)](https://bun.sh)
+A modern static site generator and fullstack framework built with Bun. BunPress delivers exceptional performance while maintaining flexibility and ease of use.
 
 ## Features
 
-- 🚀 **Built for Bun**: Leverages Bun's native tools for maximum performance
-- 🔌 **Plugin System**: Extend functionality with a powerful plugin architecture
-- 📄 **Markdown Support**: First-class support for Markdown content
-- 🎨 **Theme System**: Customize your site with flexible theming
-- 🧩 **React Components**: Use React components in your content with MDX
-- 💻 **Dev Server**: Fast development server with hot module replacement
-- 📦 **Static Output**: Generate static sites for deployment anywhere
-- 🌗 **Dark/Light Mode**: Integrated theme toggle with system preference detection
-
-## Bun Optimizations
-
-BunPress leverages Bun's powerful built-in features:
-
-- **HTML-first Bundling**: BunPress uses Bun's HTML-first bundling approach for optimal performance
-- **Automatic CSS Processing**: CSS imports are automatically bundled and optimized
-- **Hot Module Replacement**: Fast development with Bun's built-in HMR support
-- **TypeScript/JSX Support**: First-class support for TypeScript and JSX without configuration
-- **Plugin System**: Tailwind CSS and other plugins work seamlessly
-- **Fast Server**: Bun's fast HTTP server powers the development environment
-
-## Installation
-
-```bash
-# Install globally
-bun install -g bunpress
-
-# Or as a project dependency
-bun add bunpress
-```
+- **⚡ Blazing Fast**: Built on Bun's native performance capabilities
+- **📝 Content-Focused**: Markdown and MDX processing with frontmatter support
+- **🎨 Beautiful Themes**: Modern, customizable theme system
+- **🧩 Plugin System**: Extensible architecture with lifecycle hooks
+- **🌍 Internationalization**: Built-in i18n support
+- **🔍 SEO Optimized**: Automatic metadata and sitemap generation
+- **📱 Mobile-First**: Responsive layouts on all devices
+- **🔄 HMR**: Hot Module Replacement for rapid development
 
 ## Quick Start
 
 ```bash
-# Create a new site
-mkdir my-site && cd my-site
+# Install BunPress
+bun install bunpress
 
-# Initialize a BunPress site
-bunpress init
+# Create a new project
+bunpress init my-project
 
 # Start the development server
-bunpress dev
-
-# Build your site
-bunpress build
+cd my-project
+bun run dev
 ```
 
-### Creating Content
+## Documentation
 
-Content in BunPress is created using Markdown or MDX files:
+Visit our [documentation site](https://bunpress.dev) to learn more about BunPress.
 
-```md
----
-title: Getting Started
-description: Learn how to get started with BunPress
-layout: doc
----
-
-# Getting Started with BunPress
-
-Welcome to BunPress! This guide will help you get started...
-```
-
-### Using Components in MDX
-
-You can use React components in your MDX files:
-
-```mdx
----
-title: Interactive Example
----
-
-import { Button } from '../components/Button';
-
-# Interactive Components
-
-Click the button below:
-
-<Button onClick={() => alert('Hello!')}>Click Me</Button>
-```
-
-### Creating Custom Themes
-
-You can create custom themes by modifying the components in the `themes` directory:
-
-1. Copy the default theme as a starting point:
-   ```bash
-   cp -r themes/default themes/my-theme
-   ```
-
-2. Update your configuration to use the new theme:
-   ```typescript
-   // bunpress.config.ts
-   export default defineConfig({
-     // ...
-     themeConfig: {
-       name: 'my-theme',
-       options: {
-         // Your theme options
-       }
-     }
-   });
-   ```
-
-3. Customize the components in your theme directory
-
-## Advanced Usage
-
-### Using Plugins
-
-BunPress comes with several built-in plugins that you can configure in your `bunpress.config.ts`:
-
-```typescript
-import { defineConfig } from 'bunpress';
-import { 
-  seoPlugin, 
-  imagePlugin, 
-  rssPlugin,
-  analyticsPlugin
-} from 'bunpress/plugins';
-
-export default defineConfig({
-  // ...
-  plugins: [
-    seoPlugin({
-      siteUrl: 'https://example.com',
-      sitemap: true,
-      robots: true,
-    }),
-    imagePlugin({
-      optimize: true,
-      formats: ['webp', 'avif'],
-    }),
-    rssPlugin({
-      title: 'My Blog',
-      description: 'Latest posts from my blog',
-      itemLimit: 20,
-    }),
-    analyticsPlugin({
-      provider: 'google',
-      trackingId: 'G-XXXXXXXXXX',
-    }),
-  ],
-});
-```
-
-### Internationalization
-
-BunPress has built-in support for multilingual content via the i18n plugin:
-
-```typescript
-import { i18nPlugin } from 'bunpress/plugins';
-
-export default defineConfig({
-  // ...
-  plugins: [
-    i18nPlugin({
-      defaultLocale: 'en',
-      locales: ['en', 'es', 'fr'],
-      fallback: true,
-    }),
-  ],
-});
-```
-
-Then, add translations in the `i18n` directory:
-
-```json
-// i18n/en.json
-{
-  "welcome": "Welcome to BunPress",
-  "navigation": {
-    "home": "Home",
-    "docs": "Documentation"
-  }
-}
-```
-
-Use translations in your content:
-
-```md
-# {{t:welcome}}
-
-Click on the {{t:navigation.home}} link to return to the homepage.
-```
+- [Getting Started](https://bunpress.dev/docs/getting-started)
+- [Configuration](https://bunpress.dev/docs/configuration)
+- [Themes](https://bunpress.dev/docs/themes)
+- [Plugins](https://bunpress.dev/docs/plugins)
+- [I18n](https://bunpress.dev/docs/i18n)
 
 ## Project Structure
 
 ```
-my-site/
-├── bunpress.config.ts     # Configuration file
-├── pages/                 # Content pages (Markdown/MDX)
-│   ├── index.md           # Home page
-│   └── about.md           # About page
-├── public/                # Static assets
-└── themes/                # Custom themes (optional)
+my-project/
+├── pages/             # Content source files
+│   ├── index.md       # Home page
+│   └── about.md       # About page
+├── public/            # Static assets
+├── i18n/              # Translations
+│   ├── en/            # English translations
+│   └── fr/            # French translations
+├── bunpress.config.ts # Site configuration
+└── package.json       # Project dependencies
 ```
 
 ## Configuration
 
-BunPress is configured via a `bunpress.config.ts` file in your project root:
+BunPress is customizable through `bunpress.config.ts`:
 
 ```typescript
 import { defineConfig } from 'bunpress';
-import { markdownItPlugin, prismPlugin } from 'bunpress/plugins';
 
 export default defineConfig({
   title: 'My BunPress Site',
-  description: 'Created with BunPress',
-  siteUrl: 'https://example.com',
-  pagesDir: 'pages',
-  outputDir: 'dist',
+  description: 'Built with BunPress',
   themeConfig: {
-    name: 'default',
-    options: {
-      primaryColor: '#3b82f6',
-      darkMode: true,
-    },
+    name: 'docs',
+    defaultLayout: 'doc'
   },
   plugins: [
-    markdownItPlugin({
-      html: true,
-      linkify: true,
-    }),
-    prismPlugin({
-      theme: 'dark',
-      languages: ['javascript', 'typescript'],
-    }),
+    {
+      name: 'markdown-it',
+      options: {
+        html: true,
+        linkify: true
+      }
+    },
+    {
+      name: 'i18n',
+      options: {
+        defaultLocale: 'en',
+        locales: ['en', 'fr', 'es']
+      }
+    }
   ],
+  navigation: [
+    { title: 'Home', href: '/' },
+    { title: 'Docs', href: '/docs/' }
+  ],
+  sidebar: [
+    {
+      title: 'Introduction',
+      items: [
+        { title: 'Getting Started', href: '/docs/getting-started' }
+      ]
+    }
+  ]
 });
 ```
 
-## Plugin System
+## Creating Content
 
-BunPress comes with a powerful plugin system that allows you to extend its functionality. You can use built-in plugins or create your own:
+BunPress pages are written in Markdown with frontmatter:
 
-```typescript
-import { definePlugin } from 'bunpress';
+```markdown
+---
+title: Welcome to BunPress
+description: A VitePress alternative built with Bun
+---
 
-export default definePlugin({
-  name: 'my-plugin',
-  transform: (content) => {
-    // Transform content before rendering
-    return content.replace(/foo/g, 'bar');
-  },
-  buildStart: async () => {
-    // Called at the start of the build process
-    console.log('Build started');
-  },
-});
+# Welcome to BunPress
+
+Write your content in Markdown with support for:
+
+- **Formatting** and _styling_
+- Code blocks with syntax highlighting
+- Internationalization with `{{t:translation.key}}`
 ```
 
-## API Usage
+## Internationalization
 
-You can also use BunPress programmatically:
+BunPress has built-in support for multiple languages:
 
-```typescript
-import { buildSite, loadConfig } from 'bunpress/core';
+1. Add translation files to the `i18n` directory
+2. Use translation keys in your content with `{{t:key}}`
+3. Configure supported languages in `bunpress.config.ts`
+4. The language selector automatically appears in navigation
 
-async function main() {
-  const { config, pluginManager } = await loadConfig();
-  await buildSite(config, pluginManager);
-}
+## Themes
 
-main();
-```
+BunPress includes built-in themes:
 
-## Code Quality & Maintenance
+- **Docs**: Documentation-focused theme with navigation, sidebar and TOC
+- **Blog**: Clean and minimal blog theme (coming soon)
+- **Landing**: Marketing-focused theme with hero section (coming soon)
 
-BunPress maintains high code quality standards through automated tools and practices:
+## Plugins
 
-### Cleanup & Optimization
+Extend BunPress functionality with plugins:
 
-Run the cleanup script to ensure your codebase is optimized and follows best practices:
+- **markdown-it**: Enhanced Markdown processing
+- **prism**: Syntax highlighting
+- **seo**: SEO optimization tools
+- **image-optimizer**: Image optimization
+- **i18n**: Internationalization support
+- **rss-feed**: RSS feed generation
+- **search-index**: Site search capabilities
+- **analytics**: Analytics integration
 
-```bash
-bun run cleanup
-```
+## Comparison with VitePress
 
-The cleanup script:
-- Runs the formatter to ensure consistent code style
-- Checks exports to ensure all components are properly exported
-- Validates tests to ensure quality
-- Provides a summary of the codebase status
+| Feature | BunPress | VitePress |
+|---------|----------|-----------|
+| Engine | Bun | Vite |
+| Framework | React | Vue |
+| Performance | 🚀🚀🚀 | 🚀🚀 |
+| Theming | React components | Vue components |
+| Plugins | Lifecycle-based | Limited |
+| i18n | Built-in | Plugin-based |
+| SSR | Supported | Supported |
+| Mobile | First-class | First-class |
 
-### Dependency Management
+## Community & Support
 
-We use [knip](https://github.com/webpro/knip) to detect unused files, exports, and dependencies:
-
-```bash
-bun run knip
-```
-
-### TypeScript Configuration
-
-BunPress uses a strict TypeScript configuration to ensure type safety. See `tsconfig.json` for details.
-
-### Testing
-
-Run the test suite to ensure everything is working correctly:
-
-```bash
-bun test
-```
-
-## Contributing
-
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to BunPress.
+- [GitHub Discussions](https://github.com/bunpress/bunpress/discussions)
+- [Discord Community](https://discord.gg/bunpress)
+- [Twitter](https://twitter.com/bunpress)
 
 ## License
 
-MIT © [BunPress Team](https://github.com/bunpress)
+[MIT](LICENSE)

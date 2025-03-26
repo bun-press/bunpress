@@ -7,6 +7,7 @@ import { SlotProvider, Slot } from '../../../src/core/slot-system';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Separator } from '../components/ui/separator';
 import { cn } from '../../../src/lib/utils';
+import { Language } from '../components/i18n/LanguageSelector';
 
 interface TocItem {
   level: number;
@@ -54,12 +55,15 @@ interface DocLayoutProps {
       }>;
     };
     backgroundColor?: string;
+    locale?: string;
+    availableLocales?: Language[];
   };
   children: React.ReactNode;
   navItems: NavItem[];
   sidebarItems: SidebarItem[];
   tocItems: TocItem[];
   currentPath?: string;
+  onLocaleChange?: (locale: string) => void;
 }
 
 export function DocLayout({
@@ -68,7 +72,8 @@ export function DocLayout({
   navItems,
   sidebarItems,
   tocItems,
-  currentPath = ''
+  currentPath = '',
+  onLocaleChange
 }: DocLayoutProps) {
   // Get TOC level configuration
   const tocLevels = frontmatter.tocLevels || [2, 3];
@@ -112,6 +117,10 @@ export function DocLayout({
     `}</style>
   ) : null;
 
+  // i18n settings
+  const currentLocale = frontmatter.locale || 'en';
+  const availableLocales = frontmatter.availableLocales;
+
   return (
     <SlotProvider>
       {customStyles}
@@ -137,6 +146,9 @@ export function DocLayout({
                   logoText={logoText}
                   logoLink={logoLink}
                   logoImage={logoImage}
+                  currentLocale={currentLocale}
+                  availableLocales={availableLocales}
+                  onLocaleChange={onLocaleChange}
                 />
               </div>
             </header>

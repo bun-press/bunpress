@@ -1,39 +1,47 @@
 ---
-title: Welcome to BunPress
-description: A fast, lightweight, and extensible static site generator built with Bun
+title: "{{t:site.title}}"
+description: "{{t:site.description}}"
 ---
 
-# Welcome to BunPress
+# {{t:site.title}} - {{t:site.description}}
 
-BunPress is a modern static site generator that takes full advantage of Bun's capabilities to deliver exceptional speed and developer experience.
+Welcome to BunPress, a modern static site generator built with Bun. BunPress combines the best of static site generation with dynamic capabilities to create fast, flexible websites.
 
 ## Features
 
-- 🚀 **Lightning Fast**: Built on Bun's native capabilities
-- 📝 **Markdown & MDX Support**: Write content in Markdown with JSX support
-- 🎨 **Customizable Themes**: Built-in support for Shadcn UI components
-- 🔌 **Plugin System**: Extend functionality through plugins
-- 🔍 **SEO Optimized**: Automatic meta tags and sitemap generation
-- 🔄 **Hot Module Replacement**: Instant updates during development
+- **Fast**: Built on Bun for exceptional performance
+- **Flexible**: Use Markdown, MDX, or React components
+- **Plugin-based**: Extensible architecture
+- **SEO friendly**: Built-in optimization
+- **Internationalization**: Native i18n support
 
 ## Getting Started
 
-1. Create a new BunPress site:
-   ```bash
-   bun create bunpress my-site
-   ```
+```bash
+# Install BunPress
+bun install bunpress
 
-2. Start the development server:
-   ```bash
-   cd my-site
-   bunpress dev
-   ```
+# Create a new project
+bunpress init my-project
 
-3. Build for production:
-   ```bash
-   bunpress build
-   ```
+# Start the development server
+cd my-project
+bun run dev
+```
 
-## Learn More
+## Documentation
 
-Check out our [documentation](/docs) to learn more about BunPress and its features. 
+Explore our comprehensive documentation to learn more about BunPress features and capabilities:
+
+- [Installation Guide](/docs/guide/installation)
+- [Configuration](/docs/guide/configuration)
+- [Theme System](/docs/guide/themes)
+- [Plugin System](/docs/guide/plugins)
+
+## Community
+
+Join our community to get help, share your projects, and contribute to BunPress development.
+
+- [GitHub Discussions](https://github.com/bunpress/bunpress/discussions)
+- [Discord Community](https://discord.gg/bunpress)
+- [Twitter](https://twitter.com/bunpress) 

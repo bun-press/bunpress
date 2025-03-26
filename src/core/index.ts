@@ -13,6 +13,7 @@ export * from './css-processor';
 export * from './slot-system';
 export * from './renderer';
 export * from './path-aliases';
+export * from './types';
 
 // Types
 export type { Plugin } from './plugin';

@@ -1,0 +1,34 @@
+{
+  "site": {
+    "title": "BunPress",
+    "description": "A modern static site generator built with Bun"
+  },
+  "nav": {
+    "home": "Home",
+    "docs": "Documentation",
+    "guide": "Guide",
+    "api": "API",
+    "examples": "Examples",
+    "community": "Community",
+    "search": "Search"
+  },
+  "common": {
+    "edit_page": "Edit this page",
+    "last_updated": "Last updated",
+    "previous": "Previous",
+    "next": "Next",
+    "page_not_found": "Page not found",
+    "search_placeholder": "Search documentation",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": "Language",
+    "toc": "On this page"
+  },
+  "footer": {
+    "license": "Released under the MIT License",
+    "copyright": "Copyright © {year} BunPress Contributors"
+  }
+} 

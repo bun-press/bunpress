@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { cn } from "@bunpress/lib/utils";
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
@@ -12,6 +12,8 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from './ui/navigation-menu';
+import { SearchDialog } from './SearchDialog';
+import { LanguageSelector, Language } from './i18n/LanguageSelector';
 
 export interface NavItem {
   text: string;
@@ -30,6 +32,9 @@ interface NavigationProps {
   logoLink?: string;
   logoImage?: string;
   children?: React.ReactNode;
+  currentLocale?: string;
+  availableLocales?: Language[];
+  onLocaleChange?: (locale: string) => void;
 }
 
 // Type for processed items with consistent active state
@@ -45,11 +50,14 @@ export function Navigation({
   logoText = 'BunPress',
   logoLink = '/',
   logoImage,
-  children
+  children,
+  currentLocale = 'en',
+  availableLocales,
+  onLocaleChange
 }: NavigationProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const navRef = useRef<HTMLDivElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   // Check for dark mode
   React.useEffect(() => {
@@ -238,48 +246,57 @@ export function Navigation({
   };
   
   return (
-    <div className={cn("flex items-center justify-between w-full", className)} ref={navRef}>
-      {/* Logo */}
-      <a href={logoLink} className="flex items-center gap-2 mr-4 transition-opacity hover:opacity-80">
-        {logoImage ? (
-          <img src={logoImage} alt={logoText} className="h-8 w-auto animate-in fade-in-50 duration-300" />
-        ) : (
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent animate-in fade-in-50 duration-300">{logoText}</span>
-        )}
-      </a>
-      
-      {/* Desktop Navigation */}
-      <div className="hidden md:flex animate-in fade-in-75 duration-300">
-        <NavigationMenu>
-          <NavigationMenuList>
-            {processedItems.map((item, index) => renderNavigationItem(item, index))}
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
-      
-      {/* Custom Actions */}
-      <div className="flex items-center gap-2 ml-auto">
-        {/* Search Button */}
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="Search">
-          <Search className="h-4 w-4" />
-        </Button>
-        
-        {/* Dark Mode Toggle */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-9 w-9 rounded-full" 
-          onClick={toggleDarkMode}
-          aria-label="Toggle dark mode"
-        >
-          {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-        
-        {/* Custom Children */}
-        {children}
-      </div>
-      
-      {/* Mobile Navigation */}
+    <>
+      <header className={cn("sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", className)}>
+        <div className="container flex h-14 items-center">
+          <div className="mr-4 flex">
+            <a className="mr-6 flex items-center space-x-2" href={logoLink}>
+              {logoImage ? (
+                <img src={logoImage} alt={logoText} className="h-6 w-auto" />
+              ) : (
+                <span className="font-bold">{logoText}</span>
+              )}
+            </a>
+            <nav className="flex items-center space-x-6 text-sm font-medium">
+              <NavigationMenu>
+                <NavigationMenuList>
+                  {processedItems.map((item, index) => renderNavigationItem(item, index))}
+                </NavigationMenuList>
+              </NavigationMenu>
+            </nav>
+          </div>
+          <div className="flex flex-1 items-center justify-end space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSearchOpen(true)}
+              className="h-9 w-9"
+            >
+              <Search className="h-4 w-4" />
+              <span className="sr-only">Search</span>
+            </Button>
+            <LanguageSelector
+              currentLocale={currentLocale}
+              availableLocales={availableLocales}
+              onLocaleChange={onLocaleChange}
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9 rounded-full" 
+              onClick={toggleDarkMode}
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            {children}
+          </div>
+        </div>
+      </header>
+      <SearchDialog 
+        open={isSearchOpen} 
+        onOpenChange={setIsSearchOpen}
+      />
       <div className="md:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
@@ -295,6 +312,6 @@ export function Navigation({
           </SheetContent>
         </Sheet>
       </div>
-    </div>
+    </>
   );
 } 

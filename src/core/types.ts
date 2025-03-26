@@ -19,4 +19,4 @@ export interface SidebarItem {
   collapsed?: boolean;
   active?: boolean;
   external?: boolean;
-} 
+}

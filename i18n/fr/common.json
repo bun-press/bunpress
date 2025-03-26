@@ -1,0 +1,34 @@
+{
+  "site": {
+    "title": "BunPress",
+    "description": "Un générateur de site statique moderne construit avec Bun"
+  },
+  "nav": {
+    "home": "Accueil",
+    "docs": "Documentation",
+    "guide": "Guide",
+    "api": "API",
+    "examples": "Exemples",
+    "community": "Communauté",
+    "search": "Rechercher"
+  },
+  "common": {
+    "edit_page": "Modifier cette page",
+    "last_updated": "Dernière mise à jour",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "page_not_found": "Page non trouvée",
+    "search_placeholder": "Rechercher dans la documentation",
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "language": "Langue",
+    "toc": "Sur cette page"
+  },
+  "footer": {
+    "license": "Publié sous la licence MIT",
+    "copyright": "Copyright © {year} Contributeurs BunPress"
+  }
+} 

@@ -124,6 +124,9 @@ export function renderHtml(
   </head>
   <body>
     <div id="app" data-layout-params='${layoutParams}'></div>
+    ${
+      isReactLayout(layoutUrl)
+        ? `
     <script type="module">
       import { hydrate } from 'react-dom/client';
       import Layout from '${layoutUrl}';
@@ -138,10 +141,26 @@ export function renderHtml(
         appElement
       );
     </script>
+    `
+        : '<!-- No hydration script needed for this layout -->'
+    }
     ${additionalScripts}
   </body>
 </html>
 `;
+}
+
+/**
+ * Check if the layout is a React component that needs hydration
+ */
+function isReactLayout(layoutPath: string): boolean {
+  // Check file extension for React components
+  return (
+    layoutPath.endsWith('.jsx') ||
+    layoutPath.endsWith('.tsx') ||
+    layoutPath.includes('/react/') ||
+    layoutPath.includes('/components/')
+  );
 }
 
 /**

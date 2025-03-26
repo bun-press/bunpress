@@ -1,3 +1,5 @@
+import { createIntegratedPlugin } from './src/plugins/integrated';
+
 export interface DevServerConfig {
   port?: number;
   host?: string;
@@ -162,7 +164,24 @@ const defaultConfig: BunPressConfig = {
         formats: ['webp', 'avif'],
         sizes: [640, 1280, 1920]
       }
-    }
+    },
+    {
+      name: 'i18n',
+      options: {
+        defaultLocale: 'en',
+        locales: ['en', 'fr', 'es', 'de', 'zh', 'ja'],
+        translationsDir: './i18n',
+        fallbackLocale: 'en'
+      }
+    },
+    {
+      name: 'theme-registry',
+      options: {
+        themesDir: './themes',
+        validateThemes: true
+      }
+    },
+    createIntegratedPlugin(),
   ],
   // Default navigation
   navigation: [

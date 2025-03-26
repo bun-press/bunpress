@@ -1,5 +1,5 @@
 /**
- * BunPress Plugin System
+ * BunPress Plugins System
  *
  * This file exports all available plugins for easy consumption.
  */
@@ -7,25 +7,42 @@
 // Core plugin types
 export * from '../core/plugin';
 
-// Built-in plugins
-export * from './markdown-it';
-export * from './image-optimizer';
-export * from './seo';
-export * from './rss-feed';
-export * from './search-index';
-export * from './prism';
-export * from './i18n';
-export * from './analytics';
+// Import plugins
+import markdownItPlugin from './markdown-it';
+import prismPlugin from './prism';
+import analyticsPlugin from './analytics';
+import seoPlugin from './seo';
+import rssFeedPlugin from './rss-feed';
+import searchIndexPlugin from './search-index';
+import imageOptimizerPlugin from './image-optimizer';
+import themeRegistryPlugin from './theme-registry';
+import i18nPlugin from './i18n';
+import { createIntegratedPlugin } from './integrated';
 
-// Export types
-export type { AnalyticsOptions } from './analytics';
-export type { I18nOptions } from './i18n';
-export type { ImageFormat, ImageSize, ImageOptimizerOptions } from './image-optimizer';
+// Export plugins
+export { markdownItPlugin };
+export { prismPlugin };
+export { analyticsPlugin };
+export { seoPlugin };
+export { rssFeedPlugin };
+export { searchIndexPlugin };
+export { imageOptimizerPlugin };
+export { themeRegistryPlugin };
+export { i18nPlugin };
+export { createIntegratedPlugin };
 
-export type { MarkdownItOptions } from './markdown-it';
+// Core plugin collection
+export const corePlugins = {
+  markdownIt: markdownItPlugin,
+  prism: prismPlugin,
+  analytics: analyticsPlugin,
+  seo: seoPlugin,
+  rssFeed: rssFeedPlugin,
+  searchIndex: searchIndexPlugin,
+  imageOptimizer: imageOptimizerPlugin,
+  themeRegistry: themeRegistryPlugin,
+  i18n: i18nPlugin,
+  integrated: createIntegratedPlugin,
+};
 
-export type { RssFeedOptions } from './rss-feed';
-
-export type { SearchIndexOptions } from './search-index';
-
-export type { SeoOptions } from './seo';
+export default corePlugins;

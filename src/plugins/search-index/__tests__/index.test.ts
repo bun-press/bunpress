@@ -184,9 +184,32 @@ describe('Search Index Plugin', () => {
       filename: 'custom-search.json',
       outputDir: 'custom-dir',
       _fs: mockFs,
+    }) as SearchIndexPluginWithTest;
+
+    // Make sure we start fresh
+    plugin.__test__.clearContentFiles();
+
+    // Add a test file to generate content before buildStart
+    plugin.__test__.addContentFile({
+      path: '/test/file.md',
+      route: '/test-page',
+      frontmatter: { title: 'Test Page' },
+      content: 'Test content',
+      html: '<p>Test content</p>',
     });
 
+    // First check contentFiles is not empty
+    expect(plugin.__test__.getContentFiles().length).toBe(1);
+
     await plugin.buildStart?.();
+    // Add file again after buildStart (which clears the array)
+    plugin.__test__.addContentFile({
+      path: '/test/file.md',
+      route: '/test-page',
+      frontmatter: { title: 'Test Page' },
+      content: 'Test content',
+      html: '<p>Test content</p>',
+    });
     await plugin.buildEnd?.();
 
     // Check that writeFileSync was called with the correct path
@@ -206,9 +229,32 @@ describe('Search Index Plugin', () => {
 
     const plugin = searchIndexPlugin({
       _fs: mockFs,
+    }) as SearchIndexPluginWithTest;
+
+    // Make sure we start fresh
+    plugin.__test__.clearContentFiles();
+
+    // Add a test file to generate content
+    plugin.__test__.addContentFile({
+      path: '/test/file.md',
+      route: '/test-page',
+      frontmatter: { title: 'Test Page' },
+      content: 'Test content',
+      html: '<p>Test content</p>',
     });
 
+    // First check contentFiles is not empty
+    expect(plugin.__test__.getContentFiles().length).toBe(1);
+
     await plugin.buildStart?.();
+    // Add file again after buildStart (which clears the array)
+    plugin.__test__.addContentFile({
+      path: '/test/file.md',
+      route: '/test-page',
+      frontmatter: { title: 'Test Page' },
+      content: 'Test content',
+      html: '<p>Test content</p>',
+    });
     await plugin.buildEnd?.();
 
     // Check that mkdirSync was called

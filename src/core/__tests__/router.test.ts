@@ -1,35 +1,88 @@
-import { describe, expect, test, beforeAll } from 'bun:test';
+import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
 import { generateRoutes, generateRoutesAsync } from '../router';
 import * as fs from 'fs';
 import path from 'path';
 import { Plugin } from '../plugin';
 
-// Use a real test directory with actual files
-const TEST_PAGES_DIR = path.join(process.cwd(), 'test-input', 'pages');
+// Create a temporary test directory in the system temp folder
+const TEST_DIR = path.join(process.cwd(), 'tmp-test-router');
+const TEST_PAGES_DIR = path.join(TEST_DIR, 'pages');
+const TEST_EMPTY_DIR = path.join(TEST_DIR, 'empty');
+const TEST_MDX_DIR = path.join(TEST_DIR, 'mdx');
+
+// Test content for files
+const testFiles = {
+  'index.md': `---
+title: Home Page
+---
+
+# Home Page
+
+This is the home page content for testing the router.`,
+
+  'about.md': `---
+title: About Page
+---
+
+# About Page
+
+This is the about page content for testing the router.`,
+
+  'blog/index.md': `---
+title: Blog Index
+---
+
+# Blog Index
+
+This is the blog index content for testing the router.`,
+
+  'blog/post1.md': `---
+title: First Post
+---
+
+# First Post
+
+This is the first blog post content for testing the router.`,
+
+  'blog/post2.md': `---
+title: Second Post
+---
+
+# Second Post
+
+This is the second blog post content for testing the router.`,
+};
 
 describe('Router', () => {
-  // Ensure test files exist before running tests
+  // Set up test files before running tests
   beforeAll(() => {
-    // Verify test files exist to ensure tests will work properly
-    const files = [
-      path.join(TEST_PAGES_DIR, 'index.md'),
-      path.join(TEST_PAGES_DIR, 'about.md'),
-      path.join(TEST_PAGES_DIR, 'blog', 'index.md'),
-      path.join(TEST_PAGES_DIR, 'blog', 'post1.md'),
-      path.join(TEST_PAGES_DIR, 'blog', 'post2.md'),
-    ];
+    // Clean any existing test directory
+    if (fs.existsSync(TEST_DIR)) {
+      fs.rmSync(TEST_DIR, { recursive: true, force: true });
+    }
 
-    for (const file of files) {
-      if (!fs.existsSync(file)) {
-        throw new Error(
-          `Test file ${file} does not exist. Please ensure test files are set up correctly.`
-        );
-      }
+    // Create test directories
+    fs.mkdirSync(TEST_PAGES_DIR, { recursive: true });
+    fs.mkdirSync(path.join(TEST_PAGES_DIR, 'blog'), { recursive: true });
+    fs.mkdirSync(TEST_EMPTY_DIR, { recursive: true });
+    fs.mkdirSync(TEST_MDX_DIR, { recursive: true });
+
+    // Create test files
+    for (const [filePath, content] of Object.entries(testFiles)) {
+      const fullPath = path.join(TEST_PAGES_DIR, filePath);
+      fs.writeFileSync(fullPath, content);
+    }
+  });
+
+  // Clean up test files after all tests are complete
+  afterAll(() => {
+    if (fs.existsSync(TEST_DIR)) {
+      fs.rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 
   test('generates routes for simple directory structure', () => {
-    // Use real file system for testing
+    // Use programmatically created test files
     const routes = generateRoutes(TEST_PAGES_DIR);
 
     expect(Object.keys(routes).length).toBe(5);
@@ -48,31 +101,11 @@ describe('Router', () => {
   });
 
   test('handles empty directory', () => {
-    // Create a temporary empty directory
-    const emptyDir = path.join(process.cwd(), 'test-input', 'empty');
-
-    // Ensure the directory exists and is empty
-    if (!fs.existsSync(emptyDir)) {
-      fs.mkdirSync(emptyDir, { recursive: true });
-    } else {
-      // Clear any existing files
-      const files = fs.readdirSync(emptyDir);
-      for (const file of files) {
-        const filePath = path.join(emptyDir, file);
-        if (fs.statSync(filePath).isFile()) {
-          fs.unlinkSync(filePath);
-        } else {
-          fs.rmSync(filePath, { recursive: true, force: true });
-        }
-      }
-    }
-
-    const routes = generateRoutes(emptyDir);
+    const routes = generateRoutes(TEST_EMPTY_DIR);
     expect(Object.keys(routes).length).toBe(0);
   });
 
   test('generates routes asynchronously', async () => {
-    // Use real file system for testing
     const routes = await generateRoutesAsync(TEST_PAGES_DIR);
 
     expect(Object.keys(routes).length).toBe(5);
@@ -110,16 +143,10 @@ describe('Router', () => {
   });
 
   test('handles MDX files', () => {
-    // Create a temporary test MDX file
-    const mdxDir = path.join(process.cwd(), 'test-input', 'mdx');
-    const mdxFilePath = path.join(mdxDir, 'component.mdx');
+    // Create an MDX test file programmatically
+    const mdxFilePath = path.join(TEST_MDX_DIR, 'component.mdx');
 
-    // Ensure directory exists
-    if (!fs.existsSync(mdxDir)) {
-      fs.mkdirSync(mdxDir, { recursive: true });
-    }
-
-    // Create an MDX test file
+    // Create an MDX test file content
     const mdxContent = `---
 title: MDX Component
 ---
@@ -132,17 +159,14 @@ This is a test MDX component with JSX.
   <p>This is a JSX component</p>
 </div>`;
 
+    // Write the test file
     fs.writeFileSync(mdxFilePath, mdxContent);
 
     // Test MDX file processing
-    const routes = generateRoutes(mdxDir);
+    const routes = generateRoutes(TEST_MDX_DIR);
 
     expect(Object.keys(routes).length).toBe(1);
     expect(routes['/component']).toBeDefined();
     expect(routes['/component'].frontmatter.title).toBe('MDX Component');
-
-    // Clean up
-    fs.unlinkSync(mdxFilePath);
-    fs.rmdirSync(mdxDir);
   });
 });

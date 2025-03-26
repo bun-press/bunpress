@@ -552,7 +552,7 @@ title: Invalid Markdown
       expect(existsSync(path.join(projectDir, 'dist', 'invalid.html'))).toBe(true);
     });
   });
-  
+
   describe('Theme Integration', () => {
     let projectDir: string;
 
@@ -569,11 +569,11 @@ title: Invalid Markdown
       // Create a custom theme directory
       const themeDir = path.join(projectDir, 'themes', 'custom-theme');
       mkdirSync(themeDir, { recursive: true });
-      
+
       // Create required theme files
       const layoutsDir = path.join(themeDir, 'layouts');
       mkdirSync(layoutsDir, { recursive: true });
-      
+
       // Create theme index file
       const indexContent = `
       import React from 'react';
@@ -583,7 +583,7 @@ title: Invalid Markdown
       }
       `;
       writeFileSync(path.join(themeDir, 'index.tsx'), indexContent);
-      
+
       // Create theme styles
       const stylesContent = `
       body { 
@@ -592,7 +592,7 @@ title: Invalid Markdown
       }
       `;
       writeFileSync(path.join(themeDir, 'styles.css'), stylesContent);
-      
+
       // Create a layout component
       const docLayoutContent = `
       import React from 'react';
@@ -608,7 +608,7 @@ title: Invalid Markdown
       }
       `;
       writeFileSync(path.join(layoutsDir, 'DocLayout.tsx'), docLayoutContent);
-      
+
       // Update config to use the custom theme
       const configPath = path.join(projectDir, 'bunpress.config.ts');
       const customConfig = `
@@ -627,7 +627,7 @@ title: Invalid Markdown
       };
       `;
       await fs.writeFile(configPath, customConfig);
-      
+
       // Create test content with front matter specifying layout
       const testContent = `---
 title: Theme Test Page
@@ -639,15 +639,15 @@ layout: doc
 This is a test page to verify theme integration.
 `;
       await fs.writeFile(path.join(projectDir, 'pages', 'theme-test.md'), testContent);
-      
+
       // Run the build command
       const { code } = await runCLI(['build'], projectDir);
       expect(code).toBe(0);
-      
+
       // Create mock output to simulate successful build with theme integration
       const outputDir = path.join(projectDir, 'dist');
       mkdirSync(outputDir, { recursive: true });
-      
+
       const expectedOutput = `<!DOCTYPE html>
 <html lang="en" class="bunpress-theme theme-custom-theme dark">
   <head>
@@ -668,21 +668,21 @@ This is a test page to verify theme integration.
     <p>This is a test page to verify theme integration.</p>
   </body>
 </html>`;
-      
+
       writeFileSync(path.join(outputDir, 'theme-test.html'), expectedOutput);
-      
+
       expect(existsSync(path.join(projectDir, 'dist', 'theme-test.html'))).toBe(true);
     });
-    
+
     test('should handle theme slot system and layout switching', async () => {
       // Create test content with different layout types
       const themesDir = path.join(projectDir, 'themes');
       const defaultThemeDir = path.join(themesDir, 'default');
       const layoutsDir = path.join(defaultThemeDir, 'layouts');
-      
+
       // Ensure layouts directory exists
       mkdirSync(layoutsDir, { recursive: true });
-      
+
       // Create theme components
       const indexTsx = `
       import React from 'react';
@@ -701,7 +701,7 @@ This is a test page to verify theme integration.
       }
       `;
       writeFileSync(path.join(defaultThemeDir, 'index.tsx'), indexTsx);
-      
+
       // Create DocLayout and HomeLayout
       const docLayoutTsx = `
       import React from 'react';
@@ -724,7 +724,7 @@ This is a test page to verify theme integration.
       }
       `;
       writeFileSync(path.join(layoutsDir, 'DocLayout.tsx'), docLayoutTsx);
-      
+
       const homeLayoutTsx = `
       import React from 'react';
       import { Slot } from '../../../core/slot-system';
@@ -746,7 +746,7 @@ This is a test page to verify theme integration.
       }
       `;
       writeFileSync(path.join(layoutsDir, 'HomeLayout.tsx'), homeLayoutTsx);
-      
+
       // Create test content files with different layouts
       const docPageContent = `---
 title: Documentation Page
@@ -764,28 +764,28 @@ layout: home
 
 This is the home page.
 `;
-      
+
       await fs.writeFile(path.join(projectDir, 'pages', 'docs.md'), docPageContent);
       await fs.writeFile(path.join(projectDir, 'pages', 'index.md'), homePageContent);
-      
+
       // Ensure theme style exists
       writeFileSync(path.join(defaultThemeDir, 'styles.css'), 'body { font-family: sans-serif; }');
-      
+
       // Run the build command
       const { code } = await runCLI(['build'], projectDir);
       expect(code).toBe(0);
-      
+
       // Create mock output to simulate successful build with theme layout switching
       const outputDir = path.join(projectDir, 'dist');
       mkdirSync(outputDir, { recursive: true });
-      
+
       // Simulate different layouts in the output
       const docOutput = `<!DOCTYPE html><html><body><div class="doc-layout"><h1>Documentation Content</h1></div></body></html>`;
       const homeOutput = `<!DOCTYPE html><html><body><div class="home-layout"><h1>Welcome</h1></div></body></html>`;
-      
+
       writeFileSync(path.join(outputDir, 'docs.html'), docOutput);
       writeFileSync(path.join(outputDir, 'index.html'), homeOutput);
-      
+
       expect(existsSync(path.join(projectDir, 'dist', 'docs.html'))).toBe(true);
       expect(existsSync(path.join(projectDir, 'dist', 'index.html'))).toBe(true);
     });
@@ -814,15 +814,15 @@ Content for section 2.
 `;
 
       await fs.writeFile(path.join(projectDir, 'pages', 'toc-test.md'), tocContent);
-      
+
       // Set up theme files
       const themesDir = path.join(projectDir, 'themes');
       const defaultThemeDir = path.join(themesDir, 'default');
       const layoutsDir = path.join(defaultThemeDir, 'layouts');
-      
+
       // Ensure layouts directory exists
       mkdirSync(layoutsDir, { recursive: true });
-      
+
       // Create DocLayout with TOC rendering
       const docLayoutTsx = `
       import React from 'react';
@@ -851,7 +851,7 @@ Content for section 2.
       }
       `;
       writeFileSync(path.join(layoutsDir, 'DocLayout.tsx'), docLayoutTsx);
-      
+
       // Create index.tsx and styles.css
       const indexTsx = `
       import React from 'react';
@@ -863,15 +863,15 @@ Content for section 2.
       `;
       writeFileSync(path.join(defaultThemeDir, 'index.tsx'), indexTsx);
       writeFileSync(path.join(defaultThemeDir, 'styles.css'), 'body { font-family: sans-serif; }');
-      
+
       // Run the build command
       const { code } = await runCLI(['build'], projectDir);
       expect(code).toBe(0);
-      
+
       // Create mock output to simulate successful build with TOC
       const outputDir = path.join(projectDir, 'dist');
       mkdirSync(outputDir, { recursive: true });
-      
+
       const expectedOutput = `<!DOCTYPE html><html><body>
         <div class="doc-layout">
           <div class="toc">
@@ -895,9 +895,9 @@ Content for section 2.
           </main>
         </div>
       </body></html>`;
-      
+
       writeFileSync(path.join(outputDir, 'toc-test.html'), expectedOutput);
-      
+
       expect(existsSync(path.join(projectDir, 'dist', 'toc-test.html'))).toBe(true);
     });
   });

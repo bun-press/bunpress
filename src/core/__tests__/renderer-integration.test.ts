@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 // End-to-end tests for renderer with theme integration
 describe('Renderer Integration Tests', () => {
   // Set up test environment
-  const TEST_DIR = path.join(process.cwd(), 'test-renderer');
+  const TEST_DIR = path.join(process.cwd(), 'tmp-test-renderer-integration');
   const THEMES_DIR = path.join(TEST_DIR, 'themes');
   const THEME_DIR = path.join(THEMES_DIR, 'test-theme');
 
@@ -56,8 +56,8 @@ describe('Renderer Integration Tests', () => {
     toc: [
       { level: 1, id: 'test-heading', text: 'Test Heading' },
       { level: 2, id: 'section-1', text: 'Section 1' },
-      { level: 2, id: 'section-2', text: 'Section 2' }
-    ]
+      { level: 2, id: 'section-2', text: 'Section 2' },
+    ],
   };
 
   beforeEach(() => {
@@ -248,7 +248,7 @@ describe('Renderer Integration Tests', () => {
       // Ensure the theme has layouts registered
       testTheme.layouts = {
         doc: path.join(THEME_DIR, 'layouts', 'DocLayout.tsx'),
-        home: path.join(THEME_DIR, 'layouts', 'HomeLayout.tsx')
+        home: path.join(THEME_DIR, 'layouts', 'HomeLayout.tsx'),
       };
     }
 
@@ -261,8 +261,8 @@ describe('Renderer Integration Tests', () => {
       frontmatter: {
         title: 'Home Page',
         description: 'Welcome to the site',
-        layout: 'home'
-      }
+        layout: 'home',
+      },
     };
 
     // Render with home layout
@@ -291,8 +291,8 @@ describe('Renderer Integration Tests', () => {
       themeConfig: {
         name: 'non-existent-theme',
         defaultLayout: 'doc' as 'doc' | 'page' | 'home',
-        options: {}
-      }
+        options: {},
+      },
     };
 
     // Initialize theme manager with the test directory

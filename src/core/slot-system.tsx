@@ -60,3 +60,53 @@ export function SlotContent({ slot, children }: SlotContentProps) {
 
   return null;
 }
+
+/**
+ * Create a slot system for managing content slots
+ */
+export function createSlotSystem() {
+  const slots: Record<string, any> = {};
+
+  return {
+    /**
+     * Register a slot with content
+     */
+    registerSlot: (name: string, content: any) => {
+      slots[name] = content;
+    },
+
+    /**
+     * Get content for a slot
+     */
+    getSlotContent: (name: string, fallback?: any) => {
+      return slots[name] || fallback;
+    },
+
+    /**
+     * Render a page with slots
+     */
+    renderWithSlots: (template: string, slotData: Record<string, any>) => {
+      // Fill slots in template
+      let result = template;
+
+      for (const [slotName, content] of Object.entries(slotData)) {
+        const slotPlaceholder = `{{slot:${slotName}}}`;
+        result = result.replace(
+          new RegExp(slotPlaceholder, 'g'),
+          typeof content === 'string' ? content : JSON.stringify(content)
+        );
+      }
+
+      return result;
+    },
+
+    /**
+     * Clear all registered slots
+     */
+    clearSlots: () => {
+      Object.keys(slots).forEach(key => {
+        delete slots[key];
+      });
+    },
+  };
+}

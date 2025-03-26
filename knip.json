@@ -5,14 +5,10 @@
   "ignoreDependencies": [
     "react",
     "react-dom",
-    "@types/react",
-    "@types/react-dom",
     "happy-dom",
-    "jsdom",
-    "ws",
-    "@types/ws"
+    "ws"
   ],
-  "ignoreBinaries": ["bun", "prettier"],
+  "ignoreBinaries": [],
   "ignoreExportsUsedInFile": true,
   "paths": {
     "@/*": ["./themes/docs/*"]
@@ -20,12 +16,6 @@
   "rules": {
     "dependencies": "error",
     "devDependencies": "warn",
-    "exports": {
-      "level": "warn",
-      "include": [
-        "src/core/index.ts",
-        "src/plugins/index.ts"
-      ]
-    }
+    "exports": "warn"
   }
 } 

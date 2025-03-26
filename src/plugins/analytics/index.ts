@@ -72,6 +72,25 @@ export default function analyticsPlugin(options: AnalyticsOptions = {}): Plugin 
   // Check if we're in development mode
   const isDevelopment = process.env.NODE_ENV === 'development';
 
+  // Validate analytics IDs to prevent accidental use of example values
+  if (
+    googleAnalyticsId &&
+    (googleAnalyticsId === 'G-XXXXXXXXXX' || !googleAnalyticsId.startsWith('G-'))
+  ) {
+    console.warn(
+      'Warning: Invalid Google Analytics Measurement ID provided. Please use a valid ID starting with "G-".'
+    );
+  }
+
+  if (
+    googleTagManagerId &&
+    (googleTagManagerId === 'GTM-XXXXXXX' || !googleTagManagerId.startsWith('GTM-'))
+  ) {
+    console.warn(
+      'Warning: Invalid Google Tag Manager ID provided. Please use a valid ID starting with "GTM-".'
+    );
+  }
+
   return {
     name: 'analytics',
     options,

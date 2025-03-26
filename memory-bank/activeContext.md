@@ -1,6 +1,29 @@
-# Active Context
+# Active Context for BunPress
 
 ## Current Focus
+The current focus for BunPress is to clean up the project structure and improve test reliability by removing unnecessary files and directories, optimizing dependencies, and making tests more isolated. We're also working on TypeScript compatibility improvements, theme integration enhancements, cross-platform compatibility, and performance optimization.
+
+### Project Cleanup
+We've identified several issues in the project:
+1. There were many unnecessary files that were only for testing purposes (test-input, test-project)
+2. There were redundant dependencies not being used
+3. Some interfaces were not properly defined to match their usage
+4. The tests had external dependencies which made them brittle
+
+To address these issues, we've:
+1. Created a comprehensive cleanup script (`cleanup-project.js`) to remove unnecessary files and directories
+2. Removed unnecessary dependencies from package.json
+3. Improved router tests to create test files programmatically instead of depending on files in the repository
+4. Updated interface definitions to match their usage
+5. Added the `deepclean` script to package.json for easy execution of the cleanup process
+
+### Test Improvements
+The router tests were updated to be self-contained by:
+1. Creating test files programmatically within the tests
+2. Setting up a dedicated test directory that's cleaned up after tests run
+3. Avoiding dependencies on external files in the repository
+
+This approach ensures tests are more reliable, isolated, and don't leave artifacts in the repository.
 
 ### TypeScript Compatibility Improvements
 - ✅ Fixed JSX in .ts files by renaming to .tsx
@@ -25,6 +48,33 @@
 - Improve bundler performance for large sites
 - Implement asset caching for faster rebuilds
 - Optimize React server component rendering
+
+## Current Status
+All tests are now passing (181 tests across 31 files) and the project structure is cleaner and more maintainable.
+
+## Next Steps
+1. Continue improving test isolation for other test files that might rely on external files
+2. Complete the TypeScript interface improvements throughout the codebase
+3. Document the plugin API comprehensively
+4. Add linting and pre-commit hooks to maintain code quality
+5. Improve typing coverage across the codebase
+6. Add JSDoc comments for better documentation
+7. Set up stricter TypeScript checks for production builds
+8. Add support for theme extension and inheritance
+9. Fix path handling inconsistencies for cross-platform compatibility
+
+## Active Decisions
+1. Prefer self-contained tests that create their own test files and clean up afterward
+2. Remove unnecessary test directories and files to keep the repository clean
+3. Maintain comprehensive documentation of cleanup processes in .Cursorrules
+4. Be careful when updating interfaces to ensure backward compatibility
+
+## Recent Changes
+1. Created a deep cleanup script (`cleanup-project.js`)
+2. Removed test-input, test-project, examples, and fix directories
+3. Improved router tests to be self-contained
+4. Updated interface definitions for theme components
+5. Added new cleanups to the progress report and .Cursorrules
 
 ## Recent Improvements
 
@@ -75,26 +125,4 @@
 ### Plugin Architecture
 - ✅ Plugin lifecycle hooks implemented
 - ✅ Plugin registration and discovery mechanisms in place
-- ✅ Core plugins (markdown, bundler) fully operational
-
-## Next Steps
-
-### TypeScript
-- Improve typing coverage across the codebase
-- Add JSDoc comments for better documentation
-- Set up stricter TypeScript checks for production builds
-
-### Theme System
-- Add support for theme extension and inheritance
-- Create theme playground for faster theme development
-- Develop additional built-in themes for common use cases
-
-### Cross-Platform
-- Complete Windows compatibility testing
-- Fix path handling inconsistencies
-- Add CI/CD pipeline for cross-platform testing
-
-### Performance
-- Implement incremental builds for faster development
-- Add asset optimization pipeline
-- Enhance caching mechanisms for improved performance 
+- ✅ Core plugins (markdown, bundler) fully operational 

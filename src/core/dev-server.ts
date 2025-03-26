@@ -378,18 +378,32 @@ export function reloadPage(server: Server): void {
 
 /**
  * Simple implementation of minimatch for pattern matching
- *
- * @param filepath File path to check
- * @param pattern Glob pattern to match against
- * @returns Whether the path matches the pattern
+ * This function checks if a file path matches a glob pattern
+ * NOTE: This is a simplified version and does not handle all glob features
  */
 function minimatch(filepath: string, pattern: string): boolean {
-  // Convert glob pattern to regex
-  const regex = new RegExp(
-    '^' + pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]') + '$'
-  );
+  try {
+    // Convert glob pattern to a RegExp
+    const regExpStr = pattern
+      // Escape special RegExp characters
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      // Convert * to match any character except /
+      .replace(/\*/g, '[^/]*')
+      // Convert ** to match any character including /
+      .replace(/\\\*\\\*/g, '.*')
+      // Convert ? to match a single character
+      .replace(/\?/g, '.');
 
-  return regex.test(filepath);
+    // Add start and end markers
+    const regExp = new RegExp(`^${regExpStr}$`);
+
+    // Test the path against the pattern
+    return regExp.test(filepath);
+  } catch (error) {
+    console.error('Error in minimatch function:', error);
+    // In case of an error, be conservative and return false
+    return false;
+  }
 }
 
 /**

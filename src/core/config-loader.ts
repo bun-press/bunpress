@@ -66,6 +66,15 @@ export async function loadConfig(options: ConfigLoaderOptions = {}): Promise<{
     }
   }
 
+  // Initialize all plugins
+  await pluginManager.executeOnInit();
+
+  // Load translations for i18n plugin if it exists
+  await pluginManager.executeLoadTranslations();
+
+  // Register themes if theme registry plugin exists
+  await pluginManager.executeRegisterThemes();
+
   return {
     config,
     pluginManager,

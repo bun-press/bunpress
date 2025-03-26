@@ -1,5 +1,7 @@
 import type { Plugin } from '../../core/plugin';
 import type { ContentFile } from '../../core/content-processor';
+import fs from 'fs';
+import path from 'path';
 
 export interface SearchIndexOptions {
   /**
@@ -82,6 +84,22 @@ const DEFAULT_STOPWORDS = [
   'with',
 ];
 
+export interface SearchDocument {
+  id: string;
+  url: string;
+  title?: string;
+  description?: string;
+  content?: string;
+  excerpt: string;
+  [key: string]: any;
+}
+
+/**
+ * Create a search index plugin for BunPress
+ *
+ * The search index plugin generates a JSON file with searchable content
+ * that can be used with client-side search implementations.
+ */
 export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plugin {
   const {
     filename = 'search-index.json',
@@ -90,12 +108,8 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
     filterItems = () => true,
     stopwords = DEFAULT_STOPWORDS,
     snippetLength = 160,
-    _fs = null,
+    _fs = fs,
   } = options;
-
-  // Use provided fs or require the real one
-  const fs = _fs || require('fs');
-  const path = require('path');
 
   // Collection of all content files for search index generation
   const contentFiles: ContentFile[] = [];
@@ -136,14 +150,21 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
   }
 
   /**
-   * Generate search index from content files
+   * Add content file to the search index collection
    */
-  function generateSearchIndex(): any[] {
+  function addContentFile(file: ContentFile): void {
+    contentFiles.push(file);
+  }
+
+  /**
+   * Generate search index from collected content files
+   */
+  function generateSearchIndex(): SearchDocument[] {
     return contentFiles.filter(filterItems).map(file => {
       const { route, frontmatter, content, html } = file;
 
       // Create search document
-      const document: any = {
+      const document: SearchDocument = {
         id: route,
         url: route,
         excerpt: extractExcerpt(html),
@@ -181,124 +202,71 @@ export default function searchIndexPlugin(options: SearchIndexOptions = {}): Plu
     });
   }
 
-  const plugin = {
+  return {
     name: 'search-index',
     options,
 
+    // Exposing methods for testing and programmatic use
+    __test__: {
+      addContentFile,
+      clearContentFiles: () => {
+        contentFiles.length = 0;
+      },
+      getContentFiles: () => [...contentFiles],
+      generateSearchIndex,
+      processText,
+      extractExcerpt,
+    },
+
     async buildStart() {
       console.log('Search index plugin: Starting search index generation...');
-      // Reset content files
+      // Reset content files at the beginning of each build
       contentFiles.length = 0;
     },
 
-    transform(content: string, _id?: string) {
-      // This transform hook doesn't modify content
-      // It's here to conform to the plugin interface
+    transform(content: string): string {
+      // Don't modify the content
       return content;
     },
 
+    /**
+     * Process a content file after it has been processed by the content processor
+     * This is a custom hook that must be called by the builder
+     */
+    processContentFile(file: ContentFile): void {
+      addContentFile(file);
+    },
+
     async buildEnd() {
-      // In a real implementation, we'd already have content files collected
-      // during the build process.
       if (contentFiles.length === 0) {
-        console.log('Search index plugin: No content files found, simulating content...');
-        simulateContentFiles(contentFiles);
+        console.warn('Search index plugin: No content files were collected during build.');
+        console.warn('Make sure the plugin is properly integrated with the content processor.');
+        return;
       }
 
       // Generate the search index
       const searchIndex = generateSearchIndex();
 
       // Ensure output directory exists
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
+      const outputPath = path.resolve(outputDir);
+      if (!_fs.existsSync(outputPath)) {
+        _fs.mkdirSync(outputPath, { recursive: true });
       }
 
       // Write search index to file
-      fs.writeFileSync(path.join(outputDir, filename), JSON.stringify(searchIndex, null, 2));
-
-      console.log(
-        `Search index plugin: Generated ${filename} with ${searchIndex.length} documents`
-      );
+      const filePath = path.join(outputPath, filename);
+      _fs.writeFileSync(filePath, JSON.stringify(searchIndex, null, 2));
+      console.log(`Search index plugin: Generated ${filename} with ${searchIndex.length} items`);
     },
-
-    // Exposing methods for testing
-    __test__: {
-      addContentFile: (file: ContentFile) => contentFiles.push(file),
-      clearContentFiles: () => contentFiles.splice(0, contentFiles.length),
-      getContentFiles: () => [...contentFiles],
-      generateSearchIndex,
-      processText,
-      extractExcerpt,
-    },
-  };
-
-  return plugin as Plugin & {
+  } as Plugin & {
+    processContentFile: (file: ContentFile) => void;
     __test__: {
       addContentFile: (file: ContentFile) => void;
       clearContentFiles: () => void;
       getContentFiles: () => ContentFile[];
-      generateSearchIndex: () => any[];
+      generateSearchIndex: () => SearchDocument[];
       processText: (text: string) => string;
       extractExcerpt: (html: string, length?: number) => string;
     };
   };
-}
-
-// For demonstration purposes only - in a real implementation, we'd get this data
-// from processing actual content files during the build
-function simulateContentFiles(contentFiles: ContentFile[]) {
-  // Sample content
-  const pages = [
-    {
-      path: '/path/to/index.md',
-      route: '/',
-      frontmatter: {
-        title: 'BunPress - Fast Static Site Generator',
-        description: 'Create lightning-fast static sites with BunPress, powered by Bun',
-      },
-      content: '# BunPress\n\nA fast static site generator built with Bun.',
-      html: '<h1>BunPress</h1><p>A fast static site generator built with Bun.</p>',
-    },
-    {
-      path: '/path/to/docs/getting-started.md',
-      route: '/docs/getting-started',
-      frontmatter: {
-        title: 'Getting Started with BunPress',
-        description: 'Learn how to create your first BunPress site',
-        tags: ['tutorial', 'beginner'],
-      },
-      content:
-        '# Getting Started\n\nFollow these steps to create your first BunPress site.\n\n## Installation\n\nInstall BunPress using npm:\n\n```bash\nnpm install -g bunpress\n```',
-      html: '<h1>Getting Started</h1><p>Follow these steps to create your first BunPress site.</p><h2>Installation</h2><p>Install BunPress using npm:</p><pre><code class="language-bash">npm install -g bunpress</code></pre>',
-    },
-    {
-      path: '/path/to/docs/plugins.md',
-      route: '/docs/plugins',
-      frontmatter: {
-        title: 'BunPress Plugins',
-        description: 'Learn how to use and create plugins for BunPress',
-        tags: ['plugins', 'advanced'],
-      },
-      content:
-        '# Plugins\n\nBunPress has a powerful plugin system that allows you to extend functionality.\n\n## Using Plugins\n\nAdd plugins to your `bunpress.config.ts` file.',
-      html: '<h1>Plugins</h1><p>BunPress has a powerful plugin system that allows you to extend functionality.</p><h2>Using Plugins</h2><p>Add plugins to your <code>bunpress.config.ts</code> file.</p>',
-    },
-    {
-      path: '/path/to/blog/introduction.md',
-      route: '/blog/introduction',
-      frontmatter: {
-        title: 'Introducing BunPress',
-        description: 'Meet BunPress, the fastest static site generator for Bun',
-        date: '2023-05-01',
-        author: 'BunPress Team',
-        tags: ['announcement', 'release'],
-      },
-      content:
-        '# Introducing BunPress\n\nWe are excited to announce BunPress, a new static site generator built with Bun.',
-      html: '<h1>Introducing BunPress</h1><p>We are excited to announce BunPress, a new static site generator built with Bun.</p>',
-    },
-  ];
-
-  // Add sample pages to content files
-  contentFiles.push(...(pages as ContentFile[]));
 }

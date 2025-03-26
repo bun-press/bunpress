@@ -3,11 +3,14 @@ import { Navigation, NavItem } from '../components/Navigation';
 import { Footer } from '../components/Footer';
 import { SlotProvider, Slot } from '../../../src/core/slot-system';
 import { cn } from '../../../src/lib/utils';
+import { Language } from '../components/i18n/LanguageSelector';
 
 interface HeroAction {
   text: string;
   link: string;
-  variant?: 'primary' | 'secondary' | 'outline';
+  primary?: boolean;
+  external?: boolean;
+  variant?: string;
 }
 
 interface Hero {
@@ -20,42 +23,57 @@ interface Hero {
 
 interface Feature {
   title: string;
-  description: string;
-  icon?: React.ReactNode;
+  details: string;
+  description?: string;
+  icon?: string;
   link?: string;
+}
+
+interface ThemeOptions {
+  fullWidthLayout?: boolean;
+  hideNav?: boolean;
+  showFooter?: boolean;
+  footerLinks?: Array<{
+    title: string;
+    items: Array<{ text: string; link: string }>;
+  }>;
 }
 
 interface HomeLayoutProps {
   frontmatter: {
     title: string;
     description?: string;
-    hero?: Hero;
-    features?: Feature[];
     heroImage?: string;
     logoText?: string;
     logoLink?: string;
-    navTitle?: string;
-    theme?: {
-      fullWidthLayout?: boolean;
-      showFooter?: boolean;
-      hideNav?: boolean;
-      footerLinks?: Array<{
-        title: string;
-        items: Array<{ text: string; link: string }>;
-      }>;
-    };
+    hero?: Hero;
+    features?: Feature[];
+    showFooter?: boolean;
+    footerLinks?: Array<{
+      title: string;
+      items: Array<{ text: string; link: string }>;
+    }>;
+    hideNav?: boolean;
+    layout?: 'centered' | 'full';
+    accentColor?: string;
     backgroundColor?: string;
+    showFeatures?: boolean;
+    locale?: string;
+    availableLocales?: Language[];
+    theme?: ThemeOptions;
   };
   children: React.ReactNode;
   navItems: NavItem[];
   currentPath?: string;
+  onLocaleChange?: (locale: string) => void;
 }
 
 export function HomeLayout({
   frontmatter,
   children,
   navItems,
-  currentPath = ''
+  currentPath = '',
+  onLocaleChange
 }: HomeLayoutProps) {
   const hero = frontmatter.hero || { title: frontmatter.title || 'BunPress' };
   const features = frontmatter.features || [];
@@ -73,20 +91,30 @@ export function HomeLayout({
   const logoLink = frontmatter.logoLink || '/';
   const logoImage = frontmatter.heroImage;
 
+  // i18n settings
+  const currentLocale = frontmatter.locale || 'en';
+  const availableLocales = frontmatter.availableLocales;
+
   return (
     <SlotProvider>
       <div className="home-layout" style={backgroundColor ? { backgroundColor } : undefined}>
         {/* Navigation slot */}
         <Slot name="navigation" fallback={
           !hideNav && (
-            <header className="home-header">
-              <div className={`home-header-container ${isFullWidth ? 'full-width' : ''}`}>
+            <header className="home-header sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className={cn(
+                "home-header-container flex h-16 items-center px-4 container", 
+                frontmatter.layout === 'full' && "max-w-full"
+              )}>
                 <Navigation 
                   items={navItems}
                   currentPath={currentPath}
                   logoText={logoText}
                   logoLink={logoLink}
                   logoImage={logoImage}
+                  currentLocale={currentLocale}
+                  availableLocales={availableLocales}
+                  onLocaleChange={onLocaleChange}
                 />
               </div>
             </header>
