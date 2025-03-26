@@ -6,8 +6,10 @@ export * from './lib';
 // Export config helpers
 export { defineConfig, definePlugin } from './config';
 
-// Export all plugins from the plugins directory
-export * from './plugins';
+// Export specific plugins rather than all plugins to avoid conflicts
+// Instead of: export * from './plugins';
+import * as pluginsModule from './plugins';
+export { pluginsModule as plugins };
 
 // CLI code
 import { startDevServer } from './core/dev-server';

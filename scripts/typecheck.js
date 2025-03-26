@@ -1,25 +1,46 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
- * Script to run TypeScript type checking with appropriate flags
+ * TypeScript type checker script
  * 
- * This script runs TypeScript type checking with flags that suppress
- * unused variable warnings, which are common in JSX files
+ * This script runs the TypeScript compiler in watch mode
+ * with specific options to handle unused variables and parameters.
  */
 
-const { execSync } = require('child_process');
+import { spawn } from 'child_process';
+import chalk from 'chalk';
 
-try {
-  // Run TypeScript with flags to suppress unused warnings
-  const result = execSync(
-    'bun tsc --noEmit --skipLibCheck --noUnusedLocals false --noUnusedParameters false',
-    { encoding: 'utf8' }
-  );
-  
-  console.log('TypeScript type checking completed successfully');
+// Get command line arguments
+const args = process.argv.slice(2);
+const watch = args.includes('--watch');
+const strict = args.includes('--strict');
+
+// Base TypeScript options
+const tsOptions = [
+  '--noEmit', 
+  '--skipLibCheck',
+  '--pretty',
+];
+
+// Handle unused variables depending on mode
+if (!strict) {
+  tsOptions.push('--noUnusedLocals', 'false');
+  tsOptions.push('--noUnusedParameters', 'false');
+}
+
+// Add watch flag if requested
+if (watch) {
+  tsOptions.push('--watch');
+}
+
+console.log(chalk.blue('🔍 Running TypeScript type checker...'));
+console.log(chalk.gray(`Options: ${tsOptions.join(' ')}`));
+
+// Run TypeScript compiler
+const tsc = spawn('tsc', tsOptions, { stdio: 'inherit' });
+
+// Handle process termination
+process.on('SIGINT', () => {
+  tsc.kill();
   process.exit(0);
-} catch (error) {
-  console.error('TypeScript errors found:');
-  console.error(error.stdout);
-  process.exit(1);
-} 
+}); 

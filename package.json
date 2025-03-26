@@ -34,18 +34,21 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
+    "dev:watch": "bun run scripts/dev-watch.js",
     "build": "bun build src/index.ts --outdir dist --target bun && bun build:types",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir types --skipLibCheck --noUnusedLocals false --noUnusedParameters false",
     "prepublishOnly": "bun run clean && bun run build",
     "clean": "rm -rf dist types",
     "test": "bun test",
+    "test:watch": "bun test --watch",
     "lint": "bun scripts/typecheck.js",
     "lint:strict": "tsc --noEmit",
     "knip": "knip",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
     "cleanup": "bun scripts/cleanup.js",
     "deepclean": "bun cleanup-project.js",
-    "prepare": "bun run cleanup && bun run build"
+    "prepare": "bun run cleanup && bun run build",
+    "ci": "bun run lint && bun test && bun run build"
   },
   "keywords": [
     "bun",

@@ -1,170 +1,238 @@
 # BunPress
 
-A modern static site generator and fullstack framework built with Bun. BunPress delivers exceptional performance while maintaining flexibility and ease of use.
+A modern, high-performance static site generator and fullstack framework built with Bun.
 
 ## Features
 
-- **⚡ Blazing Fast**: Built on Bun's native performance capabilities
-- **📝 Content-Focused**: Markdown and MDX processing with frontmatter support
-- **🎨 Beautiful Themes**: Modern, customizable theme system
-- **🧩 Plugin System**: Extensible architecture with lifecycle hooks
-- **🌍 Internationalization**: Built-in i18n support
-- **🔍 SEO Optimized**: Automatic metadata and sitemap generation
-- **📱 Mobile-First**: Responsive layouts on all devices
-- **🔄 HMR**: Hot Module Replacement for rapid development
+- 🚀 **Performance**: Built with Bun for fast builds and development
+- ⚡ **HMR**: Hot module replacement for a seamless development experience
+- 📝 **Markdown Support**: Write content in Markdown with frontmatter
+- 🧩 **Plugin System**: Extend functionality with a powerful plugin API
+- 🎨 **Theme Support**: Build beautiful sites with customizable themes
+- 🌐 **Fullstack**: Combine static generation with dynamic API routes
+- 🔄 **i18n**: Built-in internationalization support
+- 🔍 **SEO**: Optimized for search engines out of the box
+
+## Installation
+
+Make sure you have [Bun](https://bun.sh/) installed, then run:
+
+```bash
+# Install BunPress globally
+bun install -g bunpress
+
+# Or use it directly with bunx
+bunx bunpress
+```
 
 ## Quick Start
 
-```bash
-# Install BunPress
-bun install bunpress
+Create a new BunPress project:
 
+```bash
 # Create a new project
-bunpress init my-project
+bunpress init my-website
+cd my-website
 
 # Start the development server
-cd my-project
-bun run dev
+bunpress dev
+
+# Build for production
+bunpress build
 ```
-
-## Documentation
-
-Visit our [documentation site](https://bunpress.dev) to learn more about BunPress.
-
-- [Getting Started](https://bunpress.dev/docs/getting-started)
-- [Configuration](https://bunpress.dev/docs/configuration)
-- [Themes](https://bunpress.dev/docs/themes)
-- [Plugins](https://bunpress.dev/docs/plugins)
-- [I18n](https://bunpress.dev/docs/i18n)
 
 ## Project Structure
 
+A typical BunPress project looks like this:
+
 ```
-my-project/
-├── pages/             # Content source files
-│   ├── index.md       # Home page
-│   └── about.md       # About page
-├── public/            # Static assets
-├── i18n/              # Translations
-│   ├── en/            # English translations
-│   └── fr/            # French translations
-├── bunpress.config.ts # Site configuration
-└── package.json       # Project dependencies
+my-website/
+├── pages/            # Content pages (Markdown)
+├── public/           # Static assets
+├── components/       # Custom components
+├── themes/           # Themes
+│   └── default/      # Default theme
+├── bunpress.config.ts  # Configuration
+└── package.json
 ```
 
 ## Configuration
 
-BunPress is customizable through `bunpress.config.ts`:
+Configure your site in `bunpress.config.ts`:
 
 ```typescript
 import { defineConfig } from 'bunpress';
+import { 
+  markdownItPlugin,
+  seoPlugin
+} from 'bunpress/plugins';
 
 export default defineConfig({
-  title: 'My BunPress Site',
+  title: 'My Website',
   description: 'Built with BunPress',
+  pagesDir: 'pages',
+  outputDir: 'dist',
   themeConfig: {
-    name: 'docs',
-    defaultLayout: 'doc'
+    name: 'default',
+    options: {
+      primaryColor: '#3b82f6',
+      darkMode: true,
+    }
   },
   plugins: [
-    {
-      name: 'markdown-it',
-      options: {
-        html: true,
-        linkify: true
-      }
-    },
-    {
-      name: 'i18n',
-      options: {
-        defaultLocale: 'en',
-        locales: ['en', 'fr', 'es']
-      }
-    }
-  ],
-  navigation: [
-    { title: 'Home', href: '/' },
-    { title: 'Docs', href: '/docs/' }
-  ],
-  sidebar: [
-    {
-      title: 'Introduction',
-      items: [
-        { title: 'Getting Started', href: '/docs/getting-started' }
-      ]
-    }
+    markdownItPlugin(),
+    seoPlugin({
+      generateSitemap: true,
+      robotsTxt: true
+    })
   ]
 });
 ```
 
 ## Creating Content
 
-BunPress pages are written in Markdown with frontmatter:
+Create Markdown files in the `pages` directory:
 
 ```markdown
 ---
-title: Welcome to BunPress
-description: A VitePress alternative built with Bun
+title: Getting Started
+description: Learn how to use BunPress
+layout: doc
 ---
 
-# Welcome to BunPress
+# Getting Started with BunPress
 
-Write your content in Markdown with support for:
+Welcome to BunPress! This guide will help you get started.
 
-- **Formatting** and _styling_
-- Code blocks with syntax highlighting
-- Internationalization with `{{t:translation.key}}`
+## Installation
+
+First, make sure you have Bun installed...
 ```
-
-## Internationalization
-
-BunPress has built-in support for multiple languages:
-
-1. Add translation files to the `i18n` directory
-2. Use translation keys in your content with `{{t:key}}`
-3. Configure supported languages in `bunpress.config.ts`
-4. The language selector automatically appears in navigation
-
-## Themes
-
-BunPress includes built-in themes:
-
-- **Docs**: Documentation-focused theme with navigation, sidebar and TOC
-- **Blog**: Clean and minimal blog theme (coming soon)
-- **Landing**: Marketing-focused theme with hero section (coming soon)
 
 ## Plugins
 
-Extend BunPress functionality with plugins:
+BunPress comes with several built-in plugins:
 
-- **markdown-it**: Enhanced Markdown processing
+- **markdownIt**: Enhanced Markdown processing
 - **prism**: Syntax highlighting
 - **seo**: SEO optimization tools
-- **image-optimizer**: Image optimization
-- **i18n**: Internationalization support
-- **rss-feed**: RSS feed generation
-- **search-index**: Site search capabilities
+- **rss**: RSS feed generation
+- **imageOptimizer**: Image optimization
 - **analytics**: Analytics integration
+- **searchIndex**: Search functionality
+- **i18n**: Internationalization support
 
-## Comparison with VitePress
+Example usage:
 
-| Feature | BunPress | VitePress |
-|---------|----------|-----------|
-| Engine | Bun | Vite |
-| Framework | React | Vue |
-| Performance | 🚀🚀🚀 | 🚀🚀 |
-| Theming | React components | Vue components |
-| Plugins | Lifecycle-based | Limited |
-| i18n | Built-in | Plugin-based |
-| SSR | Supported | Supported |
-| Mobile | First-class | First-class |
+```typescript
+import { defineConfig } from 'bunpress';
+import { 
+  markdownItPlugin, 
+  prismPlugin, 
+  seoPlugin, 
+  imageOptimizerPlugin 
+} from 'bunpress/plugins';
 
-## Community & Support
+export default defineConfig({
+  // Site config...
+  plugins: [
+    markdownItPlugin({
+      html: true,
+      linkify: true
+    }),
+    prismPlugin({
+      theme: 'dark',
+      languages: ['javascript', 'typescript', 'css']
+    }),
+    seoPlugin({
+      generateSitemap: true
+    }),
+    imageOptimizerPlugin({
+      formats: ['webp', 'avif'],
+      quality: 80
+    })
+  ]
+});
+```
 
-- [GitHub Discussions](https://github.com/bunpress/bunpress/discussions)
-- [Discord Community](https://discord.gg/bunpress)
-- [Twitter](https://twitter.com/bunpress)
+## Themes
+
+BunPress supports customizable themes. Create your own theme or customize the default one:
+
+```typescript
+// bunpress.config.ts
+export default defineConfig({
+  // Site config...
+  themeConfig: {
+    name: 'default',
+    options: {
+      primaryColor: '#3b82f6',
+      darkMode: true,
+      navbar: {
+        logo: '/logo.svg',
+        items: [
+          { text: 'Home', link: '/' },
+          { text: 'About', link: '/about' },
+          { text: 'Contact', link: '/contact' }
+        ]
+      },
+      sidebar: {
+        '/docs/': [
+          {
+            text: 'Introduction',
+            items: [
+              { text: 'Getting Started', link: '/docs/getting-started' },
+              { text: 'Configuration', link: '/docs/configuration' }
+            ]
+          }
+        ]
+      }
+    }
+  }
+});
+```
+
+## API Routes
+
+Create dynamic API routes in the `api` directory:
+
+```typescript
+// api/hello.ts
+export default function(req: Request) {
+  return new Response(JSON.stringify({ message: 'Hello, world!' }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+```
+
+## CLI Commands
+
+BunPress comes with a CLI for common tasks:
+
+- `bunpress init [dir]`: Create a new project
+- `bunpress dev`: Start the development server
+- `bunpress build`: Build for production
+- `bunpress preview`: Preview the production build
+
+## Development
+
+To contribute to BunPress:
+
+```bash
+# Clone the repository
+git clone https://github.com/bun-press/bunpress.git
+cd bunpress
+
+# Install dependencies
+bun install
+
+# Start development
+bun run dev
+
+# Run tests
+bun test
+```
 
 ## License
 
-[MIT](LICENSE)
+MIT

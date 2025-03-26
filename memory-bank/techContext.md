@@ -1,308 +1,394 @@
-# Technical Context
+# BunPress Technical Context
 
 ## Technology Stack
 
-### Core Technologies
-- **Bun**: JavaScript/TypeScript runtime and package manager
-- **TypeScript**: Typed superset of JavaScript for improved developer experience
-- **React**: UI library for components and theme development
-- **ESBuild** (via Bun): Fast JavaScript/TypeScript bundler
-
-### Key Dependencies
-- **markdown-it**: Markdown processing and rendering
-- **happy-dom**: DOM implementation for testing
-- **gray-matter**: YAML frontmatter parsing
-- **chalk**: Terminal styling for CLI
-- **sharp**: Image processing and optimization
-- **ws**: WebSocket implementation for HMR
+| Category                | Technologies                                                   |
+|-------------------------|---------------------------------------------------------------|
+| **Core Framework**      | Bun.js + React.js                                             |
+| **Build System**        | Bun's bundler + custom build pipeline                         |
+| **Templating**          | React Server Components                                       |
+| **Styling**             | CSS Modules                                                   |
+| **Content Processing**  | Markdown-it with custom plugins                               |
+| **Testing**             | Bun test (Jest-compatible API)                                |
+| **TypeScript**          | Strict mode with custom configurations                        |
+| **Package Management**  | Bun's package manager                                         |
+| **Linting/Formatting**  | ESLint + Prettier                                             |
+| **CI/CD**               | GitHub Actions                                                |
 
 ## Development Tools
 
-### TypeScript Configuration
-- **TypeScript 5.8+**: Using the latest TypeScript for improved type checking and performance
-- **Custom TypeChecking**: Custom script that suppresses unused variable warnings with appropriate flags
-- **Declaration Files**: TypeScript declaration files generation for better module consumption
-- **tsconfig.json**: Project-specific TypeScript configuration with appropriate compiler options
-- **JSX Support**: Support for React components in .tsx files
-
-### Testing
-- **Bun's Test Runner**: Used for unit and integration testing
-- **Happy DOM**: For DOM manipulation in tests
-- **Test Isolation**: Global variable management for proper test isolation
-
-### Code Quality
-- **ESLint**: JavaScript/TypeScript linting
-- **Prettier**: Code formatting
-- **TypeScript Checking**: Static type analysis for catching errors
+| Tool             | Purpose                                              | Configuration                                        |
+|------------------|------------------------------------------------------|------------------------------------------------------|
+| **Bun**          | Runtime, bundler, package manager, test runner       | `bunfig.toml`                                        |
+| **TypeScript**   | Type checking, static analysis                       | `tsconfig.json`                                      |
+| **ESLint**       | Code quality, enforcing patterns                     | `.eslintrc.js`                                       |
+| **Prettier**     | Code formatting                                      | `.prettierrc`                                        |
+| **VS Code**      | Primary development environment                      | `.vscode/settings.json`, `.vscode/extensions.json`  |
+| **Knip**         | Find unused files, exports, dependencies             | `knip.json`                                          |
 
 ## Project Structure
 
-### Core Module System
 ```
-src/
-  core/           - Core functionality
-    plugin.ts     - Plugin system interfaces and utilities
-    router.ts     - Routing and URL handling
-    bundler.ts    - Asset bundling logic
-    renderer.ts   - Content rendering pipeline
-    theme-manager.ts - Theme loading and management
-    slot-system.ts   - Component slot architecture
-    types.ts      - Core type definitions
-  plugins/        - Built-in plugins
-  cli/            - Command-line interface
-  lib/            - Shared utilities
-  index.ts        - Main exports
+bunpress/
+├── src/                  # Core source code
+│   ├── cli/              # Command-line interface
+│   ├── build/            # Build system
+│   ├── server/           # Server implementation
+│   ├── content/          # Content processing
+│   ├── plugin/           # Plugin system
+│   ├── theme/            # Theme system
+│   ├── utils/            # Utility functions
+│   └── integrated/       # Integration tests
+│       └── __tests__/    # Test files for integrated systems
+├── app/                  # Application components
+│   ├── components/       # UI components
+│   ├── themes/           # Built-in themes
+│   └── layouts/          # Layout templates
+├── public/               # Static assets
+├── docs/                 # Documentation
+├── scripts/              # Build and utility scripts
+├── tests/                # Test utilities and configs
+└── memory-bank/          # Project documentation and context
 ```
-
-### Plugin Architecture
-- **Plugin Interface**: Consistent API for all plugins
-- **Lifecycle Hooks**: Registration, initialization, and content processing
-- **Configuration Options**: Type-safe plugin configuration
-
-### Theme System
-- **Theme Registration**: Auto-discovery of themes in the project
-- **Component Architecture**: Layout components with slots
-- **Style Processing**: CSS/Sass handling
-- **JSX Support**: React components for theming
-- **Type Definitions**: TypeScript interfaces for themes
 
 ## Build Pipeline
 
-### Development Flow
-1. Source TypeScript files (.ts/.tsx)
-2. TypeScript type checking (via custom script with appropriate flags)
-3. Bun's bundler (based on esbuild)
-4. Output JavaScript with source maps
+1. **Source Processing**:
+   - TypeScript compilation with declaration file generation
+   - JSX transformation
+   - Path resolution and module mapping
 
-### Production Build
-1. Source TypeScript files
-2. Type checking and declaration file generation
-3. Bundling with minification
-4. Asset optimization
-5. Output distribution files
+2. **Asset Handling**:
+   - Image optimization and processing
+   - Static file copying
+   - Font processing
 
-### Type Generation
-- **Declaration Files**: Generated with `--emitDeclarationOnly` for type exports
-- **Type Exports**: Package exports include type definitions
-- **Skipped Checks**: Using `--skipLibCheck`, `--noUnusedLocals false`, and `--noUnusedParameters false` for improved build experience
+3. **Content Processing**:
+   - Markdown parsing and transformation
+   - Frontmatter extraction
+   - Table of contents generation
+
+4. **Bundle Creation**:
+   - Dependency resolution
+   - Code splitting
+   - Tree shaking for unused code removal
+   - Output generation
+
+5. **Output**:
+   - HTML generation
+   - CSS processing and minification
+   - JavaScript bundling
+   - Static assets copying
 
 ## Key Architectural Concepts
 
-### Content Pipeline
-1. **Discovery**: Finding markdown and MDX files
-2. **Parsing**: Extracting frontmatter and content
-3. **Transformation**: Applying plugins and processors
-4. **Rendering**: Converting to HTML
-5. **Theming**: Applying layout components
+### Plugin Architecture
 
-### Rendering Strategy
-- **Server-Side Rendering**: Pre-rendered HTML for fast loading
-- **Hydration**: Client-side interactivity where needed
-- **Asset Optimization**: Image processing and CSS minification
+The plugin system is the backbone of BunPress, allowing for extensibility and customization. Plugins hook into different stages of the build and runtime processes:
 
-### Plugin System
-- **Registration**: Plugins are registered with the core
-- **Discovery**: Auto-discovery of plugins in the project
-- **Configuration**: Type-safe config options
-- **Execution**: Lifecycle-based execution
+```mermaid
+flowchart TD
+    A[Plugin Registration] --> B[Initialize Plugins]
+    B --> C[Apply Hooks]
+    C --> D[Content Processing]
+    C --> E[Build Process]
+    C --> F[Server Runtime]
+```
 
-### Theme Architecture
-- **Component-Based**: React components for layouts
-- **Slot System**: Content injection points
-- **Style Integration**: CSS modules or global styles
-- **Layout Selection**: Based on content type or frontmatter
+Plugins implement a standard interface with lifecycle methods:
+- `onInit`: Called when the plugin is first loaded
+- `onBuild`: Called during the build process
+- `onServer`: Called when the server starts
+- `onContent`: Called for each content file
 
-## Development Workflows
+### Theme System
 
-### Local Development
-1. `bun run dev`: Start development server with HMR
-2. `bun run build`: Build the project
-3. `bun run lint`: Run TypeScript checks
-4. `bun test`: Run test suite
+Themes are implemented as React components with a specific structure:
 
-### Testing Approach
-- **Unit Tests**: Individual component functionality
-- **Integration Tests**: Component interactions
-- **End-to-End Tests**: Full workflow testing
-- **Test Isolation**: Using global variables and mocking
+```mermaid
+flowchart TD
+    A[Theme Registration] --> B[Theme Discovery]
+    B --> C[Theme Loading]
+    C --> D[Component Rendering]
+    D --> E[Layout Application]
+    E --> F[Content Injection]
+```
 
-### Deployment
-- **Static Outputs**: Generated HTML, JS, and CSS
-- **Asset Optimization**: Minification and tree-shaking
-- **Platform Support**: Node.js, Bun, and static hosting
-- **CI/CD Integration**: Test and build on push
+Each theme consists of:
+- Layout components (e.g., `DocLayout`, `HomeLayout`)
+- Navigation components
+- Style definitions
+- Theme configuration
 
-## Core Technologies
+### Server Architecture
 
-### Primary Technologies
-- **Bun**: JavaScript runtime and toolkit (v1.0+)
-  - Used for: Runtime execution, package management, bundling, HTTP server
-  - Key features leveraged: Bun.serve, Bun.build, FileSystemRouter
+The server is built on Bun's HTTP server capabilities with React Server Components:
 
-- **TypeScript**: Programming language (v5.0+)
-  - Used for: Type-safe code development
-  - Key features: Strong typing, interfaces, type inference
+```mermaid
+flowchart TD
+    A[HTTP Request] --> B[Route Matching]
+    B --> C[Static File Check]
+    C -->|Static| D[Serve File]
+    C -->|Dynamic| E[Process Request]
+    E --> F[Execute Plugins]
+    F --> G[Render Components]
+    G --> H[Send Response]
+```
 
-- **React**: UI library (v18+)
-  - Used for: Component rendering, client and server components
-  - Key features: Server components, React hooks, context API
+## Testing Strategy
 
-- **Markdown-it**: Markdown processor
-  - Used for: Content transformation
-  - Key features: Plugin system, HTML rendering, syntax extensions
+### Test Types and Organization
 
-### Supporting Libraries
+BunPress employs multiple testing strategies to ensure code quality:
 
-- **Radix UI**: Component primitives
-  - Used for: Accessible UI components 
-  - Key components: Dialog, Navigation, Dropdown, Accordion
+1. **Unit Tests**:
+   - Located alongside source files in `__tests__` directories
+   - Test individual functions and components in isolation
+   - Use mock objects to avoid external dependencies
 
-- **Tailwind CSS**: Utility-first CSS framework
-  - Used for: Styling components
-  - Integration: PostCSS plugin
+2. **Integration Tests**:
+   - Located in `src/integrated/__tests__/`
+   - Test interactions between multiple components
+   - Often create temporary directories and files programmatically
 
-- **Shadcn/ui**: Component library
-  - Used for: Pre-styled UI components
-  - Based on: Tailwind CSS and Radix UI
+3. **Theme Tests**:
+   - Test theme loading and rendering
+   - Verify component composition and layouts
+   - Check responsive behavior
 
-- **Prism.js**: Syntax highlighting (placeholder implementation)
-  - Used for: Code block highlighting
-  - Integration: Via plugin system
+4. **Plugin Tests**:
+   - Verify plugin registration and discovery
+   - Test lifecycle hook execution
+   - Validate plugin configuration
 
-## Development Environment
+5. **CLI Tests**:
+   - Test command execution and output
+   - Verify project initialization and build processes
+   - Check error handling and messaging
 
-### Required Tools
-- **Bun**: v1.0.0 or higher
-- **Node.js**: v16.0.0 or higher (for compatibility)
-- **Git**: For version control
+### Test Isolation and Best Practices
 
-### Recommended VSCode Extensions
-- TypeScript language features
-- Tailwind CSS IntelliSense
-- ESLint
-- Prettier
+To ensure reliable and consistent tests:
 
-## Technical Constraints
+- **Programmatic File Creation**: Tests create their own temporary files and directories instead of relying on existing files in the repository.
+- **Cleanup**: Tests clean up after themselves to prevent test pollution.
+- **Mocking**: External dependencies are mocked to avoid network requests and file system dependencies.
+- **Global State Reset**: Any global state is reset between tests.
+- **Simplified Assertions**: Complex tests with external dependencies are simplified to focus on core functionality.
 
-### Browser Support
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- IE not supported
+Example of programmatic file creation pattern:
+```typescript
+// Create temporary directories for tests
+const tmpDir = await makeTempDir();
+const contentDir = path.join(tmpDir, "content");
+await mkdir(contentDir, { recursive: true });
 
-### Node.js Requirements
-- ESM modules only
-- No CommonJS support
+// Write test files
+await writeFile(path.join(contentDir, "test.md"), "# Test Content");
 
-### Platform Compatibility
-- Primary: Unix/Linux and macOS
-- Secondary: Windows (with some path resolution issues)
+// Run test
+try {
+  // Test assertions here
+} finally {
+  // Clean up
+  await rm(tmpDir, { recursive: true, force: true });
+}
+```
 
-## Technical Decisions
+### TypeScript in Tests
 
-### Fullstack Architecture
-BunPress leverages Bun's built-in server capabilities to provide a unified approach for static and dynamic content:
+The project uses strict TypeScript configuration in tests with specific patterns:
 
-1. **Static Generation**:
-   - Pre-rendered HTML for optimal performance
-   - Asset optimization and bundling
-   - Path-based routing
-
-2. **Server Capabilities**:
-   - API routes with file-based structure
-   - HTML imports for component reuse
-   - Middleware support for request transformation
-
-### Plugin System
-The plugin system is designed to be extensible and composable:
-
-1. **Plugin Interface**:
-   ```typescript
-   interface BunPressPlugin {
-     name: string;
-     onInit?: (config: BunPressConfig) => void | Promise<void>;
-     onContent?: (content: ContentObject) => ContentObject | Promise<ContentObject>;
-     onBuild?: (buildContext: BuildContext) => void | Promise<void>;
-     onServer?: (server: Server) => void | Promise<void>;
-   }
-   ```
-
-2. **Plugin Registration**:
-   ```typescript
-   // In bunpress.config.ts
-   export default {
-     plugins: [
-       imageOptimizerPlugin(),
-       seoPlugin(),
-       rssPlugin()
-     ]
-   };
-   ```
-
-### Content Processing
-Content is processed through a transformation pipeline:
-
-1. **Source**: Read Markdown files
-2. **Parse**: Extract frontmatter and content
-3. **Transform**: Apply Markdown and plugin transformations
-4. **Render**: Generate HTML with React components
-5. **Output**: Write to static files or serve dynamically
-
-### Build System
-The build process optimizes assets for production:
-
-1. **Content Processing**: Transform all content
-2. **Asset Bundling**: Bundle JS, CSS, and other assets
-3. **HTML Generation**: Create static HTML files
-4. **Output**: Generate a deployable site
+- **Unused Parameters**: Prefix unused parameters with underscore (e.g., `_unusedParam`) to avoid TypeScript warnings.
+- **Explicit Return Types**: Specify return types for functions to ensure type safety.
+- **Mock Typing**: Provide explicit types for mock functions and objects.
+- **Assertion Types**: Use type assertions judiciously to help TypeScript understand test expectations.
 
 ## Development Workflow
 
-### Local Development
-```bash
-# Install dependencies
-bun install
-
-# Start development server
-bun run dev
-
-# Build for production
-bun run build
-
-# Create a new project
-bun run bunpress init my-project
+```mermaid
+flowchart TD
+    A[Code Change] --> B[Type Check]
+    B --> C[Lint]
+    C --> D[Test]
+    D --> E[Build]
+    E --> F[Manual Test]
+    F --> G[Commit]
 ```
 
-### Production Deployment
-BunPress sites can be deployed to any static hosting service or Node.js/Bun capable environment:
+### Available Commands
 
-1. **Static Hosting**: Deploy the `dist` directory to services like Vercel, Netlify, or GitHub Pages
-2. **Dynamic Hosting**: Deploy with Bun runtime support for fullstack features
+| Command               | Description                                        |
+|-----------------------|----------------------------------------------------|
+| `bun run dev`         | Start development server                           |
+| `bun run build`       | Build for production                               |
+| `bun run test`        | Run all tests                                      |
+| `bun run lint`        | Run linter                                         |
+| `bun run typecheck`   | Run TypeScript type checking                       |
+| `bun run clean`       | Clean build artifacts                              |
+| `bun run deepclean`   | Remove all generated files and directories         |
 
-## Testing Approach
+## Core Technologies
 
-1. **Unit Tests**: Core functions and utilities
-2. **Integration Tests**: Plugin system and content processing
-3. **End-to-End Tests**: Build process and server functionality
+### Bun
 
-Tests are implemented using Bun's built-in test runner:
-```bash
-bun test
+Bun is used as the project's runtime, package manager, and build tool. It provides:
+
+- Fast JavaScript/TypeScript runtime
+- Built-in bundler with tree shaking
+- Jest-compatible test runner
+- NPM-compatible package manager
+
+### React.js
+
+React is used for both client and server components:
+
+- React Server Components for initial rendering
+- Client components for interactive elements
+- Hook-based state management
+- Context API for theme and plugin state sharing
+
+### TypeScript
+
+TypeScript provides type safety and developer tooling:
+
+- Strict mode for maximum type safety
+- Interface definitions for plugins and themes
+- Generic types for reusable components
+- JSDoc comments for inline documentation
+
+The project uses the following TypeScript configuration patterns:
+
+```typescript
+// For unused parameters
+function exampleFunction(_unusedParam: string, usedParam: number): void {
+  console.log(usedParam);
+}
+
+// For optional parameters with defaults
+function configurePlugin(options: PluginOptions = {}): Plugin {
+  // Implementation
+}
+
+// For type guards
+function isMarkdownFile(file: File): file is MarkdownFile {
+  return file.extension === '.md';
+}
 ```
 
-## Performance Considerations
+## Required Tools
 
-1. **Development Mode**:
-   - Hot Module Replacement (HMR)
-   - On-demand content processing
-   - In-memory caching
+To work on BunPress, you need:
 
-2. **Production Mode**:
-   - Static HTML generation
-   - Asset optimization
-   - Client-side hydration
+- **Bun** (v1.0.9 or later)
+- **Node.js** (v18 or later for compatibility tools)
+- **Git** (for version control)
+- **VS Code** (recommended editor)
 
-## Security Considerations
+## Recommended VSCode Extensions
 
-1. **Input Validation**: Validate all user input in API routes
-2. **HTML Sanitization**: Clean HTML output from Markdown
-3. **Path Traversal Protection**: Prevent directory traversal
-4. **Plugin Isolation**: Prevent plugins from affecting each other
+- ESLint
+- Prettier
+- TypeScript and JavaScript Language Features
+- Markdown All in One
+- Mermaid Preview
+- Jest Runner
+- Path Intellisense
+
+## Technical Constraints
+
+### Performance Goals
+
+- Initial page load < 1s
+- Build time < 10s for small sites
+- SSG output optimized for minimal JS payload
+- Responsive design with mobile-first approach
+
+### Browser Support
+
+- Modern evergreen browsers (Chrome, Firefox, Safari, Edge)
+- No IE11 support
+- Progressive enhancement for older browsers
+
+### Dependencies
+
+- Minimal external dependencies
+- Focused on Bun's built-in capabilities
+- React as the primary UI library
+- Markdown-it for content processing
+
+## Technical Decisions
+
+### Why Bun?
+
+Bun was chosen as the primary runtime and build tool for its:
+
+1. **Speed**: Significantly faster than Node.js for both runtime and building
+2. **All-in-one solution**: Runtime, bundler, test runner, and package manager
+3. **JavaScript/TypeScript support**: First-class support for both languages
+4. **React compatibility**: Works well with React Server Components
+5. **Modern APIs**: Provides modern APIs and capabilities
+
+### Why React?
+
+React was chosen as the UI library for its:
+
+1. **Component model**: Excellent for building theme components
+2. **Server Components**: Enables server-rendered content with hydration
+3. **Ecosystem**: Large ecosystem of libraries and tools
+4. **Developer experience**: Excellent DX with TypeScript
+5. **Performance**: Good performance characteristics for SSG sites
+
+### Why TypeScript?
+
+TypeScript was chosen for type safety and developer experience:
+
+1. **Type safety**: Catches errors at build time
+2. **Developer tooling**: Excellent IDE integration
+3. **Documentation**: Types serve as documentation
+4. **Refactoring**: Makes refactoring safer and easier
+5. **Interface definitions**: Clearly defines plugin and theme interfaces
+
+### Why Markdown-it?
+
+Markdown-it was chosen as the content processor for its:
+
+1. **Plugin system**: Extensible with custom plugins
+2. **Performance**: Fast parsing and rendering
+3. **Compliance**: GFM compatibility
+4. **Customization**: Fine-grained control over rendering
+5. **Active maintenance**: Well-maintained and stable
+
+## Common Pitfalls
+
+### Path Handling
+
+- Windows vs. POSIX path separators can cause issues
+- Always use `path.join()` for cross-platform compatibility
+- Be careful with absolute vs. relative paths
+
+### React Server Components
+
+- Not all React features are available in Server Components
+- Client components must be explicitly marked with `'use client'`
+- State management differs between Server and Client components
+
+### Plugin System
+
+- Circular dependencies can cause plugin registration issues
+- Plugin execution order matters
+- Plugin hooks must be pure or clearly document side effects
+
+### Build System
+
+- Build order is important for proper dependency resolution
+- Caching can cause stale builds if not properly invalidated
+- Environment variables can affect build output
+
+## Project Health Metrics
+
+- **Test Coverage**: >90% for core modules
+- **Bundle Size**: <100KB for initial load
+- **Build Time**: <10s for standard project
+- **Startup Time**: <500ms for development server
+- **TypeScript**: 0 type errors in strict mode

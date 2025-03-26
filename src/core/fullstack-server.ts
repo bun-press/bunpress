@@ -1,228 +1,468 @@
 /**
- * Fullstack development server with HTML import routes for BunPress
- *
- * This module implements support for HTML imports as routes for the Bun.serve API,
- * enabling fullstack capabilities in BunPress sites.
+ * Fullstack Server Implementation
+ * Provides both static file serving and dynamic API routes
  */
 
-import type { Server, ServerWebSocket } from 'bun';
-import { resolve, join, dirname } from 'path';
-import { existsSync } from 'fs';
+import { Server, ServerWebSocket } from 'bun';
+import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as path from 'path';
+import chalk from 'chalk';
 
-export interface RouteHandler {
-  pattern: string | RegExp;
-  handler: (req: Request, match: RegExpMatchArray | null) => Response | Promise<Response>;
-}
-
-export interface FullstackServerConfig {
+// Types
+export interface ServerOptions {
   port?: number;
-  hostname?: string;
-  development?: boolean;
-  htmlDir: string;
+  host?: string;
+  staticDir?: string;
   apiDir?: string;
-  publicDir?: string;
-  routes?: RouteHandler[];
-  websocketHandler?: (ws: ServerWebSocket) => void;
-  notFoundHandler?: (req: Request) => Response | Promise<Response>;
+  development?: boolean;
+  hmrPort?: number;
+  hmrHost?: string;
+  cors?: {
+    origin?: string | string[];
+    methods?: string[];
+    allowedHeaders?: string[];
+    exposedHeaders?: string[];
+    credentials?: boolean;
+    maxAge?: number;
+  };
+  compression?: boolean;
+  cacheControl?: {
+    [key: string]: string;
+  };
+  middleware?: MiddlewareHandler[];
+  onError?: (error: Error, req: Request) => Response;
 }
 
-/**
- * Default 404 handler for the fullstack server.
- */
-function defaultNotFoundHandler(req: Request): Response {
-  return new Response(`Not found: ${req.url}`, {
-    status: 404,
-    headers: {
-      'Content-Type': 'text/plain',
+export type MiddlewareHandler = (req: Request, next: () => Promise<Response>) => Promise<Response>;
+export type RouteHandler = (req: Request) => Promise<Response> | Response;
+
+interface Route {
+  pattern: RegExp;
+  handler: RouteHandler;
+}
+
+// Interface definition 
+export interface IFullstackServer {
+  start: (options?: Partial<ServerOptions>) => Promise<{ port: number; host: string }>;
+  stop: () => Promise<void>;
+  dev: (options?: Partial<ServerOptions>) => Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }>;
+  isRunning: () => boolean;
+  addRoute: (pattern: RegExp | string, handler: RouteHandler) => void;
+  addMiddleware: (handler: MiddlewareHandler) => void;
+  getServer: () => Server | null;
+  events: EventEmitter;
+}
+
+interface PluginManager {
+  executeConfigureServer: (options: any) => Promise<any>;
+}
+
+// Implementation class
+export class FullstackServer implements IFullstackServer {
+  private server: Server | null = null;
+  private routes: Route[] = [];
+  private middleware: MiddlewareHandler[] = [];
+  private options: ServerOptions = {
+    port: 3000,
+    host: 'localhost',
+    staticDir: 'public',
+    apiDir: 'api',
+    development: false,
+    hmrPort: 3030,
+    hmrHost: 'localhost',
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
     },
-  });
-}
-
-/**
- * Creates a fullstack server that supports HTML imports as routes.
- */
-export function createFullstackServer(config: FullstackServerConfig): Server {
-  const {
-    port = 3000,
-    hostname = 'localhost',
-    development = true,
-    htmlDir,
-    apiDir,
-    publicDir,
-    routes = [],
-    websocketHandler,
-    notFoundHandler = defaultNotFoundHandler,
-  } = config;
-
-  const htmlDirPath = resolve(htmlDir);
-  const apiDirPath = apiDir ? resolve(apiDir) : null;
-  const publicDirPath = publicDir ? resolve(publicDir) : null;
-
-  // Function to serve HTML files
-  async function serveHtml(path: string): Promise<Response | null> {
-    const filePath = join(htmlDirPath, path.endsWith('/') ? `${path}index.html` : path);
-
-    if (!existsSync(filePath)) {
-      return null;
-    }
-
-    const file = Bun.file(filePath);
-    const content = await file.text();
-
-    const processedHtml = await processHtmlImports(content, dirname(filePath));
-
-    return new Response(processedHtml, {
-      headers: {
-        'Content-Type': 'text/html',
-      },
-    });
-  }
-
-  // Function to serve static files
-  function serveStatic(path: string): Response | null {
-    if (!publicDirPath) {
-      return null;
-    }
-
-    const filePath = join(publicDirPath, path);
-
-    if (!existsSync(filePath)) {
-      return null;
-    }
-
-    const file = Bun.file(filePath);
-    return new Response(file);
-  }
-
-  // Function to handle API routes
-  async function handleApiRoute(path: string, req: Request): Promise<Response | null> {
-    if (!apiDirPath) {
-      return null;
-    }
-
-    // Remove /api prefix
-    const apiPath = path.startsWith('/api/') ? path.slice(4) : path;
-
-    try {
-      // Try to import the API handler
-      const modulePath = join(apiDirPath, `${apiPath}.ts`);
-
-      if (!existsSync(modulePath)) {
-        return null;
-      }
-
-      const module = await import(`file://${modulePath}`);
-      const handler = module.default;
-
-      if (typeof handler !== 'function') {
-        return new Response('API handler must export a default function', { status: 500 });
-      }
-
-      return await handler(req);
-    } catch (error) {
-      console.error(`Error handling API route ${path}:`, error);
+    compression: true,
+    cacheControl: {
+      'image/*': 'public, max-age=86400',
+      'text/css': 'public, max-age=86400',
+      'application/javascript': 'public, max-age=86400',
+      'text/html': 'no-cache',
+    },
+    onError: (error: Error, _req: Request) => {
+      console.error('Server error:', error);
       return new Response('Internal Server Error', { status: 500 });
     }
+  };
+  private pluginManager: PluginManager;
+  public events: EventEmitter;
+  private connections: Set<ServerWebSocket<unknown>> = new Set();
+
+  constructor(options: { pluginManager: PluginManager; events: EventEmitter; config: any }) {
+    this.pluginManager = options.pluginManager;
+    this.events = options.events;
+    
+    // Initialize with config
+    if (options.config.devServer) {
+      this.options = {
+        ...this.options,
+        port: options.config.devServer.port || this.options.port,
+        host: options.config.devServer.host || this.options.host,
+        staticDir: options.config.publicDir || this.options.staticDir,
+        hmrPort: options.config.devServer.hmrPort || this.options.hmrPort,
+        hmrHost: options.config.devServer.hmrHost || this.options.hmrHost,
+      };
+    }
   }
 
-  // Process HTML imports in HTML content
-  async function processHtmlImports(html: string, basePath: string): Promise<string> {
-    let result = html;
-    let imports: { tag: string; src: string }[] = [];
+  /**
+   * Adds a route to the server
+   */
+  public addRoute(pattern: RegExp | string, handler: RouteHandler): void {
+    if (typeof pattern === 'string') {
+      // Convert string pattern to regex
+      const regexPattern = new RegExp(`^${pattern.replace(/\//g, '\\/').replace(/\*/g, '.*')}$`);
+      this.routes.push({
+        pattern: regexPattern,
+        handler,
+      });
+    } else {
+      this.routes.push({
+        pattern,
+        handler,
+      });
+    }
+  }
 
-    // Use HTMLRewriter to scan for custom imports
-    const rewriter = new HTMLRewriter();
-    rewriter.on('import-html', {
-      element(el: any) {
-        const src = el.getAttribute('src');
-        if (src) {
-          imports.push({ tag: el.tagName, src });
+  /**
+   * Adds middleware to the server
+   */
+  public addMiddleware(handler: MiddlewareHandler): void {
+    this.middleware.push(handler);
+  }
+
+  /**
+   * Starts the server with provided options
+   */
+  public async start(options: Partial<ServerOptions> = {}): Promise<{ port: number; host: string }> {
+    if (this.server) {
+      await this.stop();
+    }
+
+    // Merge options
+    this.options = {
+      ...this.options,
+      ...options,
+    };
+
+    // Apply plugin modifications to server options
+    this.options = await this.pluginManager.executeConfigureServer(this.options);
+
+    // Set up the request handler
+    const requestHandler = async (request: Request): Promise<Response> => {
+      // Extract URL and path
+      const url = new URL(request.url);
+      const reqPath = decodeURIComponent(url.pathname);
+      
+      // Apply CORS if enabled
+      if (this.options.cors && request.method === 'OPTIONS') {
+        return this.handleCORS(request);
+      }
+      
+      // Create middleware chain
+      const middlewareChain = async (index = 0): Promise<Response> => {
+        if (index < this.middleware.length) {
+          const currentMiddleware = this.middleware[index];
+          return currentMiddleware(request, () => middlewareChain(index + 1));
+        } else {
+          // End of middleware chain, process request normally
+          return this.handleRequest(request, reqPath);
         }
+      };
+      
+      try {
+        return await middlewareChain();
+      } catch (error) {
+        if (this.options.onError) {
+          return this.options.onError(error as Error, request);
+        }
+        console.error('Unhandled server error:', error);
+        return new Response('Internal Server Error', { status: 500 });
+      }
+    };
+
+    // The error handler for Bun.serve
+    const errorHandler = (error: Error): Response => {
+      console.error('Server error:', error);
+      return new Response('Internal Server Error', { status: 500 });
+    };
+
+    // Start server
+    this.server = Bun.serve({
+      port: this.options.port,
+      hostname: this.options.host,
+      fetch: requestHandler,
+      error: errorHandler,
+      development: this.options.development,
+      websocket: {
+        open: (ws: ServerWebSocket<unknown>) => {
+          this.connections.add(ws);
+        },
+        close: (ws: ServerWebSocket<unknown>) => {
+          this.connections.delete(ws);
+        },
+        message: (ws: ServerWebSocket<unknown>, message: any) => {
+          this.events.emit('ws:message', message, ws);
+        },
       },
     });
 
-    await rewriter.transform(new Response(html)).text();
-
-    // Process found imports
-    for (const imp of imports) {
-      const importPath = join(basePath, imp.src);
-
-      if (existsSync(importPath)) {
-        const importContent = await Bun.file(importPath).text();
-        // Replace the import tag with the content
-        const importTag = `<${imp.tag} src="${imp.src}"></${imp.tag}>`;
-        result = result.replace(importTag, importContent);
+    const info = { 
+      port: this.server?.port || this.options.port || 3000, 
+      host: this.options.host || 'localhost' 
+    };
+    
+    this.events.emit('server:start', info);
+    
+    console.log(chalk.green(`Server running at http://${info.host}:${info.port}`));
+    
+    return info;
+  }
+  
+  /**
+   * Handle CORS preflight requests
+   */
+  private handleCORS(req: Request): Response {
+    const cors = this.options.cors;
+    if (!cors) return new Response(null, { status: 204 });
+    
+    const headers = new Headers();
+    
+    // Set CORS headers
+    if (typeof cors.origin === 'string') {
+      headers.set('Access-Control-Allow-Origin', cors.origin);
+    } else if (Array.isArray(cors.origin)) {
+      const requestOrigin = req.headers.get('Origin');
+      if (requestOrigin && cors.origin.includes(requestOrigin)) {
+        headers.set('Access-Control-Allow-Origin', requestOrigin);
+      } else {
+        headers.set('Access-Control-Allow-Origin', cors.origin[0]);
       }
     }
-
-    return result;
+    
+    if (cors.methods) {
+      headers.set('Access-Control-Allow-Methods', cors.methods.join(', '));
+    }
+    
+    if (cors.allowedHeaders) {
+      headers.set('Access-Control-Allow-Headers', cors.allowedHeaders.join(', '));
+    }
+    
+    if (cors.exposedHeaders) {
+      headers.set('Access-Control-Expose-Headers', cors.exposedHeaders.join(', '));
+    }
+    
+    if (cors.credentials) {
+      headers.set('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    if (cors.maxAge !== undefined) {
+      headers.set('Access-Control-Max-Age', cors.maxAge.toString());
+    }
+    
+    return new Response(null, {
+      status: 204,
+      headers,
+    });
+  }
+  
+  /**
+   * Handle individual requests after middleware processing
+   */
+  private async handleRequest(req: Request, reqPath: string): Promise<Response> {
+    // Check for API routes first
+    for (const route of this.routes) {
+      if (route.pattern.test(reqPath)) {
+        return await route.handler(req);
+      }
+    }
+    
+    // Then check for static files
+    if (this.options.staticDir) {
+      const staticPath = path.join(process.cwd(), this.options.staticDir, reqPath);
+      
+      // Check if file exists and serve it
+      try {
+        const stat = fs.statSync(staticPath);
+        
+        if (stat.isFile()) {
+          // Determine content type based on extension
+          const ext = path.extname(staticPath).toLowerCase();
+          const contentType = this.getContentType(ext);
+          
+          // Set up response headers
+          const headers: HeadersInit = {
+            'Content-Type': contentType,
+          };
+          
+          // Add cache control headers if configured
+          if (this.options.cacheControl) {
+            const cacheControl = this.getCacheControl(contentType);
+            if (cacheControl) {
+              headers['Cache-Control'] = cacheControl;
+            }
+          }
+          
+          // Add Last-Modified header
+          headers['Last-Modified'] = new Date(stat.mtime).toUTCString();
+          
+          // Check If-Modified-Since header for caching
+          const ifModifiedSince = req.headers.get('If-Modified-Since');
+          if (ifModifiedSince) {
+            const ifModifiedSinceDate = new Date(ifModifiedSince);
+            const modifiedDate = new Date(stat.mtime);
+            
+            if (modifiedDate <= ifModifiedSinceDate) {
+              // Return 304 Not Modified if file hasn't changed
+              return new Response(null, {
+                status: 304,
+                headers,
+              });
+            }
+          }
+          
+          // Serve file with appropriate headers
+          return new Response(Bun.file(staticPath), {
+            headers,
+          });
+        }
+      } catch (err) {
+        // File doesn't exist or isn't readable
+      }
+    }
+    
+    // If we get here, return 404
+    return new Response('Not Found', { status: 404 });
+  }
+  
+  /**
+   * Get content type based on file extension
+   */
+  private getContentType(ext: string): string {
+    const contentTypes: { [key: string]: string } = {
+      '.html': 'text/html',
+      '.css': 'text/css',
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+      '.txt': 'text/plain',
+      '.pdf': 'application/pdf',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.eot': 'application/vnd.ms-fontobject',
+      '.otf': 'font/otf',
+      '.webp': 'image/webp',
+      '.avif': 'image/avif',
+    };
+    
+    return contentTypes[ext] || 'application/octet-stream';
+  }
+  
+  /**
+   * Get cache control header based on content type
+   */
+  private getCacheControl(contentType: string): string | undefined {
+    if (!this.options.cacheControl) return undefined;
+    
+    // Try exact content type match
+    if (this.options.cacheControl[contentType]) {
+      return this.options.cacheControl[contentType];
+    }
+    
+    // Try wildcard matches
+    for (const [pattern, value] of Object.entries(this.options.cacheControl)) {
+      if (pattern.includes('*') && this.matchWildcard(contentType, pattern)) {
+        return value;
+      }
+    }
+    
+    return undefined;
+  }
+  
+  /**
+   * Match content type against wildcard pattern
+   */
+  private matchWildcard(contentType: string, pattern: string): boolean {
+    const regexPattern = pattern.replace(/\*/g, '.*');
+    return new RegExp(`^${regexPattern}$`).test(contentType);
   }
 
-  // Create and return the Bun server
-  return Bun.serve({
-    port,
-    hostname,
-    development,
-    fetch: async req => {
-      const url = new URL(req.url);
-      const path = url.pathname;
+  /**
+   * Stops the server
+   */
+  public async stop(): Promise<void> {
+    if (this.server) {
+      // Close all websocket connections
+      this.connections.forEach(ws => {
+        ws.close();
+      });
+      this.connections.clear();
+      
+      // Stop server
+      this.server.stop();
+      this.server = null;
+      
+      this.events.emit('server:stop');
+    }
+  }
 
-      // 1. Check custom route handlers first
-      for (const route of routes) {
-        const pattern =
-          route.pattern instanceof RegExp
-            ? route.pattern
-            : new RegExp(`^${route.pattern.replace(/\//g, '\\/').replace(/\*/g, '.*')}$`);
+  /**
+   * Starts the development server with HMR support
+   */
+  public async dev(options: Partial<ServerOptions> = {}): Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }> {
+    const developmentOptions = {
+      ...options,
+      development: true,
+    };
+    
+    const serverInfo = await this.start(developmentOptions);
+    
+    // Add development specific info
+    const info = {
+      ...serverInfo,
+      hmrPort: this.options.hmrPort,
+      hmrHost: this.options.hmrHost,
+    };
+    
+    this.events.emit('server:dev', info);
+    
+    return info;
+  }
 
-        const match = path.match(pattern);
-        if (match) {
-          try {
-            return await route.handler(req, match);
-          } catch (error) {
-            console.error('Error in custom route handler:', error);
-            return new Response('Error in custom route handler', { status: 500 });
-          }
-        }
-      }
+  /**
+   * Checks if the server is running
+   */
+  public isRunning(): boolean {
+    return this.server !== null;
+  }
 
-      // 2. Try to serve as API route if it starts with /api
-      if (path.startsWith('/api/')) {
-        const apiResponse = await handleApiRoute(path, req);
-        if (apiResponse) {
-          return apiResponse;
-        }
-      }
-
-      // 3. Try to serve as static file
-      const staticResponse = serveStatic(path);
-      if (staticResponse) {
-        return staticResponse;
-      }
-
-      // 4. Try to serve as HTML file
-      const htmlResponse = await serveHtml(path);
-      if (htmlResponse) {
-        return htmlResponse;
-      }
-
-      // 5. Return 404 if no handler matched
-      return notFoundHandler(req);
-    },
-    websocket: websocketHandler
-      ? {
-          message: websocketHandler,
-        }
-      : undefined,
-  });
+  /**
+   * Returns the server instance
+   */
+  public getServer(): Server | null {
+    return this.server;
+  }
 }
 
 /**
- * Create middleware for the fullstack server
+ * Creates a new Fullstack Server
  */
-export function createMiddleware(
-  handler: (req: Request, next: () => Promise<Response>) => Promise<Response>
-) {
-  return async (req: Request, next: () => Promise<Response>) => {
-    return await handler(req, next);
-  };
+export function createFullstackServer(options: { pluginManager: PluginManager; events: EventEmitter; config: any }): IFullstackServer {
+  return new FullstackServer(options);
+}
+
+// Export middleware creator for backwards compatibility
+export function createMiddleware(handler: MiddlewareHandler): MiddlewareHandler {
+  return handler;
 }
