@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { Plugin } from '../../core/plugin';
+import { findThemes, ThemeStructure as UtilsThemeStructure } from '../../lib/theme-utils';
+import { getNamespacedLogger } from '../../lib/logger-utils';
+
+const logger = getNamespacedLogger('theme-registry-plugin');
 
 interface ThemeRegistryPluginOptions {
   /**
@@ -31,6 +35,29 @@ interface ThemeStructure {
 }
 
 /**
+ * Convert utility ThemeStructure to plugin ThemeStructure
+ */
+function convertThemeStructure(utilsTheme: UtilsThemeStructure): ThemeStructure {
+  const layouts: ThemeStructure['layouts'] = {};
+  
+  // Convert layouts object to expected format
+  if (utilsTheme.layouts) {
+    Object.entries(utilsTheme.layouts).forEach(([type, path]) => {
+      layouts[type] = path;
+    });
+  }
+  
+  return {
+    name: utilsTheme.name,
+    path: utilsTheme.path,
+    layouts,
+    component: utilsTheme.layoutComponent,
+    styles: utilsTheme.styleFile,
+    valid: utilsTheme.isValid !== false
+  };
+}
+
+/**
  * Plugin to manage theme registration and integration
  */
 export function themeRegistryPlugin(options: ThemeRegistryPluginOptions = {}): Plugin {
@@ -39,94 +66,48 @@ export function themeRegistryPlugin(options: ThemeRegistryPluginOptions = {}): P
 
   const themes = new Map<string, ThemeStructure>();
 
-  // Function to register a single theme
-  function registerTheme(themeName: string, themePath: string) {
-    // Find the main component file - check both Layout.tsx and index.tsx
-    let mainComponent = path.join(themePath, 'Layout.tsx');
-    if (!fs.existsSync(mainComponent)) {
-      mainComponent = path.join(themePath, 'index.tsx');
-      if (!fs.existsSync(mainComponent)) {
-        if (validateThemes) {
-          console.warn(`Theme "${themeName}" does not have a Layout.tsx or index.tsx file`);
-        }
-        return;
-      }
-    }
-
-    // Find theme's style file
-    const styleFile = path.join(themePath, 'styles.css');
-    if (!fs.existsSync(styleFile) && validateThemes) {
-      console.warn(`Theme "${themeName}" does not have a styles.css file`);
-    }
-
-    // Find layout components in the layouts directory
-    const layoutsDir = path.join(themePath, 'layouts');
-    const layouts: ThemeStructure['layouts'] = {};
-
-    if (fs.existsSync(layoutsDir)) {
-      // Get all layout files (e.g., DocLayout.tsx, PageLayout.tsx, etc.)
-      const layoutFiles = fs
-        .readdirSync(layoutsDir)
-        .filter(file => file.endsWith('.tsx') && !file.endsWith('.test.tsx'));
-
-      for (const layoutFile of layoutFiles) {
-        const layoutName = layoutFile.replace(/Layout\.tsx$/, '').toLowerCase();
-        layouts[layoutName] = path.join(layoutsDir, layoutFile);
-      }
-    }
-
-    // Check if we have required layouts
-    const valid =
-      fs.existsSync(mainComponent) &&
-      (fs.existsSync(styleFile) || !validateThemes) &&
-      (Object.keys(layouts).length > 0 || !validateThemes);
-
-    // Register the theme
-    themes.set(themeName, {
-      name: themeName,
-      path: themePath,
-      layouts,
-      component: mainComponent,
-      styles: fs.existsSync(styleFile) ? styleFile : '',
-      valid,
-    });
-
-    if (valid) {
-      console.log(`✅ Registered theme: ${themeName}`);
-    } else {
-      console.warn(`⚠️ Theme "${themeName}" was registered but may be missing required files`);
-    }
-  }
-
   // Function to register all available themes
-  function registerThemes() {
+  async function registerThemes() {
     const workspaceRoot = process.cwd();
     const themesFolderPath = path.join(workspaceRoot, themesDir);
 
     if (!fs.existsSync(themesFolderPath)) {
-      console.warn(`Themes directory not found at ${themesFolderPath}`);
+      logger.warn(`Themes directory not found at ${themesFolderPath}`);
       return;
     }
 
-    const themeDirectories = fs
-      .readdirSync(themesFolderPath, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
-
-    for (const themeName of themeDirectories) {
-      const themePath = path.join(themesFolderPath, themeName);
-      registerTheme(themeName, themePath);
+    try {
+      // Use the findThemes utility to get validated themes
+      const themeMap = await findThemes(themesFolderPath, {
+        requireLayoutComponent: validateThemes,
+        requireStyleFile: validateThemes,
+        requireLayouts: validateThemes
+      });
+      
+      // Convert and store themes
+      themeMap.forEach((themeStructure, themeName) => {
+        const convertedTheme = convertThemeStructure(themeStructure);
+        themes.set(themeName, convertedTheme);
+        
+        if (convertedTheme.valid) {
+          logger.info(`✅ Registered theme: ${themeName}`);
+        } else {
+          logger.warn(`⚠️ Theme "${themeName}" was registered but may be missing required files`);
+        }
+      });
+      
+      logger.info(`✅ Registered ${themes.size} themes: ${Array.from(themes.keys()).join(', ')}`);
+    } catch (error) {
+      logger.error(`Error registering themes: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    console.log(`✅ Registered ${themes.size} themes: ${Array.from(themes.keys()).join(', ')}`);
   }
 
   return {
     name: 'theme-registry',
 
-    buildStart() {
-      console.log('📚 Theme Registry: Registering themes...');
-      registerThemes();
+    async buildStart() {
+      logger.info('📚 Theme Registry: Registering themes...');
+      await registerThemes();
     },
 
     configureServer(server: any) {

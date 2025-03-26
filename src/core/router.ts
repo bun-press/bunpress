@@ -1,7 +1,17 @@
-import { readdirSync, statSync } from 'fs';
-import path from 'path';
 import { ContentProcessor, ContentFile, processMarkdownContent } from './content-processor';
 import { DefaultPluginManager, Plugin } from './plugin';
+import { 
+  getAllFiles, 
+  directoryExists,
+  filterFilesByExtension
+} from '../lib/fs-utils';
+import { getNamespacedLogger } from '../lib/logger-utils';
+import { tryCatch } from '../lib/error-utils';
+
+// Create namespaced logger for router
+const logger = getNamespacedLogger('router');
+
+// Helper function to filter files by extension was moved to fs-utils.ts
 
 interface Routes {
   [key: string]: ContentFile;
@@ -13,33 +23,39 @@ export async function generateRoutes(pagesDir: string): Promise<Routes> {
 
   // Helper function to process files recursively
   async function processDirectory(directory: string) {
-    try {
-      const files = readdirSync(directory);
-
-      for (const file of files) {
-        const filePath = path.join(directory, file);
-        try {
-          const stat = statSync(filePath);
-
-          if (stat.isDirectory()) {
-            // Recursively process subdirectories
-            await processDirectory(filePath);
-          } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
-            // Process markdown files using the now async version
-            const contentFile = await processMarkdownContent(filePath, pagesDir);
-            if (contentFile.route) {
-              routes[contentFile.route] = contentFile;
-            } else {
-              console.warn(`Warning: Content file at ${filePath} has no route defined`);
-            }
-          }
-        } catch (err) {
-          console.warn(`Warning: Error processing file ${filePath}: ${err}`);
+    return await tryCatch(
+      async () => {
+        // Check if directory exists
+        if (!(await directoryExists(directory))) {
+          logger.warn(`Directory ${directory} does not exist`);
+          return;
         }
+
+        // Get all files in directory
+        const allFiles = await getAllFiles(directory);
+        const markdownFiles = filterFilesByExtension(allFiles, ['.md', '.mdx']);
+
+        for (const filePath of markdownFiles) {
+          await tryCatch(
+            async () => {
+              // Process markdown files using the now async version
+              const contentFile = await processMarkdownContent(filePath, pagesDir);
+              if (contentFile.route) {
+                routes[contentFile.route] = contentFile;
+              } else {
+                logger.warn(`Content file at ${filePath} has no route defined`);
+              }
+            },
+            (err) => {
+              logger.warn(`Error processing file ${filePath}: ${err}`);
+            }
+          );
+        }
+      },
+      (err) => {
+        logger.warn(`Could not read directory ${directory}: ${err}`);
       }
-    } catch (err) {
-      console.warn(`Warning: Could not read directory ${directory}: ${err}`);
-    }
+    );
   }
 
   // Start processing from the pages directory
@@ -66,38 +82,44 @@ export async function generateRoutesAsync(
 
   // Helper function to process files recursively
   async function processDirectory(directory: string) {
-    try {
-      const files = readdirSync(directory);
-
-      for (const file of files) {
-        const filePath = path.join(directory, file);
-        try {
-          const stat = statSync(filePath);
-
-          if (stat.isDirectory()) {
-            // Recursively process subdirectories
-            await processDirectory(filePath);
-          } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
-            // Process markdown files with plugin support
-            const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
-            if (contentFile.route) {
-              routes[contentFile.route] = contentFile;
-              
-              // Register the content file with i18n plugin if available
-              if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
-                (i18nPlugin as any).registerContentFile(contentFile);
-              }
-            } else {
-              console.warn(`Warning: Content file at ${filePath} has no route defined`);
-            }
-          }
-        } catch (err) {
-          console.warn(`Warning: Error processing file ${filePath}: ${err}`);
+    return await tryCatch(
+      async () => {
+        // Check if directory exists
+        if (!(await directoryExists(directory))) {
+          logger.warn(`Directory ${directory} does not exist`);
+          return;
         }
+
+        // Get all files in directory
+        const allFiles = await getAllFiles(directory);
+        const markdownFiles = filterFilesByExtension(allFiles, ['.md', '.mdx']);
+
+        for (const filePath of markdownFiles) {
+          await tryCatch(
+            async () => {
+              // Process markdown files with plugin support
+              const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
+              if (contentFile.route) {
+                routes[contentFile.route] = contentFile;
+                
+                // Register the content file with i18n plugin if available
+                if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
+                  (i18nPlugin as any).registerContentFile(contentFile);
+                }
+              } else {
+                logger.warn(`Content file at ${filePath} has no route defined`);
+              }
+            },
+            (err) => {
+              logger.warn(`Error processing file ${filePath}: ${err}`);
+            }
+          );
+        }
+      },
+      (err) => {
+        logger.warn(`Could not read directory ${directory}: ${err}`);
       }
-    } catch (err) {
-      console.warn(`Warning: Could not read directory ${directory}: ${err}`);
-    }
+    );
   }
 
   // Start processing from the pages directory

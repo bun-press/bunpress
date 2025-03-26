@@ -186,4 +186,32 @@ export function getConfigDir(appName: string = 'bunpress'): string {
   } else {
     return path.join(homeDir, '.config', appName);
   }
+}
+
+/**
+ * Get the directory name of a path
+ */
+export function getDirname(filepath: string): string {
+  return normalizePath(path.dirname(filepath));
+}
+
+/**
+ * Get the base name of a path, optionally removing a specified extension
+ */
+export function getBasename(filepath: string, ext?: string): string {
+  return path.basename(filepath, ext);
+}
+
+/**
+ * Get the extension of a path, including the dot
+ */
+export function getExtname(filepath: string): string {
+  return path.extname(filepath);
+}
+
+/**
+ * Resolve a relative path from a base directory
+ */
+export function resolveRelativePath(baseDir: string, relativePath: string): string {
+  return normalizePath(path.resolve(baseDir, relativePath));
 } 

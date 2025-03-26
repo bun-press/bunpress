@@ -1,6 +1,21 @@
-import path from 'path';
-import fs from 'fs';
 import type { BunPressConfig } from '../../bunpress.config';
+import { 
+  readFileAsString, 
+  writeFileString, 
+  createDirectory
+} from '../lib/fs-utils';
+import { 
+  getDirname
+} from '../lib/path-utils';
+import { getNamespacedLogger } from '../lib/logger-utils';
+import { 
+  tryCatchWithCode, 
+  ErrorCode 
+} from '../lib/error-utils';
+import { rewriteCssAssetUrls } from '../lib/asset-utils';
+
+// Create namespaced logger for CSS processor
+const logger = getNamespacedLogger('css-processor');
 
 /**
  * Options for CSS processing
@@ -38,101 +53,51 @@ export async function processCSS(
   config: BunPressConfig,
   options: CSSProcessOptions = {}
 ): Promise<string> {
-  const isDev = process.env.NODE_ENV !== 'production';
+  return await tryCatchWithCode(
+    async () => {
+      const isDev = process.env.NODE_ENV !== 'production';
 
-  // Default options based on environment
-  const defaultOptions: CSSProcessOptions = {
-    minify: !isDev,
-    sourceMap: isDev,
-    rewriteUrls: true,
-  };
+      // Default options based on environment
+      const defaultOptions: CSSProcessOptions = {
+        minify: !isDev,
+        sourceMap: isDev,
+        rewriteUrls: true,
+      };
 
-  // Merge with provided options
-  const opts = { ...defaultOptions, ...options };
+      // Merge with provided options
+      const opts = { ...defaultOptions, ...options };
 
-  try {
-    // Get the CSS content
-    const cssFile = Bun.file(cssPath);
-    let cssContent = await cssFile.text();
+      // Get the CSS content
+      const cssContent = await readFileAsString(cssPath);
+      logger.debug(`Processing CSS file: ${cssPath}`);
 
-    // Use Bun's built-in transformer for CSS
-    const result = await Bun.build({
-      entrypoints: [cssPath],
-      target: 'browser',
-      minify: opts.minify,
-      sourcemap: opts.sourceMap ? 'inline' : 'none',
-    });
+      // Use Bun's built-in transformer for CSS
+      const result = await Bun.build({
+        entrypoints: [cssPath],
+        target: 'browser',
+        minify: opts.minify,
+        sourcemap: opts.sourceMap ? 'inline' : 'none',
+      });
 
-    if (!result.success) {
-      throw new Error(`Failed to process CSS`);
-    }
+      if (!result.success) {
+        throw new Error(`Failed to process CSS`);
+      }
 
-    // Get the CSS output
-    const cssOutput = (await result.outputs[0]?.text()) || cssContent;
-    let output = cssOutput;
+      // Get the CSS output
+      const cssOutput = (await result.outputs[0]?.text()) || cssContent;
+      let output = cssOutput;
 
-    // If needed, rewrite URLs to be relative to the output directory
-    if (opts.rewriteUrls) {
-      output = rewriteCSSUrls(output, cssPath, config.outputDir);
-    }
+      // If needed, rewrite URLs to be relative to the output directory
+      if (opts.rewriteUrls) {
+        output = await rewriteCssAssetUrls(output, cssPath, config.outputDir);
+      }
 
-    return output;
-  } catch (error) {
-    console.error(`Error processing CSS file ${cssPath}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Rewrite URLs in CSS to be relative to the output directory
- *
- * @param css CSS content
- * @param cssPath Path to the original CSS file
- * @param outputDir Output directory
- * @returns CSS with rewritten URLs
- */
-function rewriteCSSUrls(css: string, cssPath: string, outputDir: string): string {
-  const cssDir = path.dirname(cssPath);
-
-  // Simple URL rewriting using regex
-  // A more robust implementation would use a CSS parser
-  return css.replace(/url\(['"]?([^'")]+)['"]?\)/g, (match, url) => {
-    // Skip data URLs and absolute URLs
-    if (url.startsWith('data:') || url.startsWith('http') || url.startsWith('/')) {
-      return match;
-    }
-
-    // Resolve the original asset path
-    const assetPath = path.resolve(cssDir, url);
-
-    // Check if the file exists
-    if (!fs.existsSync(assetPath)) {
-      console.warn(`Asset not found: ${assetPath}`);
-      return match;
-    }
-
-    // Generate a new path based on file hash
-    const fileContent = fs.readFileSync(assetPath);
-    const hash = Bun.hash(fileContent).toString(16).slice(0, 8);
-    const ext = path.extname(url);
-    const basename = path.basename(url, ext);
-    const newFilename = `${basename}.${hash}${ext}`;
-
-    // Determine the assets directory in the output
-    const assetsDir = path.join(outputDir, 'assets');
-
-    // Ensure the assets directory exists
-    if (!fs.existsSync(assetsDir)) {
-      fs.mkdirSync(assetsDir, { recursive: true });
-    }
-
-    // Copy the asset to the output
-    const outputPath = path.join(assetsDir, newFilename);
-    fs.copyFileSync(assetPath, outputPath);
-
-    // Return the new URL
-    return `url('/assets/${newFilename}')`;
-  });
+      return output;
+    },
+    ErrorCode.CSS_PROCESSING_ERROR,
+    `Failed to process CSS file: ${cssPath}`,
+    { cssPath }
+  );
 }
 
 /**
@@ -150,18 +115,19 @@ export async function bundleCSS(
   config: BunPressConfig,
   options: CSSProcessOptions = {}
 ): Promise<{ success: boolean; message?: string }> {
-  if (entrypoints.length === 0) {
-    return { success: true, message: 'No CSS files to bundle' };
-  }
-
   try {
-    // Ensure the output directory exists
-    const outputDir = path.dirname(outputPath);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    if (entrypoints.length === 0) {
+      logger.info('No CSS files to bundle');
+      return { success: true, message: 'No CSS files to bundle' };
     }
 
+    // Ensure the output directory exists
+    const outputDir = getDirname(outputPath);
+    await createDirectory(outputDir);
+    logger.debug(`Created output directory: ${outputDir}`);
+
     // Process each CSS file
+    logger.info(`Bundling ${entrypoints.length} CSS files`);
     const cssContents = await Promise.all(
       entrypoints.map(cssPath => processCSS(cssPath, config, options))
     );
@@ -170,11 +136,12 @@ export async function bundleCSS(
     const bundleContent = cssContents.join('\n\n');
 
     // Write the bundle to the output file
-    fs.writeFileSync(outputPath, bundleContent);
+    await writeFileString(outputPath, bundleContent);
+    logger.info(`CSS bundle written to ${outputPath}`);
 
     return { success: true };
   } catch (error) {
-    console.error('Error bundling CSS:', error);
+    logger.error('Error bundling CSS:', { error });
     return {
       success: false,
       message: error instanceof Error ? error.message : String(error),

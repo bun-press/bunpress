@@ -1,10 +1,19 @@
-import fs from 'fs';
-import path from 'path';
 import { readdir } from 'fs/promises';
 import type { BunPressConfig } from '../../bunpress.config';
 import { createThemeUtils } from '../lib/ui-utils';
 import { getNamespacedLogger } from '../lib/logger-utils';
 import { joinPaths } from '../lib/path-utils';
+import { 
+  directoryExists, 
+  fileExists, 
+  readFileAsString
+} from '../lib/fs-utils';
+import {
+  tryCatch,
+  tryCatchWithCode,
+  ErrorCode
+} from '../lib/error-utils';
+import { findThemes, ThemeStructure, extractThemeVariables } from '../lib/theme-utils';
 
 export interface Theme {
   name: string;
@@ -39,14 +48,12 @@ export class DefaultThemeManager implements ThemeManager {
 
   constructor(workspaceRoot: string) {
     this.themesDir = joinPaths(workspaceRoot, 'themes');
-    console.log(`ThemeManager initialized with workspace root: ${workspaceRoot}`);
-    console.log(`Themes directory path: ${this.themesDir}`);
-    console.log(`Current working directory: ${process.cwd()}`);
-    console.log(`Themes directory exists (sync): ${fs.existsSync(this.themesDir)}`);
+    this.logger.info(`ThemeManager initialized with workspace root: ${workspaceRoot}`);
+    this.logger.debug(`Themes directory path: ${this.themesDir}`);
+    this.logger.debug(`Current working directory: ${process.cwd()}`);
     
     // Initialize async loading
     this.loadAvailableThemes().catch(err => {
-      console.error('Failed to load available themes', err);
       this.logger.error('Failed to load available themes', { error: err });
     });
   }
@@ -62,107 +69,36 @@ export class DefaultThemeManager implements ThemeManager {
    * Load all available themes from the themes directory
    */
   private async loadAvailableThemes(): Promise<void> {
-    console.log(`Checking themes directory: ${this.themesDir}`);
-    console.log(`Directory exists according to fs.existsSync: ${fs.existsSync(this.themesDir)}`);
-    console.log(`Process CWD: ${process.cwd()}`);
+    this.logger.debug(`Checking themes directory: ${this.themesDir}`);
     
-    // Use direct fs.existsSync instead of fileExists
-    if (!fs.existsSync(this.themesDir)) {
-      this.logger.warn(`Themes directory not found at ${this.themesDir}`);
-      return;
-    }
-
     try {
-      // Sync implementation that's more efficient
-      const dirEntries = fs.readdirSync(this.themesDir, { withFileTypes: true });
-      const themeDirectories = dirEntries
-        .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
-        .map(dirent => dirent.name);
+      // Use the new findThemes utility to discover and validate themes
+      const themeStructures = await findThemes(this.themesDir);
       
-      console.log(`Found theme directories: ${themeDirectories.join(', ')}`);
+      // Convert ThemeStructure to Theme interface
+      themeStructures.forEach((themeStructure, themeName) => {
+        this.themes.set(themeName, this.convertThemeStructure(themeStructure));
+      });
       
-      for (const themeName of themeDirectories) {
-        const themePath = joinPaths(this.themesDir, themeName);
-        console.log(`Processing theme: ${themeName} at path ${themePath}`);
-        
-        // Look for main component file
-        const indexFiles = [
-          joinPaths(themePath, 'index.tsx'),
-          joinPaths(themePath, 'Layout.tsx'),
-          joinPaths(themePath, 'index.jsx'),
-          joinPaths(themePath, 'Layout.jsx')
-        ];
-        
-        let layoutComponent = '';
-        for (const indexFile of indexFiles) {
-          if (fs.existsSync(indexFile)) {
-            layoutComponent = indexFile;
-            console.log(`Found layout component: ${layoutComponent}`);
-            break;
-          }
-        }
-        
-        if (!layoutComponent) {
-          this.logger.warn(`Theme "${themeName}" missing main component file, skipping`);
-          continue;
-        }
-        
-        // Look for style file
-        const styleFile = joinPaths(themePath, 'styles.css');
-        console.log(`Looking for style file: ${styleFile}, exists: ${fs.existsSync(styleFile)}`);
-        
-        if (!fs.existsSync(styleFile)) {
-          // Try alternative style file names
-          const alternativeStyles = [
-            joinPaths(themePath, 'style.css'),
-            joinPaths(themePath, 'theme.css')
-          ];
-          
-          for (const altStyle of alternativeStyles) {
-            if (fs.existsSync(altStyle)) {
-              this.logger.warn(`Theme "${themeName}" uses non-standard style file name: ${path.basename(altStyle)}`);
-              break;
-            }
-          }
-        } else {
-          console.log(`Found style file: ${styleFile}`);
-        }
-        
-        // Find layout components
-        const layouts: Record<string, string> = {};
-        const layoutsDir = joinPaths(themePath, 'layouts');
-        
-        if (fs.existsSync(layoutsDir)) {
-          const layoutFiles = fs.readdirSync(layoutsDir);
-          console.log(`Found layout files: ${layoutFiles.join(', ')}`);
-          
-          for (const file of layoutFiles) {
-            if (file.endsWith('.tsx') || file.endsWith('.jsx')) {
-              const layoutType = file.replace(/\.(tsx|jsx)$/, '').replace(/Layout$/, '').toLowerCase();
-              layouts[layoutType] = joinPaths(layoutsDir, file);
-              console.log(`Registered layout: ${layoutType} => ${layouts[layoutType]}`);
-            }
-          }
-        }
-        
-        // Create the theme
-        this.themes.set(themeName, {
-          name: themeName,
-          path: themePath,
-          layoutComponent,
-          styleFile,
-          layouts
-        });
-        console.log(`Added theme "${themeName}" to registry`);
-      }
-      
-      console.log(`Total themes loaded: ${this.themes.size}`);
       this.logger.info(`Loaded ${this.themes.size} themes: ${[...this.themes.keys()].join(', ')}`);
     } catch (error) {
-      console.error(`Error loading themes: ${error instanceof Error ? error.message : String(error)}`);
-      console.error(error);
       this.logger.error(`Error loading themes: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Convert ThemeStructure to Theme interface
+   */
+  private convertThemeStructure(structure: ThemeStructure): Theme {
+    return {
+      name: structure.name,
+      path: structure.path,
+      layoutComponent: structure.layoutComponent,
+      styleFile: structure.styleFile,
+      layouts: structure.layouts,
+      options: structure.options || {},
+      variables: structure.variables || {}
+    };
   }
 
   /**
@@ -218,31 +154,29 @@ export class DefaultThemeManager implements ThemeManager {
   }
 
   /**
-   * Get the CSS content for the active theme
+   * Get the theme's style content
    */
   public async getThemeStyleContent(): Promise<string> {
     if (!this.activeTheme) {
-      this.logger.warn('No active theme set, cannot get theme styles');
+      this.logger.warn('No active theme, returning empty style content');
       return '';
     }
-
-    const styleFilePath = this.activeTheme.styleFile;
-    console.log(`Getting style content from: ${styleFilePath}`);
-    console.log(`Style file exists: ${fs.existsSync(styleFilePath)}`);
     
-    try {
-      // Use synchronous operation directly
-      if (fs.existsSync(styleFilePath)) {
-        return fs.readFileSync(styleFilePath, 'utf-8');
-      } else {
-        this.logger.warn(`Theme style file not found: ${styleFilePath}`);
-        return '';
-      }
-    } catch (error) {
-      console.error(`Error reading theme style file: ${error instanceof Error ? error.message : String(error)}`);
-      this.logger.error(`Error reading theme style file: ${error instanceof Error ? error.message : String(error)}`);
-      return '';
-    }
+    return await tryCatchWithCode(
+      async () => {
+        const styleFile = this.activeTheme?.styleFile;
+        if (!styleFile || !(await fileExists(styleFile))) {
+          this.logger.warn(`Style file ${styleFile} not found for theme ${this.activeTheme?.name}`);
+          return '';
+        }
+        
+        this.logger.debug(`Reading style file: ${styleFile}`);
+        return await readFileAsString(styleFile);
+      },
+      ErrorCode.FILE_READ_ERROR,
+      `Failed to read theme style file: ${this.activeTheme?.styleFile}`,
+      { themeName: this.activeTheme.name }
+    );
   }
 
   /**
@@ -256,32 +190,54 @@ export class DefaultThemeManager implements ThemeManager {
    * Get CSS variables for the current theme
    */
   public getThemeVariables(): Record<string, string> {
-    return this.themeUtils.getThemeVariables(this.activeTheme);
+    if (!this.activeTheme) {
+      return {};
+    }
+    
+    // Use the extractThemeVariables utility from theme-utils
+    const themeVars = extractThemeVariables({
+      name: this.activeTheme.name,
+      path: this.activeTheme.path,
+      layoutComponent: this.activeTheme.layoutComponent,
+      styleFile: this.activeTheme.styleFile,
+      layouts: this.activeTheme.layouts,
+      options: this.activeTheme.options,
+      variables: this.activeTheme.variables
+    });
+    
+    // Fall back to themeUtils if no variables extracted
+    if (Object.keys(themeVars).length === 0) {
+      return this.themeUtils.getThemeVariables(this.activeTheme);
+    }
+    
+    return themeVars;
   }
 
   /**
    * Get available layouts for a theme
    */
   async getAvailableLayouts(themeName: string): Promise<string[]> {
-    try {
-      const layoutsDir = path.join(this.themesDir, themeName, 'layouts');
-      
-      if (!fs.existsSync(layoutsDir)) {
+    return await tryCatch(
+      async () => {
+        const layoutsDir = joinPaths(this.themesDir, themeName, 'layouts');
+        
+        if (!await directoryExists(layoutsDir)) {
+          return [];
+        }
+        
+        // Read layout directories
+        const layoutDirEntries = await readdir(layoutsDir, { withFileTypes: true });
+        
+        // Filter to only include files with .tsx extension
+        return layoutDirEntries
+          .filter(entry => entry.isFile() && entry.name.endsWith('.tsx'))
+          .map(entry => entry.name.replace(/\.tsx$/, ''));
+      },
+      (error) => {
+        this.logger.error(`Error getting layouts for theme ${themeName}:`, error);
         return [];
       }
-      
-      // Read layout directories
-      const layoutDirEntries = await readdir(layoutsDir, { withFileTypes: true });
-      
-      // Filter to only include files with .tsx extension
-      return layoutDirEntries
-        .filter(entry => entry.isFile() && entry.name.endsWith('.tsx'))
-        .map(entry => entry.name.replace(/\.tsx$/, ''));
-    } catch (error) {
-      const errorObj = error instanceof Error ? { message: error.message } : { message: String(error) };
-      this.logger.error(`Error getting layouts for theme ${themeName}:`, errorObj);
-      return [];
-    }
+    );
   }
 }
 

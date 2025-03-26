@@ -117,6 +117,24 @@ describe('Renderer Integration Tests', () => {
       `
     );
 
+    // Add PageLayout.tsx to ensure it's available
+    fs.writeFileSync(
+      path.join(layoutsDir, 'PageLayout.tsx'),
+      `
+      import React from 'react';
+      export default function PageLayout({ frontmatter, children }) {
+        return (
+          <div className="page-layout">
+            <header>
+              <h1>{frontmatter.title}</h1>
+            </header>
+            <main>{children}</main>
+          </div>
+        );
+      }
+      `
+    );
+
     // Add HomeLayout.tsx to ensure it's available
     fs.writeFileSync(
       path.join(layoutsDir, 'HomeLayout.tsx'),
@@ -164,16 +182,28 @@ describe('Renderer Integration Tests', () => {
       }
       `
     );
+
+    // Reset global theme manager
+    global.defaultThemeManager = null;
   });
 
   afterEach(() => {
     // Clean up test directories
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
+    
+    // Reset global theme manager
+    global.defaultThemeManager = null;
   });
 
   it('should render HTML with theme', async () => {
-    // Initialize theme manager for testing
-    initThemeManager(TEST_DIR);
+    // Initialize theme manager for testing - needs to be done before rendering
+    const themeManager = initThemeManager(TEST_DIR);
+    
+    // Wait for themes to be loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Set the theme from config
+    themeManager.setThemeFromConfig(testConfig);
 
     // Render the HTML
     const renderOptions = {
@@ -205,7 +235,13 @@ describe('Renderer Integration Tests', () => {
 
   it('should extract and include TOC items', async () => {
     // Initialize theme manager for testing
-    initThemeManager(TEST_DIR);
+    const themeManager = initThemeManager(TEST_DIR);
+    
+    // Wait for themes to be loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Set the theme from config
+    themeManager.setThemeFromConfig(testConfig);
 
     // Render the HTML
     const html = await renderHtml(testContent, testConfig, TEST_DIR);
@@ -238,21 +274,12 @@ describe('Renderer Integration Tests', () => {
 
   it('should use different layout types based on frontmatter', async () => {
     // Initialize theme manager for testing
-    initThemeManager(TEST_DIR);
-
-    // Register the layouts directory in the theme manager
     const themeManager = initThemeManager(TEST_DIR);
-    const themes = themeManager.getThemes();
-    const testTheme = themes.get('test-theme');
-    if (testTheme) {
-      // Ensure the theme has layouts registered
-      testTheme.layouts = {
-        doc: path.join(THEME_DIR, 'layouts', 'DocLayout.tsx'),
-        home: path.join(THEME_DIR, 'layouts', 'HomeLayout.tsx'),
-      };
-    }
-
-    // Set active theme
+    
+    // Wait for themes to be loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Set the theme from config
     themeManager.setThemeFromConfig(testConfig);
 
     // Content with home layout
@@ -296,7 +323,13 @@ describe('Renderer Integration Tests', () => {
     };
 
     // Initialize theme manager with the test directory
-    initThemeManager(TEST_DIR);
+    const themeManager = initThemeManager(TEST_DIR);
+    
+    // Wait for themes to be loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Set the theme from config
+    themeManager.setThemeFromConfig(invalidConfig);
 
     // Render with invalid theme
     const html = await renderHtml(testContent, invalidConfig, TEST_DIR);

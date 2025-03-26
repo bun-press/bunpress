@@ -1,9 +1,25 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
-import { spyOn } from 'bun:test';
+import { jest } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
 import { themeRegistryPlugin } from '..';
 import type { Plugin } from '../../../core/plugin';
+
+// Type for theme structure used in the server context
+interface ThemeStructure {
+  name: string;
+  path: string;
+  layouts: Record<string, string>;
+  component: string;
+  styles: string;
+  valid: boolean;
+}
+
+// Type for server context with themes
+interface ServerContext {
+  themes: Map<string, ThemeStructure>;
+  [key: string]: any;
+}
 
 // Create a real test environment with actual file system
 describe('Theme Registry Plugin', () => {
@@ -62,65 +78,82 @@ describe('Theme Registry Plugin', () => {
     process.cwd = originalCwd;
   });
 
-  it('should register valid themes correctly', () => {
-    // Create a console spy
-    const consoleLogSpy = spyOn(console, 'log');
-
+  it('should register valid themes correctly', async () => {
     // Create the plugin
     const plugin = themeRegistryPlugin() as Plugin;
 
     // Call buildStart method
-    plugin.buildStart?.();
+    await plugin.buildStart?.();
 
-    // Verify logs indicate theme registration
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Theme Registry: Registering themes')
-    );
-
-    // Valid theme should be registered
-    const validThemeRegistered = consoleLogSpy.mock.calls.some(
-      call => typeof call[0] === 'string' && call[0].includes('✅ Registered theme: valid-theme')
-    );
-    expect(validThemeRegistered).toBe(true);
-
-    // Check for registered themes summary
-    const themesRegisteredSummary = consoleLogSpy.mock.calls.some(
-      call => typeof call[0] === 'string' && call[0].includes('Registered 2 themes')
-    );
-    expect(themesRegisteredSummary).toBe(true);
-
-    // Restore spy
-    consoleLogSpy.mockRestore();
+    // Create server context with mock addHandler
+    const addHandlerSpy = jest.fn();
+    const server = { 
+      context: {} as ServerContext,
+      addHandler: addHandlerSpy
+    };
+    
+    // Configure server to populate themes in context
+    plugin.configureServer?.(server);
+    
+    // Check the themes in the server context
+    expect(server.context.themes).toBeDefined();
+    
+    // Convert the Map to an array of theme names
+    const themeNames = Array.from(server.context.themes.keys());
+    
+    // Verify that valid-theme is registered
+    expect(themeNames).toContain('valid-theme');
+    
+    // Get the valid theme info
+    const validTheme = server.context.themes.get('valid-theme');
+    expect(validTheme).toBeDefined();
+    
+    // Only test properties if validTheme is defined
+    if (validTheme) {
+      expect(validTheme.name).toBe('valid-theme');
+      expect(validTheme.path).toBe(path.join(THEMES_DIR, 'valid-theme'));
+      expect(validTheme.styles).toBe(path.join(THEMES_DIR, 'valid-theme', 'styles.css'));
+      expect(validTheme.layouts.doc).toBe(path.join(VALID_THEME_DIR, 'layouts', 'DocLayout.tsx'));
+    }
   });
 
-  it('should warn about invalid themes', () => {
-    // Create a console spy
-    const consoleWarnSpy = spyOn(console, 'warn');
-
+  it('should warn about invalid themes', async () => {
     // Create the plugin with validation enabled
     const plugin = themeRegistryPlugin({ validateThemes: true }) as Plugin;
 
     // Call buildStart method
-    plugin.buildStart?.();
+    await plugin.buildStart?.();
 
-    // Verify warning about missing styles.css
-    const stylesMissingWarning = consoleWarnSpy.mock.calls.some(
-      call => typeof call[0] === 'string' && call[0].includes('does not have a styles.css file')
-    );
-    expect(stylesMissingWarning).toBe(true);
-
-    // Restore spy
-    consoleWarnSpy.mockRestore();
+    // Create server context with mock addHandler
+    const addHandlerSpy = jest.fn();
+    const server = { 
+      context: {} as ServerContext,
+      addHandler: addHandlerSpy
+    };
+    
+    // Configure server to populate themes in context
+    plugin.configureServer?.(server);
+    
+    // Check the themes in the server context
+    expect(server.context.themes).toBeDefined();
+    
+    // Convert the Map to an array of theme names
+    const themeNames = Array.from(server.context.themes.keys());
+    
+    // Verify that only the valid theme is registered with validateThemes=true
+    expect(themeNames).not.toContain('invalid-theme');
+    expect(themeNames).toContain('valid-theme');
+    expect(themeNames.length).toBe(1);
   });
 
-  it('should configure server with themes endpoint', () => {
+  it('should configure server with themes endpoint', async () => {
     // Create the plugin
     const plugin = themeRegistryPlugin() as Plugin;
 
     // Mock server object with addHandler method
-    const addHandlerSpy = spyOn({ addHandler: () => {} }, 'addHandler');
+    const addHandlerSpy = jest.fn();
     const server = {
-      context: {} as Record<string, any>,
+      context: {} as ServerContext,
       addHandler: addHandlerSpy,
     };
 
@@ -136,12 +169,9 @@ describe('Theme Registry Plugin', () => {
       method: 'GET',
       handler: expect.any(Function),
     });
-
-    // Restore spy
-    addHandlerSpy.mockRestore();
   });
 
-  it('should handle custom themes directory', () => {
+  it('should handle custom themes directory', async () => {
     // Create custom themes directory
     const CUSTOM_THEMES_DIR = path.join(TEST_DIR, 'custom-themes');
     fs.mkdirSync(CUSTOM_THEMES_DIR, { recursive: true });
@@ -160,22 +190,40 @@ describe('Theme Registry Plugin', () => {
       'export default function DocLayout() { return null; }'
     );
 
-    // Create a console spy
-    const consoleLogSpy = spyOn(console, 'log');
-
     // Create the plugin with custom themes directory
     const plugin = themeRegistryPlugin({ themesDir: 'custom-themes' }) as Plugin;
 
     // Call buildStart method
-    plugin.buildStart?.();
+    await plugin.buildStart?.();
 
-    // Verify logs indicate theme registration from custom directory
-    const customThemeRegistered = consoleLogSpy.mock.calls.some(
-      call => typeof call[0] === 'string' && call[0].includes('✅ Registered theme: custom-theme')
-    );
-    expect(customThemeRegistered).toBe(true);
-
-    // Restore spy
-    consoleLogSpy.mockRestore();
+    // Create server context with mock addHandler
+    const addHandlerSpy = jest.fn();
+    const server = { 
+      context: {} as ServerContext,
+      addHandler: addHandlerSpy
+    };
+    
+    // Configure server to populate themes in context
+    plugin.configureServer?.(server);
+    
+    // Check the themes in the server context
+    expect(server.context.themes).toBeDefined();
+    
+    // Convert the Map to an array of theme names
+    const themeNames = Array.from(server.context.themes.keys());
+    
+    // Verify that custom-theme is registered
+    expect(themeNames).toContain('custom-theme');
+    
+    // Get the custom theme info
+    const customTheme = server.context.themes.get('custom-theme');
+    expect(customTheme).toBeDefined();
+    
+    // Only test properties if customTheme is defined
+    if (customTheme) {
+      expect(customTheme.name).toBe('custom-theme');
+      expect(customTheme.path).toBe(path.join(CUSTOM_THEMES_DIR, 'custom-theme'));
+      expect(customTheme.styles).toBe(path.join(CUSTOM_THEMES_DIR, 'custom-theme', 'styles.css'));
+    }
   });
 });

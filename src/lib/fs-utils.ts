@@ -104,9 +104,15 @@ export async function getAllFiles(dir: string): Promise<string[]> {
 /**
  * Read a file and return its contents as a string
  */
-export async function readFileAsString(filePath: string): Promise<string> {
+export async function readFileAsString(filePath: string, encoding?: string): Promise<string> {
   return await tryCatchWithCode(
     async () => {
+      if (encoding === 'binary') {
+        // Handle binary encoding by returning the content as UTF-8 encoded string
+        const file = Bun.file(filePath);
+        const buffer = await file.arrayBuffer();
+        return new TextDecoder().decode(buffer);
+      }
       return await Bun.file(filePath).text();
     },
     ErrorCode.FILE_READ_ERROR,
@@ -332,9 +338,15 @@ export function extractFrontmatter(content: string): { frontmatter: Record<strin
 /**
  * Filter files by extension
  */
-export function filterFilesByExtension(files: string[], extensions: string | string[]): string[] {
-  const exts = Array.isArray(extensions) ? extensions : [extensions];
-  return files.filter(file => exts.includes(getExtension(file)));
+export function filterFilesByExtension(files: string[], extensions: string[]): string[] {
+  return files.filter(file => {
+    for (const ext of extensions) {
+      if (file.endsWith(ext)) {
+        return true;
+      }
+    }
+    return false;
+  });
 }
 
 /**
