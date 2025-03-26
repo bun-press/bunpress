@@ -2,12 +2,53 @@
 
 ## Current Focus
 
-- **Code cleanup and maintenance**: Working on improving code quality, removing unnecessary files, and standardizing patterns across the codebase.
-- **Test improvements**: Enhancing test stability, test isolation, and increasing test coverage.
-- **TypeScript compatibility improvements**: Fixing TypeScript errors, particularly in integrated test files, adding proper interface definitions, and improving type safety.
-- **Theme integration enhancements**: Streamlining theme loading, registration, and testing.
-- **Cross-platform compatibility**: Addressing Windows path issues and ensuring consistent behavior across operating systems.
-- **Performance optimization**: Implementing caching and identifying bottlenecks in the build process.
+### DRY Improvements
+We're currently focused on making the codebase more maintainable by implementing DRY (Don't Repeat Yourself) principles across various components. Our work includes:
+
+1. **Centralized Error Handling** ✅
+   - Created a structured error system with proper context and typing
+   - Implemented factory functions for common error types
+   - Standardized error responses across the application
+
+2. **Unified Configuration Management** ✅
+   - Implemented a ConfigManager class for centralized config handling
+   - Added type-safe configuration access with schema validation
+   - Created BunPress-specific configuration utilities
+
+3. **Centralized Routing System** ✅
+   - Implemented a Router class with middleware support
+   - Added route grouping and pattern matching capabilities
+   - Created a static file handler with cache control
+   - Provided example implementation and documentation
+
+4. **Next Area: Content Processing**
+   - Centralizing TOC extraction
+   - Implementing a unified content processing pipeline
+   - Creating standardized content transformers
+
+## Recent Decisions
+
+- Adopt a centralized routing approach to eliminate duplicate route handling across server implementations
+- Use middleware chains for consistent request processing
+- Implement route grouping for better organization of API routes
+- Add pattern matching for flexible path handling
+- Create a reusable static file handler that can be used across server implementations
+
+## Active Considerations
+
+- How to best integrate the routing system with existing server implementations
+- Balancing flexibility and simplicity in the routing API
+- Performance implications of centralized routing
+- Future extensions for the routing system (named routes, automatic route generation)
+
+## Previous Focus
+
+- Code cleanup and maintenance
+- Test improvements
+- TypeScript compatibility improvements
+- Theme integration enhancements
+- Cross-platform compatibility
+- Performance optimization
 
 ## Recent Integrated Test Fixes
 

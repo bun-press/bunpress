@@ -48,7 +48,9 @@
     "cleanup": "bun scripts/cleanup.js",
     "deepclean": "bun cleanup-project.js",
     "prepare": "bun run cleanup && bun run build",
-    "ci": "bun run lint && bun test && bun run build"
+    "ci": "bun run lint && bun test && bun run build",
+    "use-original-server": "node scripts/switch-server-implementation.js original",
+    "use-improved-server": "node scripts/switch-server-implementation.js improved"
   },
   "keywords": [
     "bun",

@@ -1,6 +1,7 @@
 import type { BunPressConfig } from '../../bunpress.config';
 import { getThemeManager, initThemeManager } from './theme-manager';
 import path from 'path';
+import { extractTocItems, TocItem } from '../lib/content-utils';
 
 export interface RenderOptions {
   /**
@@ -27,11 +28,7 @@ export interface RenderOptions {
 export interface ContentData {
   html: string;
   frontmatter: Record<string, any>;
-  toc?: Array<{
-    level: number;
-    id: string;
-    text: string;
-  }>;
+  toc?: TocItem[];
 }
 
 /**
@@ -64,7 +61,7 @@ export function renderHtml(
     return renderFallbackTemplate(html, frontmatter, config);
   }
 
-  // Extract TOC items from the HTML content
+  // Extract TOC items from the HTML content if not already provided
   const tocItems = content.toc || extractTocItems(html);
 
   // Get navigation and sidebar data from the config
@@ -161,26 +158,6 @@ function isReactLayout(layoutPath: string): boolean {
     layoutPath.includes('/react/') ||
     layoutPath.includes('/components/')
   );
-}
-
-/**
- * Extract TOC items from HTML content
- */
-function extractTocItems(html: string) {
-  const tocItems = [];
-  const headingRegex = /<h([2-6])[^>]*id="([^"]+)"[^>]*>(.*?)<\/h\1>/g;
-  let match;
-
-  while ((match = headingRegex.exec(html)) !== null) {
-    const level = parseInt(match[1], 10);
-    const id = match[2];
-    // Simple HTML tag stripping for the text
-    const text = match[3].replace(/<[^>]*>/g, '');
-
-    tocItems.push({ level, id, text });
-  }
-
-  return tocItems;
 }
 
 /**

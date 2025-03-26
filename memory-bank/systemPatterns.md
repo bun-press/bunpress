@@ -4,14 +4,71 @@
 
 BunPress follows a modular architecture with clear separation of concerns:
 
+```mermaid
+graph TD
+    A[Plugin Registration] --> B[Initialization Hooks]
+    B --> C[Content Processing]
+    C --> D[Build Process]
+    D --> E[Server Middleware]
 ```
-src/
-├── core/ - Core system components
-├── plugins/ - Plugin implementations
-├── cli/ - Command line interface
-├── templates/ - Default templates
-└── utils/ - Shared utilities
-```
+
+Each plugin can hook into multiple lifecycle stages:
+- `onInit` - Plugin initialization
+- `onContent` - Content transformation (Markdown -> HTML)
+- `onBuild` - Build-time processing
+- `onServer` - Server-side middleware
+
+Plugins are registered in the BunPress configuration and loaded at runtime using the plugin loader system.
+
+## System Architecture
+
+### Core Components
+
+BunPress is composed of several core components that work together:
+
+#### Server Components
+- **Dev Server**: Serves content during development with HMR support
+- **Fullstack Server**: Production-ready server that handles API routes and static files
+- **Router**: Centralized routing system for request handling with middleware support
+- **HMR**: Hot Module Replacement for development
+
+#### Content Processing
+- **Markdown Processor**: Converts markdown to HTML with support for plugins
+- **Content Provider**: Loads and caches content from the filesystem
+- **TOC Generator**: Extracts table of contents from markdown
+
+#### Build System
+- **Bundler**: Creates optimized JavaScript bundles
+- **CSS Processor**: Handles CSS frameworks and optimizations
+- **Asset Optimizer**: Optimizes images and other assets for production
+
+### Key Architectural Decisions
+
+1. **Centralized Utility Pattern**
+   - All utilities centralized in `src/lib` directory
+   - Utility exports consolidated through barrel files (index.ts)
+   - Reduced duplication by extracting common functionality
+
+2. **Configuration Management**
+   - Centralized configuration through ConfigManager
+   - Schema-based validation for type safety
+   - Environment variable support with clear precedence
+
+3. **Error Handling**
+   - Structured error system with codes and contexts
+   - Factory functions for common error types
+   - Consistent error formatting across the application
+
+4. **Routing System**
+   - Router class with middleware support
+   - Route grouping for logical organization
+   - Pattern matching with parameter extraction
+   - Static file handling with cache control
+
+5. **Plugin Architecture**
+   - Plugin system with standardized hook points
+   - Context objects passed to plugins
+   - Lifecycle management for plugins
 
 ## Key Technical Decisions
 

@@ -1,15 +1,17 @@
-import { readFileSync } from 'fs';
-import matter from 'gray-matter';
-import { marked } from 'marked';
-import path from 'path';
 import { PluginManager, DefaultPluginManager } from './plugin';
+import {
+  readMarkdownFile,
+  markdownToHtml,
+  generateRoute,
+  extractTocItems,
+  ContentFile as ContentFileBase
+} from '../lib/content-utils';
 
-export interface ContentFile {
-  path: string;
-  route: string;
-  content: string;
-  frontmatter: Record<string, any>;
-  html: string;
+/**
+ * Extended content file interface with additional properties
+ */
+export interface ContentFile extends ContentFileBase {
+  // Any additional properties specific to this implementation
 }
 
 export interface ContentProcessorOptions {
@@ -24,39 +26,29 @@ export class ContentProcessor {
   }
 
   async processMarkdownContent(filePath: string, rootDir: string): Promise<ContentFile> {
-    // Read the file
-    const fileContent = readFileSync(filePath, 'utf-8');
-
-    // Parse frontmatter
-    const { data: frontmatter, content } = matter(fileContent);
+    // Read and parse the markdown file
+    const { frontmatter, content } = await readMarkdownFile(filePath);
 
     // Apply plugin transformations to the content
     const transformedContent = await this.pluginManager.executeTransform(content);
 
-    // Convert markdown to HTML - use marked.parse as string
-    const html = marked.parse(transformedContent) as string;
+    // Convert markdown to HTML
+    const html = markdownToHtml(transformedContent);
 
     // Generate route from file path
-    const relativePath = path.relative(rootDir, filePath);
-    const withoutExtension = relativePath.replace(/\.(md|mdx)$/, '');
+    const route = generateRoute(filePath, rootDir);
 
-    // Convert to URL path (handle index files specially)
-    let route = withoutExtension.replace(/\\/g, '/');
-    if (route.endsWith('/index')) {
-      route = route.replace(/\/index$/, '');
-    }
-    if (route === 'index') {
-      route = '/';
-    } else if (!route.startsWith('/')) {
-      route = `/${route}`;
-    }
+    // Extract TOC items
+    const toc = extractTocItems(html);
 
+    // Return the processed content file
     return {
       path: filePath,
       route,
       content: transformedContent,
       frontmatter,
       html,
+      toc
     };
   }
 
@@ -70,38 +62,23 @@ export class ContentProcessor {
   }
 }
 
-// Maintain backward compatibility with existing code
-export function processMarkdownContent(filePath: string, rootDir: string): ContentFile {
-  // Create a synchronous version that doesn't use plugins
-  // Read the file
-  const fileContent = readFileSync(filePath, 'utf-8');
-
-  // Parse frontmatter
-  const { data: frontmatter, content } = matter(fileContent);
-
-  // Convert markdown to HTML - use marked.parse as string
-  const html = marked.parse(content) as string;
-
-  // Generate route from file path
-  const relativePath = path.relative(rootDir, filePath);
-  const withoutExtension = relativePath.replace(/\.(md|mdx)$/, '');
-
-  // Convert to URL path (handle index files specially)
-  let route = withoutExtension.replace(/\\/g, '/');
-  if (route.endsWith('/index')) {
-    route = route.replace(/\/index$/, '');
-  }
-  if (route === 'index') {
-    route = '/';
-  } else if (!route.startsWith('/')) {
-    route = `/${route}`;
-  }
-
+/**
+ * Synchronous version that doesn't use plugins
+ * Maintained for backward compatibility but now async
+ */
+export async function processMarkdownContent(filePath: string, rootDir: string): Promise<ContentFile> {
+  // Use the utility function that does all the work for us
+  const contentFile = await readMarkdownFile(filePath);
+  const html = markdownToHtml(contentFile.content);
+  const route = generateRoute(filePath, rootDir);
+  const toc = extractTocItems(html);
+  
   return {
     path: filePath,
     route,
-    content,
-    frontmatter,
+    content: contentFile.content,
+    frontmatter: contentFile.frontmatter,
     html,
+    toc
   };
 }

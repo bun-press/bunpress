@@ -119,6 +119,52 @@
 - ✅ Enhanced markdown rendering with better TOC extraction
 - ✅ Added support for frontmatter-based layout selection
 
+## Recent Improvements
+
+### Centralized Configuration Management
+- ✅ Created ConfigManager in config-utils.ts
+- ✅ Implemented BunPress-specific configuration in bunpress-config.ts
+- ✅ Added type-safe configuration access and validation
+
+### Standardized Error Handling
+- ✅ Implemented centralized error system in error-utils.ts
+- ✅ Created structured error classes with context support
+- ✅ Added error factory functions for specific error types
+
+### Enhanced File System Utilities
+- ✅ Updated fs-utils.ts to use centralized error handling
+- ✅ Improved error reporting and type safety
+- ✅ Added better cache management utilities
+
+### Centralized Routing System
+- ✅ Implemented Router class in route-utils.ts with middleware support
+- ✅ Added route grouping and pattern matching capabilities
+- ✅ Created static file handler with cache control
+- ✅ Added example implementation in router-example.ts
+- ✅ Provided comprehensive documentation in router-documentation.md
+
+## Next Steps
+
+### Content Processing Improvements
+- ⬜ Centralize TOC extraction into a common utility
+- ⬜ Implement unified content processing pipeline
+- ⬜ Create standardized content transformers
+
+### Plugin System Enhancement
+- ⬜ Create unified hooks for plugins
+- ⬜ Implement plugin lifecycle management
+- ⬜ Add plugin dependency resolution
+
+### User Interface
+- ⬜ Implement theme component system
+- ⬜ Create responsive layout components
+- ⬜ Add accessibility features
+
+### Build System
+- ⬜ Optimize build process
+- ⬜ Add production build optimizations
+- ⬜ Implement code splitting
+
 ## Known Issues
 
 ### TypeScript Configuration
@@ -197,3 +243,29 @@
 - Implement advanced caching strategies
 - Create visual page builder interface
 - Add AI-assisted content optimization
+
+## DRY Improvements (2023-09-18)
+
+### Completed
+- Created centralized utility modules in `src/lib` directory:
+  - `server-utils.ts` for server functionality
+  - `fs-utils.ts` for file system operations
+  - `plugin-utils.ts` for plugin handling
+  - `path-utils.ts` for path manipulation
+  - `hmr-utils.ts` for Hot Module Replacement
+  - `content-utils.ts` for content processing operations
+  - `index.ts` barrel file for exporting all utilities
+- Consolidated server implementations by applying DRY improvements directly to main server files
+- Removed duplicate server implementations to maintain a single clean codebase
+- Updated content processing code to use centralized utilities
+- Added documentation for DRY improvements (`DRY-IMPROVEMENTS.md`)
+
+### In Progress
+- Testing the improved implementations
+- Fixing any remaining type issues in utility modules
+- Planning next areas for DRY improvements
+
+### Next Steps
+- Create utility for error handling
+- Consolidate configuration handling
+- Apply DRY principles to theme handling

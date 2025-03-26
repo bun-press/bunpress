@@ -9,37 +9,36 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
 
-// Types
-export interface ServerOptions {
-  port?: number;
-  host?: string;
-  staticDir?: string;
+// Import utility functions directly
+import {
+  ServerConfig,
+  MiddlewareHandler,
+  RouteHandler,
+  Route,
+  handleCORS,
+  getContentType,
+  getCacheControl,
+  createMiddlewareChain
+} from '../lib/server-utils';
+
+import {
+  fileExists,
+  readFileAsString
+} from '../lib/fs-utils';
+
+import {
+  normalizePath,
+  joinPaths
+} from '../lib/path-utils';
+
+// Server options extending the base ServerConfig
+export interface ServerOptions extends ServerConfig {
   apiDir?: string;
-  development?: boolean;
-  hmrPort?: number;
-  hmrHost?: string;
-  cors?: {
-    origin?: string | string[];
-    methods?: string[];
-    allowedHeaders?: string[];
-    exposedHeaders?: string[];
-    credentials?: boolean;
-    maxAge?: number;
-  };
   compression?: boolean;
   cacheControl?: {
     [key: string]: string;
   };
-  middleware?: MiddlewareHandler[];
   onError?: (error: Error, req: Request) => Response;
-}
-
-export type MiddlewareHandler = (req: Request, next: () => Promise<Response>) => Promise<Response>;
-export type RouteHandler = (req: Request) => Promise<Response> | Response;
-
-interface Route {
-  pattern: RegExp;
-  handler: RouteHandler;
 }
 
 // Interface definition 
@@ -65,7 +64,7 @@ export class FullstackServer implements IFullstackServer {
   private middleware: MiddlewareHandler[] = [];
   private options: ServerOptions = {
     port: 3000,
-    host: 'localhost',
+    hostname: 'localhost',
     staticDir: 'public',
     apiDir: 'api',
     development: false,
@@ -75,7 +74,9 @@ export class FullstackServer implements IFullstackServer {
       origin: '*',
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
+      exposedHeaders: [],
       credentials: true,
+      maxAge: 86400,
     },
     compression: true,
     cacheControl: {
@@ -102,7 +103,7 @@ export class FullstackServer implements IFullstackServer {
       this.options = {
         ...this.options,
         port: options.config.devServer.port || this.options.port,
-        host: options.config.devServer.host || this.options.host,
+        hostname: options.config.devServer.host || this.options.hostname,
         staticDir: options.config.publicDir || this.options.staticDir,
         hmrPort: options.config.devServer.hmrPort || this.options.hmrPort,
         hmrHost: options.config.devServer.hmrHost || this.options.hmrHost,
@@ -195,7 +196,7 @@ export class FullstackServer implements IFullstackServer {
     // Start server
     this.server = Bun.serve({
       port: this.options.port,
-      hostname: this.options.host,
+      hostname: this.options.hostname,
       fetch: requestHandler,
       error: errorHandler,
       development: this.options.development,
@@ -214,7 +215,7 @@ export class FullstackServer implements IFullstackServer {
 
     const info = { 
       port: this.server?.port || this.options.port || 3000, 
-      host: this.options.host || 'localhost' 
+      host: this.options.hostname || 'localhost' 
     };
     
     this.events.emit('server:start', info);
@@ -228,47 +229,8 @@ export class FullstackServer implements IFullstackServer {
    * Handle CORS preflight requests
    */
   private handleCORS(req: Request): Response {
-    const cors = this.options.cors;
-    if (!cors) return new Response(null, { status: 204 });
-    
-    const headers = new Headers();
-    
-    // Set CORS headers
-    if (typeof cors.origin === 'string') {
-      headers.set('Access-Control-Allow-Origin', cors.origin);
-    } else if (Array.isArray(cors.origin)) {
-      const requestOrigin = req.headers.get('Origin');
-      if (requestOrigin && cors.origin.includes(requestOrigin)) {
-        headers.set('Access-Control-Allow-Origin', requestOrigin);
-      } else {
-        headers.set('Access-Control-Allow-Origin', cors.origin[0]);
-      }
-    }
-    
-    if (cors.methods) {
-      headers.set('Access-Control-Allow-Methods', cors.methods.join(', '));
-    }
-    
-    if (cors.allowedHeaders) {
-      headers.set('Access-Control-Allow-Headers', cors.allowedHeaders.join(', '));
-    }
-    
-    if (cors.exposedHeaders) {
-      headers.set('Access-Control-Expose-Headers', cors.exposedHeaders.join(', '));
-    }
-    
-    if (cors.credentials) {
-      headers.set('Access-Control-Allow-Credentials', 'true');
-    }
-    
-    if (cors.maxAge !== undefined) {
-      headers.set('Access-Control-Max-Age', cors.maxAge.toString());
-    }
-    
-    return new Response(null, {
-      status: 204,
-      headers,
-    });
+    // Use the imported handleCORS function to ensure consistent CORS handling
+    return handleCORS(req, this.options);
   }
   
   /**

@@ -707,7 +707,8 @@ async function main() {
           const ipAddress = getLocalIpAddress();
 
           // Start the development server
-          const { watcher, server } = startDevServer(config, pluginManager);
+          const devServerResult = await startDevServer(config, pluginManager);
+          const { watcher, server } = devServerResult;
 
           // Add cleanup handler for the watcher
           resources.push(() => {

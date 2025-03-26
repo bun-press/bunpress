@@ -9,16 +9,16 @@ import type { ThemeManager } from '../core/theme-manager';
 import type { PluginManager } from '../core/plugin';
 import path from 'path';
 import fs from 'fs';
-import matter from 'gray-matter';
 import { createSlotSystem } from '../core/slot-system';
+import {
+  readMarkdownFile,
+  markdownToHtml,
+  ContentFile as BaseContentFile,
+  processMarkdownString
+} from '../lib/content-utils';
 
-// Types for content processing
-export interface ContentFile {
-  path: string;
-  content: string;
-  frontmatter: Record<string, any>;
-  html?: string;
-}
+// Extend the content file interface
+export interface ContentFile extends BaseContentFile {}
 
 // Interface for content processor
 export interface ContentProcessor {
@@ -105,24 +105,16 @@ export function createContentProcessor({
      */
     async processContent(content: string, filePath: string): Promise<ContentFile> {
       try {
-        // Parse frontmatter
-        const { data: frontmatter, content: markdownContent } = matter(content);
+        // Use the utility function to process the markdown
+        // We use process.cwd() as a placeholder for the rootDir
+        // Since we don't need route generation in this context
+        const contentFile = processMarkdownString(content, filePath, process.cwd());
 
-        // Create content file object
-        const contentFile: ContentFile = {
-          path: filePath,
-          content: markdownContent,
-          frontmatter,
-        };
-
-        // Transform content through plugins
-        let transformedContent = markdownContent;
+        // Apply plugin transformations if provided
         if (pluginManager) {
-          transformedContent = await pluginManager.executeTransform(markdownContent);
+          contentFile.content = await pluginManager.executeTransform(contentFile.content);
+          contentFile.html = markdownToHtml(contentFile.content);
         }
-
-        // Store HTML
-        contentFile.html = transformedContent;
 
         return contentFile;
       } catch (error) {

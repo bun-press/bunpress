@@ -94,11 +94,11 @@ Testing complex frontmatter data.`;
     }
   });
 
-  test('processes markdown content with frontmatter', () => {
+  test('processes markdown content with frontmatter', async () => {
     const testFile = path.join(testDir, 'test.md');
 
     // Process the file using the real implementation
-    const result = processMarkdownContent(testFile, testDir);
+    const result = await processMarkdownContent(testFile, testDir);
 
     // Check frontmatter was properly parsed
     expect(result.frontmatter.title).toBe('Test Page');
@@ -116,28 +116,28 @@ Testing complex frontmatter data.`;
     expect(result.route).toBe('/test');
   });
 
-  test('handles index files correctly', () => {
+  test('handles index files correctly', async () => {
     const testFile = path.join(testDir, 'index.md');
 
-    const result = processMarkdownContent(testFile, testDir);
+    const result = await processMarkdownContent(testFile, testDir);
 
     expect(result.route).toBe('/');
     expect(result.frontmatter.title).toBe('Home');
   });
 
-  test('handles nested routes correctly', () => {
+  test('handles nested routes correctly', async () => {
     const testFile = path.join(testDir, 'nested', 'page.md');
 
-    const result = processMarkdownContent(testFile, testDir);
+    const result = await processMarkdownContent(testFile, testDir);
 
     expect(result.route).toBe('/nested/page');
     expect(result.frontmatter.title).toBe('Nested Page');
   });
 
-  test('handles HTML in markdown content', () => {
+  test('handles HTML in markdown content', async () => {
     const testFile = path.join(testDir, 'html-test.md');
 
-    const result = processMarkdownContent(testFile, testDir);
+    const result = await processMarkdownContent(testFile, testDir);
 
     // Marked doesn't escape HTML by default, it passes it through
     // We're testing that the HTML is included in the output
@@ -149,10 +149,10 @@ Testing complex frontmatter data.`;
     expect(result.content).toContain('<div class="test">');
   });
 
-  test('handles frontmatter with various data types', () => {
+  test('handles frontmatter with various data types', async () => {
     const testFile = path.join(testDir, 'complex-frontmatter.md');
 
-    const result = processMarkdownContent(testFile, testDir);
+    const result = await processMarkdownContent(testFile, testDir);
 
     expect(result.frontmatter.title).toBe('Complex Frontmatter');
     expect(Array.isArray(result.frontmatter.tags)).toBe(true);

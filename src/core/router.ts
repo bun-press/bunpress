@@ -8,11 +8,11 @@ interface Routes {
 }
 
 // Use the synchronous version for now since we're transitioning to async
-export function generateRoutes(pagesDir: string): Routes {
+export async function generateRoutes(pagesDir: string): Promise<Routes> {
   const routes: Routes = {};
 
   // Helper function to process files recursively
-  function processDirectory(directory: string) {
+  async function processDirectory(directory: string) {
     const files = readdirSync(directory);
 
     for (const file of files) {
@@ -21,17 +21,21 @@ export function generateRoutes(pagesDir: string): Routes {
 
       if (stat.isDirectory()) {
         // Recursively process subdirectories
-        processDirectory(filePath);
+        await processDirectory(filePath);
       } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
-        // Process markdown files using the synchronous version for now
-        const contentFile = processMarkdownContent(filePath, pagesDir);
-        routes[contentFile.route] = contentFile;
+        // Process markdown files using the now async version
+        const contentFile = await processMarkdownContent(filePath, pagesDir);
+        if (contentFile.route) {
+          routes[contentFile.route] = contentFile;
+        } else {
+          console.warn(`Warning: Content file at ${filePath} has no route defined`);
+        }
       }
     }
   }
 
   // Start processing from the pages directory
-  processDirectory(pagesDir);
+  await processDirectory(pagesDir);
 
   return routes;
 }
@@ -66,11 +70,15 @@ export async function generateRoutesAsync(
       } else if (file.endsWith('.md') || file.endsWith('.mdx')) {
         // Process markdown files with plugin support
         const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
-        routes[contentFile.route] = contentFile;
-
-        // Register the content file with i18n plugin if available
-        if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
-          (i18nPlugin as any).registerContentFile(contentFile);
+        if (contentFile.route) {
+          routes[contentFile.route] = contentFile;
+          
+          // Register the content file with i18n plugin if available
+          if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
+            (i18nPlugin as any).registerContentFile(contentFile);
+          }
+        } else {
+          console.warn(`Warning: Content file at ${filePath} has no route defined`);
         }
       }
     }

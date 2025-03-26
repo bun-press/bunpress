@@ -81,9 +81,9 @@ describe('Router', () => {
     }
   });
 
-  test('generates routes for simple directory structure', () => {
+  test('generates routes for simple directory structure', async () => {
     // Use programmatically created test files
-    const routes = generateRoutes(TEST_PAGES_DIR);
+    const routes = await generateRoutes(TEST_PAGES_DIR);
 
     expect(Object.keys(routes).length).toBe(5);
     expect(routes['/']).toBeDefined();
@@ -100,8 +100,8 @@ describe('Router', () => {
     expect(routes['/blog/post2'].frontmatter.title).toBe('Second Post');
   });
 
-  test('handles empty directory', () => {
-    const routes = generateRoutes(TEST_EMPTY_DIR);
+  test('handles empty directory', async () => {
+    const routes = await generateRoutes(TEST_EMPTY_DIR);
     expect(Object.keys(routes).length).toBe(0);
   });
 
@@ -142,7 +142,7 @@ describe('Router', () => {
     expect(routes['/about'].content).toContain('<!-- Processed by TestPlugin -->');
   });
 
-  test('handles MDX files', () => {
+  test('handles MDX files', async () => {
     // Create an MDX test file programmatically
     const mdxFilePath = path.join(TEST_MDX_DIR, 'component.mdx');
 
@@ -163,7 +163,7 @@ This is a test MDX component with JSX.
     fs.writeFileSync(mdxFilePath, mdxContent);
 
     // Test MDX file processing
-    const routes = generateRoutes(TEST_MDX_DIR);
+    const routes = await generateRoutes(TEST_MDX_DIR);
 
     expect(Object.keys(routes).length).toBe(1);
     expect(routes['/component']).toBeDefined();
