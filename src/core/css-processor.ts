@@ -1,9 +1,14 @@
 import type { BunPressConfig } from '../../bunpress.config';
-import { readFileAsString, writeFileString, createDirectory } from '../lib/fs-utils';
+import { createDirectory } from '../lib/fs-utils';
 import { getDirname } from '../lib/path-utils';
 import { getNamespacedLogger } from '../lib/logger-utils';
 import { tryCatchWithCode, ErrorCode } from '../lib/error-utils';
 import { rewriteCssAssetUrls } from '../lib/asset-utils';
+import postcss from 'postcss';
+import autoprefixer from 'autoprefixer';
+import cssnano from 'cssnano';
+import path from 'path';
+import fs from 'fs/promises';
 
 // Create namespaced logger for CSS processor
 const logger = getNamespacedLogger('css-processor');
@@ -31,6 +36,24 @@ interface CSSProcessOptions {
   rewriteUrls?: boolean;
 }
 
+async function processImports(cssContent: string, filePath: string) {
+  const importRegex = /@import\s+(?:url\()?['"]([^'"]+)['"]\)?;/g;
+  let processedCSS = cssContent;
+  let match;
+  
+  while ((match = importRegex.exec(cssContent)) !== null) {
+    const importPath = path.resolve(path.dirname(filePath), match[1]);
+    try {
+      const importedContent = await fs.readFile(importPath, 'utf-8');
+      processedCSS = processedCSS.replace(match[0], importedContent);
+    } catch (error) {
+      console.warn(`Failed to import CSS file: ${importPath}`);
+    }
+  }
+  
+  return processedCSS;
+}
+
 /**
  * Process a CSS file using Bun's transform API
  *
@@ -47,38 +70,35 @@ export async function processCSS(
   return await tryCatchWithCode(
     async () => {
       const isDev = process.env.NODE_ENV !== 'production';
-
-      // Default options based on environment
-      const defaultOptions: CSSProcessOptions = {
+      const opts = { 
         minify: !isDev,
         sourceMap: isDev,
         rewriteUrls: true,
+        ...options
       };
 
-      // Merge with provided options
-      const opts = { ...defaultOptions, ...options };
-
-      // Get the CSS content
-      const cssContent = await readFileAsString(cssPath);
+      let cssContent = await fs.readFile(cssPath, 'utf-8');
       logger.debug(`Processing CSS file: ${cssPath}`);
 
-      // Use Bun's built-in transformer for CSS
-      const result = await Bun.build({
-        entrypoints: [cssPath],
-        target: 'browser',
-        minify: opts.minify,
-        sourcemap: opts.sourceMap ? 'inline' : 'none',
-      });
+      // Process CSS imports first
+      cssContent = await processImports(cssContent, cssPath);
 
-      if (!result.success) {
-        throw new Error(`Failed to process CSS`);
+      // Configure PostCSS plugins
+      const plugins = [];
+      plugins.push(autoprefixer());
+      if (opts.minify) {
+        plugins.push(cssnano({ preset: 'default' }));
       }
 
-      // Get the CSS output
-      const cssOutput = (await result.outputs[0]?.text()) || cssContent;
-      let output = cssOutput;
+      // Process with PostCSS
+      const result = await postcss(plugins).process(cssContent, {
+        from: cssPath,
+        to: path.join(config.outputDir, path.basename(cssPath)),
+        map: opts.sourceMap ? { inline: true } : false
+      });
 
-      // If needed, rewrite URLs to be relative to the output directory
+      let output = result.css;
+
       if (opts.rewriteUrls) {
         output = await rewriteCssAssetUrls(output, cssPath, config.outputDir);
       }
@@ -127,7 +147,8 @@ export async function bundleCSS(
     const bundleContent = cssContents.join('\n\n');
 
     // Write the bundle to the output file
-    await writeFileString(outputPath, bundleContent);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, bundleContent);
     logger.info(`CSS bundle written to ${outputPath}`);
 
     return { success: true };
