@@ -4,14 +4,11 @@ import {
   markdownToHtml,
   generateRoute,
   extractTocItems,
-  ContentFile as ContentFileBase
+  ContentFile as ContentFileBase,
 } from '../lib/content-utils';
 
 // Import error handling utilities
-import {
-  ErrorCode,
-  tryCatchWithCode
-} from '../lib/error-utils';
+import { ErrorCode, tryCatchWithCode } from '../lib/error-utils';
 
 // Import logger
 import { getNamespacedLogger } from '../lib/logger-utils';
@@ -41,7 +38,7 @@ export class ContentProcessor {
     return await tryCatchWithCode(
       async () => {
         logger.debug(`Processing markdown file: ${filePath}`);
-        
+
         // Read and parse the markdown file
         const { frontmatter, content } = await readMarkdownFile(filePath);
 
@@ -66,7 +63,7 @@ export class ContentProcessor {
           content: transformedContent,
           frontmatter,
           html,
-          toc
+          toc,
         };
       },
       ErrorCode.CONTENT_PARSE_ERROR,
@@ -90,26 +87,29 @@ export class ContentProcessor {
  * Synchronous version that doesn't use plugins
  * Maintained for backward compatibility but now async
  */
-export async function processMarkdownContent(filePath: string, rootDir: string): Promise<ContentFile> {
+export async function processMarkdownContent(
+  filePath: string,
+  rootDir: string
+): Promise<ContentFile> {
   return await tryCatchWithCode(
     async () => {
       logger.debug(`Processing markdown file (legacy method): ${filePath}`);
-      
+
       // Use the utility function that does all the work for us
       const contentFile = await readMarkdownFile(filePath);
       const html = markdownToHtml(contentFile.content);
       const route = generateRoute(filePath, rootDir);
       const toc = extractTocItems(html);
-      
+
       logger.debug(`Processed markdown file (legacy method): ${filePath}, route: ${route}`);
-      
+
       return {
         path: filePath,
         route,
         content: contentFile.content,
         frontmatter: contentFile.frontmatter,
         html,
-        toc
+        toc,
       };
     },
     ErrorCode.CONTENT_PARSE_ERROR,

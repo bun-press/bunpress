@@ -3,16 +3,8 @@ import type { BunPressConfig } from '../../bunpress.config';
 import { createThemeUtils } from '../lib/ui-utils';
 import { getNamespacedLogger } from '../lib/logger-utils';
 import { joinPaths } from '../lib/path-utils';
-import { 
-  directoryExists, 
-  fileExists, 
-  readFileAsString
-} from '../lib/fs-utils';
-import {
-  tryCatch,
-  tryCatchWithCode,
-  ErrorCode
-} from '../lib/error-utils';
+import { directoryExists, fileExists, readFileAsString } from '../lib/fs-utils';
+import { tryCatch, tryCatchWithCode, ErrorCode } from '../lib/error-utils';
 import { findThemes, ThemeStructure, extractThemeVariables } from '../lib/theme-utils';
 
 export interface Theme {
@@ -51,7 +43,7 @@ export class DefaultThemeManager implements ThemeManager {
     this.logger.info(`ThemeManager initialized with workspace root: ${workspaceRoot}`);
     this.logger.debug(`Themes directory path: ${this.themesDir}`);
     this.logger.debug(`Current working directory: ${process.cwd()}`);
-    
+
     // Initialize async loading
     this.loadAvailableThemes().catch(err => {
       this.logger.error('Failed to load available themes', { error: err });
@@ -70,19 +62,21 @@ export class DefaultThemeManager implements ThemeManager {
    */
   private async loadAvailableThemes(): Promise<void> {
     this.logger.debug(`Checking themes directory: ${this.themesDir}`);
-    
+
     try {
       // Use the new findThemes utility to discover and validate themes
       const themeStructures = await findThemes(this.themesDir);
-      
+
       // Convert ThemeStructure to Theme interface
       themeStructures.forEach((themeStructure, themeName) => {
         this.themes.set(themeName, this.convertThemeStructure(themeStructure));
       });
-      
+
       this.logger.info(`Loaded ${this.themes.size} themes: ${[...this.themes.keys()].join(', ')}`);
     } catch (error) {
-      this.logger.error(`Error loading themes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Error loading themes: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -97,7 +91,7 @@ export class DefaultThemeManager implements ThemeManager {
       styleFile: structure.styleFile,
       layouts: structure.layouts,
       options: structure.options || {},
-      variables: structure.variables || {}
+      variables: structure.variables || {},
     };
   }
 
@@ -161,7 +155,7 @@ export class DefaultThemeManager implements ThemeManager {
       this.logger.warn('No active theme, returning empty style content');
       return '';
     }
-    
+
     return await tryCatchWithCode(
       async () => {
         const styleFile = this.activeTheme?.styleFile;
@@ -169,7 +163,7 @@ export class DefaultThemeManager implements ThemeManager {
           this.logger.warn(`Style file ${styleFile} not found for theme ${this.activeTheme?.name}`);
           return '';
         }
-        
+
         this.logger.debug(`Reading style file: ${styleFile}`);
         return await readFileAsString(styleFile);
       },
@@ -193,7 +187,7 @@ export class DefaultThemeManager implements ThemeManager {
     if (!this.activeTheme) {
       return {};
     }
-    
+
     // Use the extractThemeVariables utility from theme-utils
     const themeVars = extractThemeVariables({
       name: this.activeTheme.name,
@@ -202,14 +196,14 @@ export class DefaultThemeManager implements ThemeManager {
       styleFile: this.activeTheme.styleFile,
       layouts: this.activeTheme.layouts,
       options: this.activeTheme.options,
-      variables: this.activeTheme.variables
+      variables: this.activeTheme.variables,
     });
-    
+
     // Fall back to themeUtils if no variables extracted
     if (Object.keys(themeVars).length === 0) {
       return this.themeUtils.getThemeVariables(this.activeTheme);
     }
-    
+
     return themeVars;
   }
 
@@ -220,20 +214,20 @@ export class DefaultThemeManager implements ThemeManager {
     return await tryCatch(
       async () => {
         const layoutsDir = joinPaths(this.themesDir, themeName, 'layouts');
-        
-        if (!await directoryExists(layoutsDir)) {
+
+        if (!(await directoryExists(layoutsDir))) {
           return [];
         }
-        
+
         // Read layout directories
         const layoutDirEntries = await readdir(layoutsDir, { withFileTypes: true });
-        
+
         // Filter to only include files with .tsx extension
         return layoutDirEntries
           .filter(entry => entry.isFile() && entry.name.endsWith('.tsx'))
           .map(entry => entry.name.replace(/\.tsx$/, ''));
       },
-      (error) => {
+      error => {
         this.logger.error(`Error getting layouts for theme ${themeName}:`, error);
         return [];
       }

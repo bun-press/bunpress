@@ -35,7 +35,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "useDefineForClassFields": true,
-    "types": ["bun-types"]
+    "types": ["bun-types", "react", "react-dom"]
   },
   "include": [
     "src/**/*.ts",

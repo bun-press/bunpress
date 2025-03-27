@@ -87,27 +87,27 @@ describe('Theme Registry Plugin', () => {
 
     // Create server context with mock addHandler
     const addHandlerSpy = jest.fn();
-    const server = { 
+    const server = {
       context: {} as ServerContext,
-      addHandler: addHandlerSpy
+      addHandler: addHandlerSpy,
     };
-    
+
     // Configure server to populate themes in context
     plugin.configureServer?.(server);
-    
+
     // Check the themes in the server context
     expect(server.context.themes).toBeDefined();
-    
+
     // Convert the Map to an array of theme names
     const themeNames = Array.from(server.context.themes.keys());
-    
+
     // Verify that valid-theme is registered
     expect(themeNames).toContain('valid-theme');
-    
+
     // Get the valid theme info
     const validTheme = server.context.themes.get('valid-theme');
     expect(validTheme).toBeDefined();
-    
+
     // Only test properties if validTheme is defined
     if (validTheme) {
       expect(validTheme.name).toBe('valid-theme');
@@ -126,20 +126,20 @@ describe('Theme Registry Plugin', () => {
 
     // Create server context with mock addHandler
     const addHandlerSpy = jest.fn();
-    const server = { 
+    const server = {
       context: {} as ServerContext,
-      addHandler: addHandlerSpy
+      addHandler: addHandlerSpy,
     };
-    
+
     // Configure server to populate themes in context
     plugin.configureServer?.(server);
-    
+
     // Check the themes in the server context
     expect(server.context.themes).toBeDefined();
-    
+
     // Convert the Map to an array of theme names
     const themeNames = Array.from(server.context.themes.keys());
-    
+
     // Verify that only the valid theme is registered with validateThemes=true
     expect(themeNames).not.toContain('invalid-theme');
     expect(themeNames).toContain('valid-theme');
@@ -198,27 +198,27 @@ describe('Theme Registry Plugin', () => {
 
     // Create server context with mock addHandler
     const addHandlerSpy = jest.fn();
-    const server = { 
+    const server = {
       context: {} as ServerContext,
-      addHandler: addHandlerSpy
+      addHandler: addHandlerSpy,
     };
-    
+
     // Configure server to populate themes in context
     plugin.configureServer?.(server);
-    
+
     // Check the themes in the server context
     expect(server.context.themes).toBeDefined();
-    
+
     // Convert the Map to an array of theme names
     const themeNames = Array.from(server.context.themes.keys());
-    
+
     // Verify that custom-theme is registered
     expect(themeNames).toContain('custom-theme');
-    
+
     // Get the custom theme info
     const customTheme = server.context.themes.get('custom-theme');
     expect(customTheme).toBeDefined();
-    
+
     // Only test properties if customTheme is defined
     if (customTheme) {
       expect(customTheme.name).toBe('custom-theme');

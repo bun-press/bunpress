@@ -190,7 +190,7 @@ describe('Renderer Integration Tests', () => {
   afterEach(() => {
     // Clean up test directories
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
-    
+
     // Reset global theme manager
     global.defaultThemeManager = null;
   });
@@ -198,10 +198,10 @@ describe('Renderer Integration Tests', () => {
   it('should render HTML with theme', async () => {
     // Initialize theme manager for testing - needs to be done before rendering
     const themeManager = initThemeManager(TEST_DIR);
-    
+
     // Wait for themes to be loaded
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Set the theme from config
     themeManager.setThemeFromConfig(testConfig);
 
@@ -236,10 +236,10 @@ describe('Renderer Integration Tests', () => {
   it('should extract and include TOC items', async () => {
     // Initialize theme manager for testing
     const themeManager = initThemeManager(TEST_DIR);
-    
+
     // Wait for themes to be loaded
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Set the theme from config
     themeManager.setThemeFromConfig(testConfig);
 
@@ -275,10 +275,10 @@ describe('Renderer Integration Tests', () => {
   it('should use different layout types based on frontmatter', async () => {
     // Initialize theme manager for testing
     const themeManager = initThemeManager(TEST_DIR);
-    
+
     // Wait for themes to be loaded
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Set the theme from config
     themeManager.setThemeFromConfig(testConfig);
 
@@ -324,10 +324,10 @@ describe('Renderer Integration Tests', () => {
 
     // Initialize theme manager with the test directory
     const themeManager = initThemeManager(TEST_DIR);
-    
+
     // Wait for themes to be loaded
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Set the theme from config
     themeManager.setThemeFromConfig(invalidConfig);
 

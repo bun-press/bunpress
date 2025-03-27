@@ -1,24 +1,10 @@
 import path from 'path';
 import type { BunPressConfig } from '../../bunpress.config';
 import { createPathAliasPlugin } from './path-aliases';
-import { 
-  readFileAsString, 
-  createDirectory,
-  writeFileString
-} from '../lib/fs-utils';
-import { 
-  resolvePath,
-  getRelativePath,
-  joinPaths
-} from '../lib/path-utils';
-import {
-  ErrorCode,
-  tryCatchWithCode,
-  BunPressError
-} from '../lib/error-utils';
-import {
-  getNamespacedLogger
-} from '../lib/logger-utils';
+import { readFileAsString, createDirectory, writeFileString } from '../lib/fs-utils';
+import { resolvePath, getRelativePath, joinPaths } from '../lib/path-utils';
+import { ErrorCode, tryCatchWithCode, BunPressError } from '../lib/error-utils';
+import { getNamespacedLogger } from '../lib/logger-utils';
 
 // Create namespaced logger for bundler
 const logger = getNamespacedLogger('bundler');
@@ -80,7 +66,7 @@ export async function processHtmlWithRewriter(
 
       // Read the HTML file
       const htmlContent = await readFileAsString(htmlPath);
-      
+
       // Store extracted assets
       const assets: AssetReference[] = [];
 
@@ -95,7 +81,7 @@ export async function processHtmlWithRewriter(
             // Store the asset reference - use original path as the path to preserve filename
             assets.push({
               type: 'script',
-              path: src,  // Keep the original src value instead of using relPath
+              path: src, // Keep the original src value instead of using relPath
               originalPath: src,
               attrs: {
                 type: el.getAttribute('type') || '',
@@ -123,7 +109,7 @@ export async function processHtmlWithRewriter(
             // Store the asset reference - use original href as the path
             assets.push({
               type: 'style',
-              path: href,  // Keep the original href value
+              path: href, // Keep the original href value
               originalPath: href,
               attrs: {
                 media: el.getAttribute('media') || '',
@@ -146,7 +132,7 @@ export async function processHtmlWithRewriter(
             // Store the asset reference - use original src as the path
             assets.push({
               type: 'image',
-              path: src,  // Keep the original src value
+              path: src, // Keep the original src value
               originalPath: src,
               attrs: {
                 alt: el.getAttribute('alt') || '',
@@ -169,7 +155,7 @@ export async function processHtmlWithRewriter(
       const transformedHtml = await rewriter.transform(new Response(htmlContent)).text();
 
       logger.debug(`Processed HTML file: ${htmlPath}, extracted ${assets.length} assets`);
-      
+
       return {
         html: transformedHtml,
         assets,
@@ -219,7 +205,7 @@ export async function bundleAssets(
 
       logger.info(`Bundling ${entrypoints.length} entrypoints to ${outputDir}`);
       logger.debug(`Bundle options: ${JSON.stringify(bundleOptions)}`);
-      
+
       // Create path alias plugin for imports from aliases
       const pathAliasPlugin = createPathAliasPlugin();
 
@@ -252,7 +238,7 @@ export async function bundleAssets(
           .filter(log => log.level === 'error')
           .map(log => log.message)
           .join('\n');
-          
+
         logger.error(`Bundling failed: ${errors}`);
         throw new BunPressError(
           ErrorCode.CONTENT_RENDER_ERROR,
@@ -287,47 +273,56 @@ export async function processHTMLEntrypoints(
     async () => {
       // Process each HTML file
       const results = [];
-      
+
       logger.info(`Processing ${htmlFiles.length} HTML entrypoints`);
-      
+
       for (const htmlFile of htmlFiles) {
         // Get relative output path
         const relPath = getRelativePath(process.cwd(), htmlFile);
         const outputPath = joinPaths(outputDir, relPath);
-        
+
         // Create output directory
         await createDirectory(path.dirname(outputPath));
-        
+
         // Process HTML
         const { html, assets } = await processHtmlWithRewriter(htmlFile, {
           injectHMR: process.env.NODE_ENV !== 'production',
           extractAssets: true,
         });
-        
+
         // Write processed HTML
         await writeFileString(outputPath, html);
-        
+
         // Bundle assets
-        const scriptAssets = assets.filter(a => a.type === 'script').map(a => resolvePath(path.dirname(htmlFile), a.path));
-        const styleAssets = assets.filter(a => a.type === 'style').map(a => resolvePath(path.dirname(htmlFile), a.path));
-        
+        const scriptAssets = assets
+          .filter(a => a.type === 'script')
+          .map(a => resolvePath(path.dirname(htmlFile), a.path));
+        const styleAssets = assets
+          .filter(a => a.type === 'style')
+          .map(a => resolvePath(path.dirname(htmlFile), a.path));
+
         // Bundle scripts
         let scriptResult = { success: true, outputs: [] };
         if (scriptAssets.length > 0) {
           const scriptsOutDir = joinPaths(outputDir, 'assets', 'js');
           scriptResult = await bundleAssets(scriptAssets, scriptsOutDir, {}, bundleOptions);
         }
-        
+
         // Bundle styles
         let styleResult = { success: true, outputs: [] };
         if (styleAssets.length > 0) {
           const stylesOutDir = joinPaths(outputDir, 'assets', 'css');
-          styleResult = await bundleAssets(styleAssets, stylesOutDir, {}, {
-            ...bundleOptions,
-            target: 'browser',
-          });
+          styleResult = await bundleAssets(
+            styleAssets,
+            stylesOutDir,
+            {},
+            {
+              ...bundleOptions,
+              target: 'browser',
+            }
+          );
         }
-        
+
         // Store results
         results.push({
           htmlFile,
@@ -335,10 +330,10 @@ export async function processHTMLEntrypoints(
           scriptResult,
           styleResult,
         });
-        
+
         logger.info(`Processed HTML entrypoint: ${relPath}`);
       }
-      
+
       return results;
     },
     ErrorCode.CONTENT_RENDER_ERROR,

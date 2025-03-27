@@ -88,7 +88,7 @@ export async function renderHtml(
     currentPath: frontmatter.path || '/',
     config,
   };
-  
+
   // Safely serialize the layout params with proper escaping
   const layoutParamsSerialized = JSON.stringify(layoutParams)
     .replace(/</g, '\\u003c')

@@ -73,7 +73,7 @@ export function resolvePluginPath(pluginName: string): string | null {
   if (pluginName.startsWith('@bunpress/')) {
     const internalName = pluginName.replace('@bunpress/', '');
     const internalPath = path.join(process.cwd(), 'src', 'plugins', internalName);
-    
+
     // Check internal path synchronously to avoid async complexity
     try {
       if (fs.existsSync(internalPath + '.ts') || fs.existsSync(internalPath + '/index.ts')) {
@@ -83,7 +83,7 @@ export function resolvePluginPath(pluginName: string): string | null {
       // Ignore file system errors
     }
   }
-  
+
   // Handle node_modules plugins
   try {
     // Try to resolve from node_modules
@@ -92,7 +92,7 @@ export function resolvePluginPath(pluginName: string): string | null {
   } catch (error) {
     // Not found in node_modules
   }
-  
+
   // Try local paths
   const localPaths = [
     // Absolute path
@@ -102,18 +102,22 @@ export function resolvePluginPath(pluginName: string): string | null {
     // Relative to plugins directory
     path.join(process.cwd(), 'plugins', pluginName),
   ];
-  
+
   for (const localPath of localPaths) {
     try {
-      if (fs.existsSync(localPath + '.ts') || fs.existsSync(localPath + '.js') || 
-          fs.existsSync(path.join(localPath, 'index.ts')) || fs.existsSync(path.join(localPath, 'index.js'))) {
+      if (
+        fs.existsSync(localPath + '.ts') ||
+        fs.existsSync(localPath + '.js') ||
+        fs.existsSync(path.join(localPath, 'index.ts')) ||
+        fs.existsSync(path.join(localPath, 'index.js'))
+      ) {
         return localPath;
       }
     } catch (error) {
       // Ignore file system errors
     }
   }
-  
+
   console.error(`Plugin not found: ${pluginName}`);
   return null;
 }
@@ -122,14 +126,14 @@ export function resolvePluginPath(pluginName: string): string | null {
  * Execute plugin hook safely
  */
 export async function executePluginHook<T>(
-  plugin: Plugin, 
-  hookName: string, 
+  plugin: Plugin,
+  hookName: string,
   args: any
 ): Promise<T | undefined> {
   if (!plugin[hookName] || typeof plugin[hookName] !== 'function') {
     return undefined;
   }
-  
+
   try {
     const result = await plugin[hookName](args);
     return result as T;
@@ -143,12 +147,12 @@ export async function executePluginHook<T>(
  * Execute multiple plugin hooks in sequence
  */
 export async function executePluginHooks<T>(
-  plugins: Plugin[], 
-  hookName: string, 
+  plugins: Plugin[],
+  hookName: string,
   initialValue: T
 ): Promise<T> {
   let result = initialValue;
-  
+
   for (const plugin of plugins) {
     if (plugin[hookName] && typeof plugin[hookName] === 'function') {
       try {
@@ -161,7 +165,7 @@ export async function executePluginHooks<T>(
       }
     }
   }
-  
+
   return result;
 }
 
@@ -171,15 +175,15 @@ export async function executePluginHooks<T>(
 export function sortPluginsByDependencies(plugins: Plugin[]): Plugin[] {
   const sorted: Plugin[] = [];
   const visited = new Set<string>();
-  
+
   // Helper function for topological sort
   function visit(plugin: Plugin) {
     if (visited.has(plugin.name)) {
       return;
     }
-    
+
     visited.add(plugin.name);
-    
+
     // Process dependencies if defined
     const dependencies = plugin.options?.dependencies || [];
     if (Array.isArray(dependencies)) {
@@ -190,14 +194,14 @@ export function sortPluginsByDependencies(plugins: Plugin[]): Plugin[] {
         }
       }
     }
-    
+
     sorted.push(plugin);
   }
-  
+
   // Sort all plugins
   for (const plugin of plugins) {
     visit(plugin);
   }
-  
+
   return sorted;
-} 
+}

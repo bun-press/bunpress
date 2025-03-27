@@ -62,7 +62,7 @@ export interface ThemeValidationOptions {
 
 /**
  * Validate a theme directory and extract theme structure
- * 
+ *
  * @param themeName Name of the theme
  * @param themePath Path to the theme directory
  * @param options Validation options
@@ -79,7 +79,11 @@ export async function validateTheme(
     requireStyleFile: options.requireStyleFile !== false,
     requireLayouts: options.requireLayouts === true, // Default to false
     alternativeStyleFiles: options.alternativeStyleFiles || ['style.css', 'theme.css'],
-    alternativeLayoutFiles: options.alternativeLayoutFiles || ['Layout.tsx', 'Layout.jsx', 'index.jsx']
+    alternativeLayoutFiles: options.alternativeLayoutFiles || [
+      'Layout.tsx',
+      'Layout.jsx',
+      'index.jsx',
+    ],
   };
 
   logger.debug(`Processing theme: ${themeName} at path ${themePath}`);
@@ -87,7 +91,7 @@ export async function validateTheme(
   // Look for main component file
   const indexFile = joinPaths(themePath, 'index.tsx');
   let layoutComponent = '';
-  
+
   if (await fileExists(indexFile)) {
     layoutComponent = indexFile;
     logger.debug(`Found layout component: ${layoutComponent}`);
@@ -112,7 +116,7 @@ export async function validateTheme(
   const styleFile = joinPaths(themePath, 'styles.css');
   const styleExists = await fileExists(styleFile);
   logger.debug(`Looking for style file: ${styleFile}, exists: ${styleExists}`);
-  
+
   let finalStyleFile = styleFile;
   if (!styleExists) {
     // Try alternative style file names
@@ -128,7 +132,7 @@ export async function validateTheme(
     logger.debug(`Found style file: ${styleFile}`);
   }
 
-  if (!await fileExists(finalStyleFile) && opts.requireStyleFile) {
+  if (!(await fileExists(finalStyleFile)) && opts.requireStyleFile) {
     logger.warn(`Theme "${themeName}" missing style file, skipping`);
     return null;
   }
@@ -136,14 +140,17 @@ export async function validateTheme(
   // Find layout components
   const layouts: Record<string, string> = {};
   const layoutsDir = joinPaths(themePath, 'layouts');
-  
+
   if (await directoryExists(layoutsDir)) {
     const layoutFiles = await readdir(layoutsDir);
     logger.debug(`Found layout files: ${layoutFiles.join(', ')}`);
-    
+
     for (const file of layoutFiles) {
       if (file.endsWith('.tsx') || file.endsWith('.jsx')) {
-        const layoutType = file.replace(/\.(tsx|jsx)$/, '').replace(/Layout$/, '').toLowerCase();
+        const layoutType = file
+          .replace(/\.(tsx|jsx)$/, '')
+          .replace(/Layout$/, '')
+          .toLowerCase();
         layouts[layoutType] = joinPaths(layoutsDir, file);
         logger.debug(`Registered layout: ${layoutType} => ${layouts[layoutType]}`);
       }
@@ -162,7 +169,7 @@ export async function validateTheme(
     layoutComponent: layoutComponent || '',
     styleFile: finalStyleFile,
     layouts,
-    isValid: true
+    isValid: true,
   };
 
   logger.debug(`Added theme "${themeName}" to registry`);
@@ -171,7 +178,7 @@ export async function validateTheme(
 
 /**
  * Find and validate themes in a directory
- * 
+ *
  * @param themesDir Path to the directory containing themes
  * @param options Validation options
  * @returns Promise resolving to Map of theme name to theme structure
@@ -182,7 +189,7 @@ export async function findThemes(
 ): Promise<Map<string, ThemeStructure>> {
   const themes = new Map<string, ThemeStructure>();
   logger.debug(`Checking themes directory: ${themesDir}`);
-    
+
   const exists = await directoryExists(themesDir);
   if (!exists) {
     logger.warn(`Themes directory not found at ${themesDir}`);
@@ -195,18 +202,18 @@ export async function findThemes(
     const themeDirectories = directories
       .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
       .map(dirent => dirent.name);
-    
+
     logger.debug(`Found theme directories: ${themeDirectories.join(', ')}`);
-    
+
     for (const themeName of themeDirectories) {
       const themePath = joinPaths(themesDir, themeName);
       const theme = await validateTheme(themeName, themePath, options);
-      
+
       if (theme) {
         themes.set(themeName, theme);
       }
     }
-    
+
     logger.info(`Loaded ${themes.size} themes: ${[...themes.keys()].join(', ')}`);
   } catch (error) {
     logger.error(`Error loading themes: ${error instanceof Error ? error.message : String(error)}`);
@@ -217,7 +224,7 @@ export async function findThemes(
 
 /**
  * Get CSS variables from a theme
- * 
+ *
  * @param theme Theme structure
  * @returns Record of CSS variable names to values
  */
@@ -229,4 +236,4 @@ export function extractThemeVariables(theme: ThemeStructure | null): Record<stri
   // For now, return empty object - this will be implemented to extract CSS variables from the theme's style file
   // Actual implementation would involve parsing CSS and extracting :root { --variable: value } declarations
   return {};
-} 
+}

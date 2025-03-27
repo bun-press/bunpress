@@ -11,7 +11,7 @@ describe('Fullstack Server', () => {
   const publicDir = path.join(tmpDir, 'public');
   const contentDir = path.join(tmpDir, 'content');
   const apiDir = path.join(tmpDir, 'api');
-  
+
   // Mock dependencies
   const mockPluginManager = {
     executeTransform: async (content: string) => content,
@@ -22,28 +22,31 @@ describe('Fullstack Server', () => {
 
   // Store original Bun.serve for restoration
   const originalServe = Bun.serve;
-  
+
   beforeAll(async () => {
     // Create directories
     await fs.mkdir(tmpDir, { recursive: true });
     await fs.mkdir(publicDir, { recursive: true });
     await fs.mkdir(contentDir, { recursive: true });
     await fs.mkdir(apiDir, { recursive: true });
-    
+
     // Create sample files
     await fs.writeFile(path.join(publicDir, 'index.html'), '<html><body>Test</body></html>');
     await fs.writeFile(path.join(contentDir, 'test.md'), '# Test');
-    await fs.writeFile(path.join(apiDir, 'route.js'), 'export default (req) => new Response("API");');
+    await fs.writeFile(
+      path.join(apiDir, 'route.js'),
+      'export default (req) => new Response("API");'
+    );
   });
-  
+
   afterAll(async () => {
     // Cleanup
     await fs.rm(tmpDir, { recursive: true, force: true });
-    
+
     // Restore original Bun.serve
     (global.Bun as any).serve = originalServe;
   });
-  
+
   it('server should start with the correct options', async () => {
     // Mock Bun.serve to return a simple server object
     const mockServerPort = 3001;
@@ -53,9 +56,9 @@ describe('Fullstack Server', () => {
         stop: () => {},
       } as any;
     });
-    
+
     const events = new EventEmitter();
-    
+
     const server = createFullstackServer({
       config: {
         contentDir,
@@ -65,12 +68,12 @@ describe('Fullstack Server', () => {
       pluginManager: mockPluginManager,
       events,
     });
-    
+
     const info = await server.start();
     expect(info.port).toBe(mockServerPort);
     expect(Bun.serve).toHaveBeenCalled();
   });
-  
+
   it('server should serve HTML files', async () => {
     // Set up a real server with a port
     const mockFetch = mock((req: Request) => {
@@ -82,7 +85,7 @@ describe('Fullstack Server', () => {
       }
       return new Response('Not Found', { status: 404 });
     });
-    
+
     // Mock Bun.serve to use our fetch handler
     global.Bun.serve = mock(() => {
       return {
@@ -91,9 +94,9 @@ describe('Fullstack Server', () => {
         stop: () => {},
       } as any;
     });
-    
+
     const events = new EventEmitter();
-    
+
     const server = createFullstackServer({
       config: {
         contentDir,
@@ -103,30 +106,30 @@ describe('Fullstack Server', () => {
       pluginManager: mockPluginManager,
       events,
     });
-    
+
     // Start the server
     await server.start();
-    
+
     // Since we can't directly fetch through the server interface,
     // we'll verify that our mock was called with the expected URL pattern
     // Create a request that would be handled by our server
     const testUrl = 'http://localhost:3002/index.html';
-    
+
     // Call the mock fetch function directly with a constructed request
     const response = await mockFetch(new Request(testUrl));
-    
+
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/html');
     const text = await response.text();
     expect(text).toContain('<body>Test</body>');
   });
-  
+
   it('server should return 404 for non-existent paths', async () => {
     // Set up a real server with a port
     const mockFetch = mock((_req: Request) => {
       return new Response('Not Found', { status: 404 });
     });
-    
+
     // Mock Bun.serve to use our fetch handler
     global.Bun.serve = mock(() => {
       return {
@@ -135,9 +138,9 @@ describe('Fullstack Server', () => {
         stop: () => {},
       } as any;
     });
-    
+
     const events = new EventEmitter();
-    
+
     const server = createFullstackServer({
       config: {
         contentDir,
@@ -147,16 +150,16 @@ describe('Fullstack Server', () => {
       pluginManager: mockPluginManager,
       events,
     });
-    
+
     // Start the server
     await server.start();
-    
+
     // Call the mock fetch function directly with a constructed request
     const response = await mockFetch(new Request('http://localhost:3003/non-existent'));
-    
+
     expect(response.status).toBe(404);
   });
-  
+
   it('server should handle custom routes', async () => {
     // Set up a mock fetch handler
     const mockFetch = mock((req: Request) => {
@@ -164,14 +167,14 @@ describe('Fullstack Server', () => {
       if (url.pathname.startsWith('/api/user/')) {
         const match = url.pathname.match(/\/api\/user\/(\w+)/);
         const id = match ? match[1] : null;
-        
+
         return new Response(JSON.stringify({ id }), {
           headers: { 'Content-Type': 'application/json' },
         });
       }
       return new Response('Not Found', { status: 404 });
     });
-    
+
     // Mock Bun.serve to use our fetch handler
     global.Bun.serve = mock(() => {
       return {
@@ -180,9 +183,9 @@ describe('Fullstack Server', () => {
         stop: () => {},
       } as any;
     });
-    
+
     const events = new EventEmitter();
-    
+
     const server = createFullstackServer({
       config: {
         contentDir,
@@ -192,30 +195,30 @@ describe('Fullstack Server', () => {
       pluginManager: mockPluginManager,
       events,
     });
-    
+
     // Add a custom route
-    server.addRoute('/api/user/:id', async (req) => {
+    server.addRoute('/api/user/:id', async req => {
       const url = new URL(req.url);
       const match = url.pathname.match(/\/api\/user\/(\w+)/);
       const id = match ? match[1] : null;
-      
+
       return new Response(JSON.stringify({ id }), {
         headers: { 'Content-Type': 'application/json' },
       });
     });
-    
+
     // Start the server
     await server.start();
-    
+
     // Call the mock fetch function directly with a constructed request
     const response = await mockFetch(new Request('http://localhost:3004/api/user/123'));
-    
+
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('application/json');
     const data = await response.json();
     expect(data).toEqual({ id: '123' });
   });
-  
+
   it('server should handle middleware', async () => {
     // Set up a mock fetch handler that simulates middleware behavior
     const mockFetch = mock((req: Request) => {
@@ -224,7 +227,7 @@ describe('Fullstack Server', () => {
       }
       return new Response('Regular Response');
     });
-    
+
     // Mock Bun.serve to use our fetch handler
     global.Bun.serve = mock(() => {
       return {
@@ -233,9 +236,9 @@ describe('Fullstack Server', () => {
         stop: () => {},
       } as any;
     });
-    
+
     const events = new EventEmitter();
-    
+
     const server = createFullstackServer({
       config: {
         contentDir,
@@ -245,7 +248,7 @@ describe('Fullstack Server', () => {
       pluginManager: mockPluginManager,
       events,
     });
-    
+
     // Add middleware
     server.addMiddleware(async (req, next) => {
       if (req.headers.get('x-test-header') === 'middleware-test') {
@@ -253,15 +256,15 @@ describe('Fullstack Server', () => {
       }
       return await next();
     });
-    
+
     // Start the server
     await server.start();
-    
+
     // Call the mock fetch function directly with a constructed request
     const request = new Request('http://localhost:3005/any-path');
     request.headers.set('x-test-header', 'middleware-test');
     const response = await mockFetch(request);
-    
+
     expect(response.status).toBe(200);
     const text = await response.text();
     expect(text).toBe('Middleware Response');

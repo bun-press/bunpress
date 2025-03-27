@@ -39,7 +39,7 @@ export interface HmrContextOptions {
    * WebSocket server port
    */
   port?: number;
-  
+
   /**
    * WebSocket server hostname
    */
@@ -97,17 +97,17 @@ export interface HmrUpdate {
    * Type of update
    */
   type: 'update' | 'reload' | 'css-update' | 'js-update' | 'error';
-  
+
   /**
    * Path to the file that changed
    */
   path?: string;
-  
+
   /**
    * Timestamp of the update
    */
   timestamp?: number;
-  
+
   /**
    * Additional data to send
    */
@@ -119,7 +119,7 @@ export interface HmrUpdate {
  */
 export function createHmrContext(options?: HmrContextOptions): HmrContext {
   if (!options) options = {};
-  
+
   const port = options.port || 3030;
   const hostname = options.hostname || 'localhost';
   const events = new EventEmitter();
@@ -136,15 +136,16 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
     message(ws: ServerWebSocket<unknown>, message: string | Uint8Array) {
       try {
         // Parse message if it's a string
-        const data = typeof message === 'string' || message instanceof Uint8Array 
-          ? JSON.parse(message.toString()) 
-          : message;
-        
+        const data =
+          typeof message === 'string' || message instanceof Uint8Array
+            ? JSON.parse(message.toString())
+            : message;
+
         // Handle HMR messages
         if (data.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong' }));
         }
-        
+
         // Emit message event
         events.emit('message', ws, data);
       } catch (error) {
@@ -154,7 +155,7 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
     close(ws: ServerWebSocket<unknown>) {
       clients.delete(ws);
       events.emit('disconnect', ws);
-    }
+    },
   };
 
   // Try to create WebSocket server with automatic fallback
@@ -165,13 +166,13 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
       fetch(req, server) {
         const success = server.upgrade(req);
         if (!success) {
-          return new Response("WebSocket upgrade failed", { status: 400 });
+          return new Response('WebSocket upgrade failed', { status: 400 });
         }
         return new Response();
       },
-      websocket: wsHandlers
+      websocket: wsHandlers,
     });
-    
+
     actualPort = server.port;
     console.log(`HMR server started on ws://${hostname}:${actualPort}`);
   } catch (error) {
@@ -181,18 +182,18 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
       try {
         // Try with port 0 to get a random available port
         server = Bun.serve({
-          port: 0,  // This will use a random available port
+          port: 0, // This will use a random available port
           hostname,
           fetch(req, server) {
             const success = server.upgrade(req);
             if (!success) {
-              return new Response("WebSocket upgrade failed", { status: 400 });
+              return new Response('WebSocket upgrade failed', { status: 400 });
             }
             return new Response();
           },
-          websocket: wsHandlers
+          websocket: wsHandlers,
         });
-        
+
         actualPort = server.port;
         console.log(`HMR server started on ws://${hostname}:${actualPort}`);
       } catch (err) {
@@ -216,7 +217,7 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
     websocket: {
       ...wsHandlers,
       port: actualPort,
-      hostname
+      hostname,
     },
     moduleDependencies: new Map(),
     moduleLastUpdate: new Map(),
@@ -226,7 +227,7 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
         server = null;
       }
       clients.clear();
-    }
+    },
   };
 
   return context;
@@ -235,10 +236,7 @@ export function createHmrContext(options?: HmrContextOptions): HmrContext {
 /**
  * Create the HMR client script to be injected into HTML pages
  */
-export function createHmrClientScript(options?: {
-  port?: number;
-  hostname?: string;
-}): string {
+export function createHmrClientScript(options?: { port?: number; hostname?: string }): string {
   const port = options?.port || 3030;
   const hostname = options?.hostname || 'localhost';
   const wsUrl = `ws://${hostname}:${port}`;
@@ -397,11 +395,7 @@ export function setupFileWatcher(
 ): { close: () => void } {
   // Default options
   const watchOptions: WatchOptions = {
-    ignored: [
-      '**/node_modules/**',
-      '**/.git/**',
-      '**/dist/assets/**/*.map',
-    ],
+    ignored: ['**/node_modules/**', '**/.git/**', '**/dist/assets/**/*.map'],
     debounce: 100,
     extensions: ['.html', '.css', '.js', '.jsx', '.ts', '.tsx', '.md', '.mdx'],
     ...options,
@@ -517,7 +511,7 @@ export function broadcastHmrUpdate(context: HmrContext, update: HmrUpdate): void
     console.warn('HMR context not initialized');
     return;
   }
-  
+
   // Broadcast update to all connected clients
   const message = JSON.stringify(update);
   for (const client of context.clients) {
@@ -535,7 +529,7 @@ export function broadcastHmrUpdate(context: HmrContext, update: HmrUpdate): void
 export function requestPageReload(context: HmrContext): void {
   broadcastHmrUpdate(context, {
     type: 'reload',
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 }
 
@@ -546,6 +540,6 @@ export function broadcastHmrError(context: HmrContext, errorMessage: string): vo
   broadcastHmrUpdate(context, {
     type: 'error',
     data: { message: errorMessage },
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-} 
+}

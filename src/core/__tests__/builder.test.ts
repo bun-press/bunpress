@@ -179,7 +179,7 @@ This page is about the test site.
     // Update the test config to point to our test public directory
     const testConfigWithPublic = {
       ...testConfig,
-      publicDir: publicDir
+      publicDir: publicDir,
     };
 
     try {

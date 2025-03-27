@@ -3,16 +3,19 @@
  * Provides centralized utilities for file system operations
  */
 
-import { mkdir, readdir, writeFile, copyFile as fsCopyFile, existsSync, rmdir, 
-unlink, statSync } from 'fs';
+import {
+  mkdir,
+  readdir,
+  writeFile,
+  copyFile as fsCopyFile,
+  existsSync,
+  rmdir,
+  unlink,
+  statSync,
+} from 'fs';
 import { stat } from 'fs/promises';
 import { resolve, join, dirname, extname, relative, sep } from 'path';
-import { 
-  ErrorCode, 
-  createFileSystemError,
-  tryCatch,
-  tryCatchWithCode
-} from './error-utils';
+import { ErrorCode, createFileSystemError, tryCatch, tryCatchWithCode } from './error-utils';
 import { minimatch } from './server-utils';
 
 /**
@@ -49,7 +52,7 @@ export async function createDirectory(dirPath: string): Promise<boolean> {
     async () => {
       if (!existsSync(dirPath)) {
         await new Promise<void>((resolve, reject) => {
-          mkdir(dirPath, { recursive: true }, (err) => {
+          mkdir(dirPath, { recursive: true }, err => {
             if (err) reject(err);
             else resolve();
           });
@@ -57,7 +60,7 @@ export async function createDirectory(dirPath: string): Promise<boolean> {
       }
       return true;
     },
-    (error) => {
+    error => {
       throw createFileSystemError(
         ErrorCode.PERMISSION_DENIED,
         `Failed to create directory ${dirPath}`,
@@ -80,9 +83,9 @@ export async function getAllFiles(dir: string): Promise<string[]> {
           else resolve(files);
         });
       });
-      
+
       const files = await Promise.all(
-        dirents.map(async (dirent) => {
+        dirents.map(async dirent => {
           const res = resolve(dir, dirent);
           const stats = await stat(res);
           return stats.isDirectory() ? await getAllFiles(res) : res;
@@ -90,7 +93,7 @@ export async function getAllFiles(dir: string): Promise<string[]> {
       );
       return files.flat();
     },
-    (error) => {
+    error => {
       throw createFileSystemError(
         ErrorCode.DIRECTORY_NOT_FOUND,
         `Failed to get files from directory ${dir}`,
@@ -129,14 +132,14 @@ export async function writeFileString(filePath: string, content: string): Promis
     async () => {
       const dir = dirname(filePath);
       await createDirectory(dir);
-      
+
       await new Promise<void>((resolve, reject) => {
-        writeFile(filePath, content, (err) => {
+        writeFile(filePath, content, err => {
           if (err) reject(err);
           else resolve();
         });
       });
-      
+
       return true;
     },
     ErrorCode.FILE_WRITE_ERROR,
@@ -153,14 +156,14 @@ export async function copyFile(source: string, destination: string): Promise<boo
     async () => {
       const dir = dirname(destination);
       await createDirectory(dir);
-      
+
       await new Promise<void>((resolve, reject) => {
-        fsCopyFile(source, destination, (err) => {
+        fsCopyFile(source, destination, err => {
           if (err) reject(err);
           else resolve();
         });
       });
-      
+
       return true;
     },
     ErrorCode.FILE_COPY_ERROR,
@@ -176,18 +179,18 @@ export async function copyDirectory(source: string, destination: string): Promis
   return await tryCatch(
     async () => {
       await createDirectory(destination);
-      
+
       const files = await getAllFiles(source);
-      
+
       for (const file of files) {
         const relativePath = file.slice(source.length);
         const destPath = join(destination, relativePath);
         await copyFile(file, destPath);
       }
-      
+
       return true;
     },
-    (error) => {
+    error => {
       throw createFileSystemError(
         ErrorCode.PERMISSION_DENIED,
         `Failed to copy directory from ${source} to ${destination}`,
@@ -206,7 +209,7 @@ export async function deleteFile(filePath: string): Promise<boolean> {
     async () => {
       if (existsSync(filePath)) {
         await new Promise<void>((resolve, reject) => {
-          unlink(filePath, (err) => {
+          unlink(filePath, err => {
             if (err) reject(err);
             else resolve();
           });
@@ -228,7 +231,7 @@ export async function deleteDirectory(dirPath: string): Promise<boolean> {
     async () => {
       if (existsSync(dirPath)) {
         await new Promise<void>((resolve, reject) => {
-          rmdir(dirPath, { recursive: true }, (err) => {
+          rmdir(dirPath, { recursive: true }, err => {
             if (err) reject(err);
             else resolve();
           });
@@ -276,35 +279,38 @@ export function getNormalizedRelativePath(filePath: string, basePath: string): s
 /**
  * Extract frontmatter from Markdown content
  */
-export function extractFrontmatter(content: string): { frontmatter: Record<string, any>; content: string } {
+export function extractFrontmatter(content: string): {
+  frontmatter: Record<string, any>;
+  content: string;
+} {
   // Default result
   const result = {
     frontmatter: {},
     content,
   };
-  
+
   // Check for frontmatter
   const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
   const match = content.match(frontmatterRegex);
-  
+
   if (!match) {
     return result;
   }
-  
+
   try {
     // Extract frontmatter content
     const frontmatterContent = match[1];
-    
+
     // Parse frontmatter (simple key-value pairs)
     const frontmatter: Record<string, any> = {};
     const lines = frontmatterContent.split('\n');
-    
+
     lines.forEach(line => {
       const colonIndex = line.indexOf(':');
       if (colonIndex !== -1) {
         const key = line.slice(0, colonIndex).trim();
         const value = line.slice(colonIndex + 1).trim();
-        
+
         // Remove quotes if present
         if (value.startsWith('"') && value.endsWith('"')) {
           frontmatter[key] = value.slice(1, -1);
@@ -321,10 +327,10 @@ export function extractFrontmatter(content: string): { frontmatter: Record<strin
         }
       }
     });
-    
+
     // Remove frontmatter from content
     const cleanContent = content.replace(frontmatterRegex, '');
-    
+
     return {
       frontmatter,
       content: cleanContent,
@@ -354,4 +360,4 @@ export function filterFilesByExtension(files: string[], extensions: string[]): s
  */
 export function isFileIgnored(filePath: string, ignoredPatterns: string[]): boolean {
   return ignoredPatterns.some(pattern => minimatch(filePath, pattern));
-} 
+}

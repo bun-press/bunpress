@@ -39,21 +39,21 @@ interface ThemeStructure {
  */
 function convertThemeStructure(utilsTheme: UtilsThemeStructure): ThemeStructure {
   const layouts: ThemeStructure['layouts'] = {};
-  
+
   // Convert layouts object to expected format
   if (utilsTheme.layouts) {
     Object.entries(utilsTheme.layouts).forEach(([type, path]) => {
       layouts[type] = path;
     });
   }
-  
+
   return {
     name: utilsTheme.name,
     path: utilsTheme.path,
     layouts,
     component: utilsTheme.layoutComponent,
     styles: utilsTheme.styleFile,
-    valid: utilsTheme.isValid !== false
+    valid: utilsTheme.isValid !== false,
   };
 }
 
@@ -81,24 +81,26 @@ export function themeRegistryPlugin(options: ThemeRegistryPluginOptions = {}): P
       const themeMap = await findThemes(themesFolderPath, {
         requireLayoutComponent: validateThemes,
         requireStyleFile: validateThemes,
-        requireLayouts: validateThemes
+        requireLayouts: validateThemes,
       });
-      
+
       // Convert and store themes
       themeMap.forEach((themeStructure, themeName) => {
         const convertedTheme = convertThemeStructure(themeStructure);
         themes.set(themeName, convertedTheme);
-        
+
         if (convertedTheme.valid) {
           logger.info(`✅ Registered theme: ${themeName}`);
         } else {
           logger.warn(`⚠️ Theme "${themeName}" was registered but may be missing required files`);
         }
       });
-      
+
       logger.info(`✅ Registered ${themes.size} themes: ${Array.from(themes.keys()).join(', ')}`);
     } catch (error) {
-      logger.error(`Error registering themes: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(
+        `Error registering themes: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

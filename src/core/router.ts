@@ -1,10 +1,6 @@
 import { ContentProcessor, ContentFile, processMarkdownContent } from './content-processor';
 import { DefaultPluginManager, Plugin } from './plugin';
-import { 
-  getAllFiles, 
-  directoryExists,
-  filterFilesByExtension
-} from '../lib/fs-utils';
+import { getAllFiles, directoryExists, filterFilesByExtension } from '../lib/fs-utils';
 import { getNamespacedLogger } from '../lib/logger-utils';
 import { tryCatch } from '../lib/error-utils';
 
@@ -46,13 +42,13 @@ export async function generateRoutes(pagesDir: string): Promise<Routes> {
                 logger.warn(`Content file at ${filePath} has no route defined`);
               }
             },
-            (err) => {
+            err => {
               logger.warn(`Error processing file ${filePath}: ${err}`);
             }
           );
         }
       },
-      (err) => {
+      err => {
         logger.warn(`Could not read directory ${directory}: ${err}`);
       }
     );
@@ -101,7 +97,7 @@ export async function generateRoutesAsync(
               const contentFile = await processor.processMarkdownContent(filePath, pagesDir);
               if (contentFile.route) {
                 routes[contentFile.route] = contentFile;
-                
+
                 // Register the content file with i18n plugin if available
                 if (i18nPlugin && typeof (i18nPlugin as any).registerContentFile === 'function') {
                   (i18nPlugin as any).registerContentFile(contentFile);
@@ -110,13 +106,13 @@ export async function generateRoutesAsync(
                 logger.warn(`Content file at ${filePath} has no route defined`);
               }
             },
-            (err) => {
+            err => {
               logger.warn(`Error processing file ${filePath}: ${err}`);
             }
           );
         }
       },
-      (err) => {
+      err => {
         logger.warn(`Could not read directory ${directory}: ${err}`);
       }
     );

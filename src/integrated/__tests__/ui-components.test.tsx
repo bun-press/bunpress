@@ -1,14 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 
 import { renderToString } from 'react-dom/server';
-import {
-  TOC,
-  Sidebar,
-  Navigation,
-  Footer,
-  ThemeSelector,
-  LanguageSelector,
-} from '..';
+import { TOC, Sidebar, Navigation, Footer, ThemeSelector, LanguageSelector } from '..';
 
 describe('Integrated UI Components', () => {
   test('TOC component renders correctly', () => {

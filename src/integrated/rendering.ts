@@ -13,7 +13,7 @@ import { createSlotSystem } from '../core/slot-system';
 import {
   markdownToHtml,
   ContentFile as BaseContentFile,
-  processMarkdownString
+  processMarkdownString,
 } from '../lib/content-utils';
 
 // Extend the content file interface
@@ -157,7 +157,7 @@ export function createLayoutManager({
      */
     getLayoutForContent(content: ContentFile): string {
       const defaultLayout = 'default';
-      
+
       if (!content.frontmatter) {
         return defaultLayout;
       }
@@ -219,7 +219,7 @@ export function createLayoutManager({
       try {
         const pageTitle = frontmatter?.title || 'Untitled';
         const navItems = frontmatter?.navigation || [];
-        
+
         // Basic template as fallback
         return `
 <!DOCTYPE html>
@@ -333,12 +333,12 @@ export const slotSystem = createSlotSystem;
 export const i18n = () => {
   const translations: Record<string, Record<string, string>> = {};
   let currentLocale = 'en';
-  
+
   return {
     t: (key: string) => {
       const translation = translations[currentLocale]?.[key];
       if (!translation) return key;
-      
+
       return translation;
     },
 
@@ -360,28 +360,31 @@ export const renderContent = async () => {
     render: (markdown: string, options?: { highlightCode?: boolean }) => {
       // Simple markdown-like rendering
       let html = markdown;
-      
+
       // Process code blocks first (before paragraph processing)
       if (options?.highlightCode) {
-        html = html.replace(/```(\w+)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
+        html = html.replace(
+          /```(\w+)\n([\s\S]*?)```/g,
+          '<pre><code class="language-$1">$2</code></pre>'
+        );
       } else {
         html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
       }
-      
+
       // Process headings
       html = html.replace(/^# (.*?)$/gm, '<h1 id="$1">$1</h1>');
       html = html.replace(/^## (.*?)$/gm, '<h2 id="$1">$1</h2>');
       html = html.replace(/^### (.*?)$/gm, '<h3 id="$1">$1</h3>');
-      
+
       // Process paragraphs - but not inside code blocks
       html = html.replace(/^(?!<h[1-6]|<pre|<ul|<ol|<p)(.+)$/gm, '<p>$1</p>');
-      
+
       // Process emphasis and links
       html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
       html = html.replace(/`(.*?)`/g, '<code>$1</code>');
       html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
-      
+
       return html;
     },
 
@@ -401,7 +404,7 @@ export const renderContent = async () => {
         const [key, ...valueParts] = line.split(':');
         if (key && valueParts.length) {
           const valueStr = valueParts.join(':').trim();
-          
+
           // Basic type conversions
           if (valueStr === 'true') {
             frontmatter[key.trim()] = true;
@@ -421,18 +424,18 @@ export const renderContent = async () => {
     extractTOC: (html: string) => {
       const headings: { id: string; text: string; level: number }[] = [];
       const headingRegex = /<h(\d+) id="([^"]+)">([^<]+)<\/h\1>/g;
-      
+
       let match;
       while ((match = headingRegex.exec(html)) !== null) {
         const [, level, id, text] = match;
         headings.push({
           id,
           text,
-          level: Number(level)
+          level: Number(level),
         });
       }
 
       return headings;
-    }
+    },
   };
 };

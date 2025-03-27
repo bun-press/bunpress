@@ -5,7 +5,11 @@
 
 import { join } from 'path';
 import { createConfig, ConfigSchema, loadEnvFile } from './config-utils';
-import { NavigationItem as BaseNavigationItem, SidebarItem as BaseSidebarItem, SidebarSubItem } from './ui-utils';
+import {
+  NavigationItem as BaseNavigationItem,
+  SidebarItem as BaseSidebarItem,
+  SidebarSubItem,
+} from './ui-utils';
 
 /**
  * BunPress development server configuration
@@ -15,27 +19,27 @@ export interface DevServerConfig {
    * Port to run the development server on
    */
   port: number;
-  
+
   /**
    * Hostname to bind to
    */
   hostname: string;
-  
+
   /**
    * HMR port
    */
   hmrPort: number;
-  
+
   /**
    * HMR hostname
    */
   hmrHostname: string;
-  
+
   /**
    * Whether to open the browser automatically
    */
   open: boolean;
-  
+
   /**
    * Whether to enable HMR
    */
@@ -50,37 +54,37 @@ export interface BundleConfig {
    * Whether to minify assets
    */
   minify: boolean;
-  
+
   /**
    * Whether to generate source maps
    */
   sourcemap: boolean;
-  
+
   /**
    * Whether to enable code splitting
    */
   splitting: boolean;
-  
+
   /**
    * Whether to hash asset filenames
    */
   assetHashing: boolean;
-  
+
   /**
    * Public path for assets
    */
   publicPath: string;
-  
+
   /**
    * Bundle target
    */
   target: 'browser' | 'bun' | 'node';
-  
+
   /**
    * Bundle format
    */
   format: 'esm' | 'cjs' | 'iife';
-  
+
   /**
    * Whether to enable CSS chunking
    */
@@ -95,7 +99,7 @@ export interface ThemeConfig {
    * Name of the theme
    */
   name: string;
-  
+
   /**
    * Theme options
    */
@@ -110,32 +114,32 @@ export interface DocumentationConfig {
    * Whether to show the edit link
    */
   showEditLink: boolean;
-  
+
   /**
    * Whether to show the last updated timestamp
    */
   showLastUpdated: boolean;
-  
+
   /**
    * Whether to show navigation
    */
   showNavigation: boolean;
-  
+
   /**
    * Whether to show the table of contents
    */
   showTOC: boolean;
-  
+
   /**
    * Whether to show the sidebar
    */
   showSidebar: boolean;
-  
+
   /**
    * Table of contents heading levels to include
    */
   tocLevels: [number, number];
-  
+
   /**
    * Base URL for edit links
    */
@@ -150,22 +154,22 @@ export interface NavigationItem extends BaseNavigationItem {
    * Item text label
    */
   label: string;
-  
+
   /**
    * Item URL
    */
   url: string;
-  
+
   /**
    * Whether the item is active
    */
   active?: boolean;
-  
+
   /**
    * Whether the link is external
    */
   external?: boolean;
-  
+
   /**
    * Child items
    */
@@ -180,22 +184,22 @@ export interface SidebarItem extends BaseSidebarItem {
    * Item URL (using url property from ui-utils)
    */
   url: string;
-  
+
   /**
    * Whether the section is collapsed
    */
   collapsed?: boolean;
-  
+
   /**
    * Whether the item is active
    */
   active?: boolean;
-  
+
   /**
    * Whether the link is external
    */
   external?: boolean;
-  
+
   /**
    * Child items
    */
@@ -210,7 +214,7 @@ export interface PluginConfig {
    * Plugin name
    */
   name: string;
-  
+
   /**
    * Plugin options
    */
@@ -225,72 +229,72 @@ export interface BunPressConfig {
    * Site title
    */
   title: string;
-  
+
   /**
    * Site description
    */
   description: string;
-  
+
   /**
    * Site URL
    */
   siteUrl: string;
-  
+
   /**
    * Pages directory
    */
   pagesDir: string;
-  
+
   /**
    * Content directory
    */
   contentDir?: string;
-  
+
   /**
    * Output directory
    */
   outputDir: string;
-  
+
   /**
    * Public directory
    */
   publicDir?: string;
-  
+
   /**
    * Components directory
    */
   componentsDir?: string;
-  
+
   /**
    * Theme configuration
    */
   themeConfig: ThemeConfig;
-  
+
   /**
    * Plugins
    */
   plugins: PluginConfig[];
-  
+
   /**
    * Development server configuration
    */
   devServer?: Partial<DevServerConfig>;
-  
+
   /**
    * Bundle configuration
    */
   bundle?: Partial<BundleConfig>;
-  
+
   /**
    * Navigation
    */
   navigation?: NavigationItem[];
-  
+
   /**
    * Sidebar
    */
   sidebar?: SidebarItem[];
-  
+
   /**
    * Documentation configuration
    */
@@ -310,7 +314,7 @@ const DEFAULT_CONFIG: BunPressConfig = {
   publicDir: 'public',
   componentsDir: 'components',
   themeConfig: {
-    name: 'default'
+    name: 'default',
   },
   plugins: [],
   devServer: {
@@ -319,7 +323,7 @@ const DEFAULT_CONFIG: BunPressConfig = {
     hmrPort: 3001,
     hmrHostname: 'localhost',
     open: false,
-    hmr: true
+    hmr: true,
   },
   bundle: {
     minify: process.env.NODE_ENV === 'production',
@@ -329,32 +333,32 @@ const DEFAULT_CONFIG: BunPressConfig = {
     publicPath: '/',
     target: 'browser',
     format: 'esm',
-    cssChunking: true
+    cssChunking: true,
   },
   navigation: [
     { label: 'Home', url: '/' },
-    { label: 'Documentation', url: '/docs/' }
+    { label: 'Documentation', url: '/docs/' },
   ],
   sidebar: [
     {
       title: 'Introduction',
       url: '/docs/introduction/',
       items: [
-        { title: "Getting Started", url: "/docs/getting-started/" },
-        { title: "Installation", url: "/docs/installation/" }
-      ]
+        { title: 'Getting Started', url: '/docs/getting-started/' },
+        { title: 'Installation', url: '/docs/installation/' },
+      ],
     },
     {
       title: 'Guides',
       url: '/docs/guides/',
       collapsed: false,
       items: [
-        { title: "Basic Usage", url: "/docs/guides/basic-usage/" },
-        { title: "Configuration", url: "/docs/guides/configuration/" },
-        { title: "Themes", url: "/docs/guides/themes/" },
-        { title: "Plugins", url: "/docs/guides/plugins/" }
-      ]
-    }
+        { title: 'Basic Usage', url: '/docs/guides/basic-usage/' },
+        { title: 'Configuration', url: '/docs/guides/configuration/' },
+        { title: 'Themes', url: '/docs/guides/themes/' },
+        { title: 'Plugins', url: '/docs/guides/plugins/' },
+      ],
+    },
   ],
   documentation: {
     showEditLink: true,
@@ -362,8 +366,8 @@ const DEFAULT_CONFIG: BunPressConfig = {
     showNavigation: true,
     showTOC: true,
     showSidebar: true,
-    tocLevels: [2, 3]
-  }
+    tocLevels: [2, 3],
+  },
 };
 
 /**
@@ -375,109 +379,109 @@ const configSchema: ConfigSchema = {
     required: true,
     default: DEFAULT_CONFIG.title,
     env: 'BUNPRESS_TITLE',
-    description: 'Site title'
+    description: 'Site title',
   },
   description: {
     type: 'string',
     required: true,
     default: DEFAULT_CONFIG.description,
     env: 'BUNPRESS_DESCRIPTION',
-    description: 'Site description'
+    description: 'Site description',
   },
   siteUrl: {
     type: 'string',
     required: true,
     default: DEFAULT_CONFIG.siteUrl,
     env: 'BUNPRESS_SITE_URL',
-    description: 'Site URL'
+    description: 'Site URL',
   },
   pagesDir: {
     type: 'string',
     required: true,
     default: DEFAULT_CONFIG.pagesDir,
     env: 'BUNPRESS_PAGES_DIR',
-    description: 'Pages directory'
+    description: 'Pages directory',
   },
   contentDir: {
     type: 'string',
     default: DEFAULT_CONFIG.contentDir,
     env: 'BUNPRESS_CONTENT_DIR',
-    description: 'Content directory'
+    description: 'Content directory',
   },
   outputDir: {
     type: 'string',
     required: true,
     default: DEFAULT_CONFIG.outputDir,
     env: 'BUNPRESS_OUTPUT_DIR',
-    description: 'Output directory'
+    description: 'Output directory',
   },
   publicDir: {
     type: 'string',
     default: DEFAULT_CONFIG.publicDir,
     env: 'BUNPRESS_PUBLIC_DIR',
-    description: 'Public directory'
+    description: 'Public directory',
   },
   componentsDir: {
     type: 'string',
     default: DEFAULT_CONFIG.componentsDir,
     env: 'BUNPRESS_COMPONENTS_DIR',
-    description: 'Components directory'
+    description: 'Components directory',
   },
   themeConfig: {
     type: 'object',
     required: true,
     default: DEFAULT_CONFIG.themeConfig,
-    description: 'Theme configuration'
+    description: 'Theme configuration',
   },
   plugins: {
     type: 'array',
     default: DEFAULT_CONFIG.plugins,
-    description: 'Plugins'
+    description: 'Plugins',
   },
   devServer: {
     type: 'object',
     default: DEFAULT_CONFIG.devServer,
-    description: 'Development server configuration'
+    description: 'Development server configuration',
   },
   bundle: {
     type: 'object',
     default: DEFAULT_CONFIG.bundle,
-    description: 'Bundle configuration'
+    description: 'Bundle configuration',
   },
   navigation: {
     type: 'array',
     default: DEFAULT_CONFIG.navigation,
-    description: 'Navigation'
+    description: 'Navigation',
   },
   sidebar: {
     type: 'array',
     default: DEFAULT_CONFIG.sidebar,
-    description: 'Sidebar'
+    description: 'Sidebar',
   },
   documentation: {
     type: 'object',
     default: DEFAULT_CONFIG.documentation,
-    description: 'Documentation configuration'
-  }
+    description: 'Documentation configuration',
+  },
 };
 
 /**
  * Initialize BunPress configuration
- * 
+ *
  * @param options Configuration options
  * @returns Configuration manager
  */
 export async function initBunPressConfig() {
   // Load .env file first
   await loadEnvFile();
-  
+
   // Create configuration manager
   const configManager = createConfig<BunPressConfig>(configSchema, {
     configPath: join(process.cwd(), 'bunpress.config.json'),
     loadEnv: true,
-    envPrefix: 'BUNPRESS_'
+    envPrefix: 'BUNPRESS_',
   });
-  
+
   // Try to load configuration
   try {
     await configManager.load();
@@ -485,7 +489,7 @@ export async function initBunPressConfig() {
     console.warn('Failed to load configuration:', error);
     console.info('Using default configuration');
   }
-  
+
   return configManager;
 }
 
@@ -498,13 +502,13 @@ let configInstance: ReturnType<typeof createConfig<BunPressConfig>> | null = nul
 /**
  * Get the BunPress configuration
  * This will initialize the configuration if it hasn't been initialized yet
- * 
+ *
  * @returns Configuration manager
  */
 export async function getBunPressConfig() {
   if (!configInstance) {
     configInstance = await initBunPressConfig();
   }
-  
+
   return configInstance;
-} 
+}

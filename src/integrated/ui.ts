@@ -466,11 +466,7 @@ export function createThemeIntegration({
 /**
  * Creates navigation service
  */
-export function createNavigation({
-  config,
-}: {
-  config: BunPressConfig;
-}): NavigationService {
+export function createNavigation({ config }: { config: BunPressConfig }): NavigationService {
   // Current active route
   let activePath = '/';
 

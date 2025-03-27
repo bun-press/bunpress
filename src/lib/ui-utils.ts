@@ -1,8 +1,8 @@
 /**
  * UI Utilities for BunPress
- * 
+ *
  * This file centralizes UI component factories and theme-related utility functions
- * to reduce duplication across the codebase. It provides a common interface for 
+ * to reduce duplication across the codebase. It provides a common interface for
  * creating UI components that can be used in both the integrated and core modules.
  */
 
@@ -53,7 +53,10 @@ export interface UIComponentFactory {
   createNavigation: (items: NavigationItem[], options?: any) => React.ReactElement;
   createFooter: (items: NavigationItem[], options?: any) => React.ReactElement;
   createThemeSelector: (themes: ThemeOption[], currentTheme: string) => React.ReactElement;
-  createLanguageSelector: (languages: LanguageOption[], currentLanguage: string) => React.ReactElement;
+  createLanguageSelector: (
+    languages: LanguageOption[],
+    currentLanguage: string
+  ) => React.ReactElement;
 }
 
 /**
@@ -65,13 +68,19 @@ export function createUIComponentFactory(): UIComponentFactory {
      * Create a Table of Contents component
      */
     createTOC(items: TOCItem[]): React.ReactElement {
-      return React.createElement('div', { className: 'toc' }, 
+      return React.createElement(
+        'div',
+        { className: 'toc' },
         items.map((item, index) => {
-          return React.createElement('a', { 
-            key: index,
-            className: `toc-item toc-level-${item.level}`,
-            href: `#${item.id}`
-          }, item.text);
+          return React.createElement(
+            'a',
+            {
+              key: index,
+              className: `toc-item toc-level-${item.level}`,
+              href: `#${item.id}`,
+            },
+            item.text
+          );
         })
       );
     },
@@ -80,30 +89,47 @@ export function createUIComponentFactory(): UIComponentFactory {
      * Create a Sidebar component
      */
     createSidebar(items: SidebarItem[], options: any = {}): React.ReactElement {
-      return React.createElement('nav', { className: 'sidebar' },
+      return React.createElement(
+        'nav',
+        { className: 'sidebar' },
         items.map((item, index) => {
           if (item.items) {
-            return React.createElement('div', { 
-              key: index,
-              className: 'sidebar-group has-children' + (options.collapsible ? ' collapsible' : '')
-            }, [
-              React.createElement('div', { className: 'sidebar-group-title' }, item.title),
-              React.createElement('div', { className: 'sidebar-group-items' },
-                item.items.map((subItem, subIndex) => {
-                  return React.createElement('a', {
-                    key: subIndex,
-                    className: 'sidebar-item',
-                    href: subItem.url
-                  }, subItem.title);
-                })
-              )
-            ]);
+            return React.createElement(
+              'div',
+              {
+                key: index,
+                className:
+                  'sidebar-group has-children' + (options.collapsible ? ' collapsible' : ''),
+              },
+              [
+                React.createElement('div', { className: 'sidebar-group-title' }, item.title),
+                React.createElement(
+                  'div',
+                  { className: 'sidebar-group-items' },
+                  item.items.map((subItem, subIndex) => {
+                    return React.createElement(
+                      'a',
+                      {
+                        key: subIndex,
+                        className: 'sidebar-item',
+                        href: subItem.url,
+                      },
+                      subItem.title
+                    );
+                  })
+                ),
+              ]
+            );
           } else {
-            return React.createElement('a', {
-              key: index,
-              className: 'sidebar-item',
-              href: item.url
-            }, item.title);
+            return React.createElement(
+              'a',
+              {
+                key: index,
+                className: 'sidebar-item',
+                href: item.url,
+              },
+              item.title
+            );
           }
         })
       );
@@ -115,18 +141,26 @@ export function createUIComponentFactory(): UIComponentFactory {
     createNavigation(items: NavigationItem[], options: any = {}): React.ReactElement {
       return React.createElement('header', { className: 'navigation' }, [
         React.createElement('div', { className: 'navigation-logo' }, [
-          options.logo && React.createElement('img', { src: options.logo, alt: options.title || 'Logo' }),
-          options.title && React.createElement('span', { className: 'navigation-title' }, options.title)
+          options.logo &&
+            React.createElement('img', { src: options.logo, alt: options.title || 'Logo' }),
+          options.title &&
+            React.createElement('span', { className: 'navigation-title' }, options.title),
         ]),
-        React.createElement('nav', { className: 'navigation-links' },
+        React.createElement(
+          'nav',
+          { className: 'navigation-links' },
           items.map((item, index) => {
-            return React.createElement('a', {
-              key: index,
-              className: 'navigation-link',
-              href: item.url
-            }, item.label);
+            return React.createElement(
+              'a',
+              {
+                key: index,
+                className: 'navigation-link',
+                href: item.url,
+              },
+              item.label
+            );
           })
-        )
+        ),
       ]);
     },
 
@@ -135,28 +169,47 @@ export function createUIComponentFactory(): UIComponentFactory {
      */
     createFooter(items: NavigationItem[], options: any = {}): React.ReactElement {
       return React.createElement('footer', { className: 'footer' }, [
-        options.prevNext && React.createElement('div', { className: 'footer-navigation' }, [
-          options.prevNext.prev && React.createElement('a', {
-            className: 'footer-prev',
-            href: options.prevNext.prev.url
-          }, options.prevNext.prev.label),
-          options.prevNext.next && React.createElement('a', {
-            className: 'footer-next',
-            href: options.prevNext.next.url
-          }, options.prevNext.next.label)
-        ]),
+        options.prevNext &&
+          React.createElement('div', { className: 'footer-navigation' }, [
+            options.prevNext.prev &&
+              React.createElement(
+                'a',
+                {
+                  className: 'footer-prev',
+                  href: options.prevNext.prev.url,
+                },
+                options.prevNext.prev.label
+              ),
+            options.prevNext.next &&
+              React.createElement(
+                'a',
+                {
+                  className: 'footer-next',
+                  href: options.prevNext.next.url,
+                },
+                options.prevNext.next.label
+              ),
+          ]),
         React.createElement('div', { className: 'footer-content' }, [
-          options.copyright && React.createElement('div', { className: 'footer-copyright' }, options.copyright),
-          items.length > 0 && React.createElement('div', { className: 'footer-links' },
-            items.map((item, index) => {
-              return React.createElement('a', {
-                key: index,
-                className: 'footer-link',
-                href: item.url
-              }, item.label);
-            })
-          )
-        ])
+          options.copyright &&
+            React.createElement('div', { className: 'footer-copyright' }, options.copyright),
+          items.length > 0 &&
+            React.createElement(
+              'div',
+              { className: 'footer-links' },
+              items.map((item, index) => {
+                return React.createElement(
+                  'a',
+                  {
+                    key: index,
+                    className: 'footer-link',
+                    href: item.url,
+                  },
+                  item.label
+                );
+              })
+            ),
+        ]),
       ]);
     },
 
@@ -164,39 +217,58 @@ export function createUIComponentFactory(): UIComponentFactory {
      * Create a Theme Selector component
      */
     createThemeSelector(themes: ThemeOption[], currentTheme: string): React.ReactElement {
-      return React.createElement('select', { 
-        className: 'theme-selector',
-        value: currentTheme,
-        onChange: (e: any) => {
-          // In a real component, this would set the theme
-          console.log('Theme changed to', e.target.value);
-        }
-      }, themes.map((theme, index) => {
-        return React.createElement('option', {
-          key: index,
-          value: theme.id
-        }, theme.name);
-      }));
+      return React.createElement(
+        'select',
+        {
+          className: 'theme-selector',
+          value: currentTheme,
+          onChange: (e: any) => {
+            // In a real component, this would set the theme
+            console.log('Theme changed to', e.target.value);
+          },
+        },
+        themes.map((theme, index) => {
+          return React.createElement(
+            'option',
+            {
+              key: index,
+              value: theme.id,
+            },
+            theme.name
+          );
+        })
+      );
     },
 
     /**
      * Create a Language Selector component
      */
-    createLanguageSelector(languages: LanguageOption[], currentLanguage: string): React.ReactElement {
-      return React.createElement('select', { 
-        className: 'language-selector',
-        value: currentLanguage,
-        onChange: (e: any) => {
-          // In a real component, this would set the language
-          console.log('Language changed to', e.target.value);
-        }
-      }, languages.map((lang, index) => {
-        return React.createElement('option', {
-          key: index,
-          value: lang.code
-        }, lang.name);
-      }));
-    }
+    createLanguageSelector(
+      languages: LanguageOption[],
+      currentLanguage: string
+    ): React.ReactElement {
+      return React.createElement(
+        'select',
+        {
+          className: 'language-selector',
+          value: currentLanguage,
+          onChange: (e: any) => {
+            // In a real component, this would set the language
+            console.log('Language changed to', e.target.value);
+          },
+        },
+        languages.map((lang, index) => {
+          return React.createElement(
+            'option',
+            {
+              key: index,
+              value: lang.code,
+            },
+            lang.name
+          );
+        })
+      );
+    },
   };
 }
 
@@ -224,7 +296,7 @@ export function createThemeUtils() {
       // Merge with theme variables if they exist
       return {
         ...defaultVariables,
-        ...(theme?.variables || {})
+        ...(theme?.variables || {}),
       };
     },
 
@@ -247,6 +319,6 @@ export function createThemeUtils() {
       link.href = `${basePath}/${themeName}/style.css`;
       link.id = 'theme-stylesheet';
       return link;
-    }
+    },
   };
-} 
+}

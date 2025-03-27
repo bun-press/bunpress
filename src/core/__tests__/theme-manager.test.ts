@@ -13,7 +13,7 @@ import type { BunPressConfig } from '../../../bunpress.config';
 const jest = {
   requireActual: (moduleName: string) => {
     return require(moduleName);
-  }
+  },
 };
 
 // Mock the fileExists function to always return true for the themes directory
@@ -36,7 +36,7 @@ mock.module('../../lib/fs-utils', () => {
         return true;
       }
       return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
-    }
+    },
   };
 });
 
@@ -84,7 +84,7 @@ describe('ThemeManager', () => {
     console.log(`THEMES_DIR: ${THEMES_DIR}`);
     console.log(`THEME_1_DIR: ${THEME_1_DIR}`);
     console.log(`THEME_2_DIR: ${THEME_2_DIR}`);
-    
+
     // Create test directories
     if (fs.existsSync(TEST_DIR)) {
       console.log(`Removing existing TEST_DIR: ${TEST_DIR}`);
@@ -120,18 +120,20 @@ describe('ThemeManager', () => {
       'export default function Theme2Layout() { return null; }'
     );
     fs.writeFileSync(path.join(THEME_2_DIR, 'styles.css'), 'body { color: blue; }');
-    
+
     // Verify files were created
     console.log(`Themes directory exists: ${fs.existsSync(THEMES_DIR)}`);
     console.log(`Theme1 index.tsx exists: ${fs.existsSync(path.join(THEME_1_DIR, 'index.tsx'))}`);
     console.log(`Theme1 styles.css exists: ${fs.existsSync(path.join(THEME_1_DIR, 'styles.css'))}`);
-    console.log(`Theme1 layouts/DocLayout.tsx exists: ${fs.existsSync(path.join(THEME_1_DIR, 'layouts', 'DocLayout.tsx'))}`);
-    
+    console.log(
+      `Theme1 layouts/DocLayout.tsx exists: ${fs.existsSync(path.join(THEME_1_DIR, 'layouts', 'DocLayout.tsx'))}`
+    );
+
     // List all files in themes directory for verification
     const files = fs.readdirSync(THEMES_DIR);
     console.log(`Files in themes directory: ${files.join(', ')}`);
   }
-  
+
   // Make sure test files exist before each test
   beforeEach(() => {
     createTestThemeFiles();
@@ -151,10 +153,10 @@ describe('ThemeManager', () => {
     // Create theme manager with test workspace
     console.log(`Test workspace root: ${TEST_DIR}`);
     const themeManager = new DefaultThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (themeManager as any).loadAvailableThemes();
-    
+
     // Get available themes
     const themes = themeManager.getThemes();
     console.log(`Found themes: ${[...themes.keys()].join(', ')}`);
@@ -183,7 +185,7 @@ describe('ThemeManager', () => {
   it('should set active theme from config', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (themeManager as any).loadAvailableThemes();
 
@@ -231,7 +233,7 @@ describe('ThemeManager', () => {
   it('should get correct theme component for layout type', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (themeManager as any).loadAvailableThemes();
 
@@ -261,7 +263,7 @@ describe('ThemeManager', () => {
   it('should get theme style content', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (themeManager as any).loadAvailableThemes();
 
@@ -294,7 +296,7 @@ describe('ThemeManager', () => {
   it('should list available theme names', async () => {
     // Create theme manager with test workspace
     const themeManager = new DefaultThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (themeManager as any).loadAvailableThemes();
 
@@ -313,7 +315,7 @@ describe('ThemeManager', () => {
 
     // Initialize theme manager
     const instance1 = initThemeManager(TEST_DIR);
-    
+
     // Force synchronous theme loading
     await (instance1 as any).loadAvailableThemes();
 

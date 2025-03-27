@@ -1,6 +1,6 @@
 /**
  * BunPress Plugin System
- * 
+ *
  * This file exports all plugins and provides a unified API for plugin registration.
  */
 
@@ -23,7 +23,7 @@ import { createIntegratedPlugin } from './integrated';
 type MarkdownPluginOptions = Parameters<typeof markdownItPlugin>[0];
 type PrismPluginOptions = Parameters<typeof prismPlugin>[0];
 type SeoPluginOptions = Parameters<typeof seoPlugin>[0];
-type RssFeedPluginOptions = Parameters<typeof rssFeedPlugin>[0]; 
+type RssFeedPluginOptions = Parameters<typeof rssFeedPlugin>[0];
 type ImageOptimizerPluginOptions = Parameters<typeof imageOptimizerPlugin>[0];
 type SearchIndexPluginOptions = Parameters<typeof searchIndexPlugin>[0];
 type AnalyticsPluginOptions = Parameters<typeof analyticsPlugin>[0];
@@ -37,22 +37,22 @@ export const plugins = {
   // Content Plugins
   markdownIt: markdownItPlugin,
   prism: prismPlugin,
-  
+
   // SEO & Discovery
   seo: seoPlugin,
   rssFeed: rssFeedPlugin,
   searchIndex: searchIndexPlugin,
-  
+
   // Performance & Media
   imageOptimizer: imageOptimizerPlugin,
-  
+
   // Analytics
   analytics: analyticsPlugin,
-  
+
   // Core functionality
   themeRegistry: themeRegistryPlugin,
   i18n: i18nPlugin,
-  integrated: createIntegratedPlugin
+  integrated: createIntegratedPlugin,
 };
 
 // Helper types for autocomplete and type checking
@@ -68,7 +68,7 @@ export type {
   SearchIndexPluginOptions,
   AnalyticsPluginOptions,
   ThemeRegistryPluginOptions,
-  I18nPluginOptions
+  I18nPluginOptions,
 };
 
 // Re-export plugin creators with shorter names for convenience
@@ -81,7 +81,7 @@ export {
   searchIndexPlugin,
   analyticsPlugin,
   themeRegistryPlugin,
-  i18nPlugin
+  i18nPlugin,
 };
 
 // Integrated plugins that combine multiple plugins
@@ -90,10 +90,7 @@ export { createIntegratedPlugin };
 /**
  * Create a custom plugin with the proper type definitions
  */
-export function createPlugin<T>(
-  name: string,
-  factory: (options?: T) => Plugin
-): PluginCreator<T> {
+export function createPlugin<T>(name: string, factory: (options?: T) => Plugin): PluginCreator<T> {
   return (options?: T) => {
     const plugin = factory(options);
     return definePlugin({
@@ -108,37 +105,37 @@ export function createPlugin<T>(
  */
 export class PluginManager {
   private plugins: Plugin[] = [];
-  
+
   /**
    * Register a plugin with the manager
    */
   register(plugin: Plugin): void {
     this.plugins.push(plugin);
   }
-  
+
   /**
    * Register multiple plugins at once
    */
   registerAll(plugins: Plugin[]): void {
     this.plugins.push(...plugins);
   }
-  
+
   /**
    * Execute the transform hook for all plugins
    */
   async executeTransform(content: string, _context: any = {}): Promise<string> {
     let result = content;
-    
+
     // Execute transform hooks on all registered plugins
     for (const plugin of this.plugins) {
       if (plugin.transform) {
         result = await plugin.transform(result);
       }
     }
-    
+
     return result;
   }
-  
+
   /**
    * Execute the buildStart hook for all plugins
    */
@@ -149,7 +146,7 @@ export class PluginManager {
       }
     }
   }
-  
+
   /**
    * Execute the buildEnd hook for all plugins
    */
@@ -160,22 +157,22 @@ export class PluginManager {
       }
     }
   }
-  
+
   /**
    * Execute the configureServer hook for all plugins
    */
   async executeConfigureServer(server: any): Promise<any> {
     let serverConfig = server;
-    
+
     for (const plugin of this.plugins) {
       if (plugin.configureServer) {
         await plugin.configureServer(serverConfig);
       }
     }
-    
+
     return serverConfig;
   }
-  
+
   /**
    * Execute the processContentFile hook for all plugins
    */
@@ -186,7 +183,7 @@ export class PluginManager {
       }
     }
   }
-  
+
   /**
    * Execute the registerThemes hook for all plugins
    */
@@ -197,13 +194,13 @@ export class PluginManager {
       }
     }
   }
-  
+
   /**
    * Execute a specific hook for all plugins
    */
   async executeHook(hook: keyof Plugin, ...args: any[]): Promise<any[]> {
     const results: any[] = [];
-    
+
     for (const plugin of this.plugins) {
       const hookFn = plugin[hook];
       if (typeof hookFn === 'function') {
@@ -211,17 +208,17 @@ export class PluginManager {
         results.push(await hookFn(...args));
       }
     }
-    
+
     return results;
   }
-  
+
   /**
    * Get all registered plugins
    */
   getPlugins(): Plugin[] {
     return [...this.plugins];
   }
-  
+
   /**
    * Get a plugin by name
    */

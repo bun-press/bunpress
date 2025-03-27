@@ -24,22 +24,22 @@ export const slotSystem = () => {
     registerSlot: (name: string, content: string) => {
       slots[name] = content;
     },
-    
+
     getSlotContent: (name: string, fallback?: string) => {
       return slots[name] !== undefined ? slots[name] : fallback;
     },
-    
+
     renderWithSlots: (template: string, slotData: Record<string, string>) => {
       return template.replace(/\{\{slot:([^}]+)\}\}/g, (_, slotName) => {
         return slotData[slotName] || '';
       });
     },
-    
+
     clearSlots: () => {
       Object.keys(slots).forEach(key => {
         delete slots[key];
       });
-    }
+    },
   };
 };
 
@@ -47,51 +47,51 @@ export const slotSystem = () => {
 export const i18n = () => {
   const translations: Record<string, Record<string, string>> = {};
   let currentLocale = 'en';
-  
+
   return {
     t: (key: string, params?: Record<string, any>) => {
       const translation = translations[currentLocale]?.[key];
       if (!translation) return key;
-      
+
       if (!params) return translation;
-      
+
       // Handle simple parameter substitution
       return translation.replace(/\{(\w+)\}/g, (_, paramName) => {
         return params[paramName]?.toString() || '';
       });
     },
-    
+
     setLanguage: (lang: string) => {
       currentLocale = lang;
     },
-    
+
     getLanguage: () => currentLocale,
-    
+
     registerTranslations: (locale: string, translationObj: Record<string, string>) => {
       translations[locale] = { ...(translations[locale] || {}), ...translationObj };
     },
-    
+
     getAvailableLocales: () => {
       return Object.keys(translations);
     },
-    
+
     translate: (content: string, locale: string, fallbackLocale?: string) => {
       currentLocale = locale;
-      
+
       return content.replace(/\{\{t:([^}]+)\}\}/g, (_, key) => {
         const translation = translations[locale]?.[key];
-        
+
         if (translation) return translation;
-        
+
         // Try fallback locale if provided
         if (fallbackLocale && translations[fallbackLocale]?.[key]) {
           return translations[fallbackLocale][key];
         }
-        
+
         // Just return the key if no translation found
         return key;
       });
-    }
+    },
   };
 };
 
@@ -217,4 +217,4 @@ export * from './system';
 export * from './rendering';
 export * from './ui';
 export * from './build';
-export * from './server'; 
+export * from './server';

@@ -275,7 +275,9 @@ export function createFullstackServer({
           const { default: open } = await import('open');
           await open(`http://${host}:${port}`);
         } catch (error) {
-          console.warn("Couldn't open browser automatically. The 'open' package may not be installed.");
+          console.warn(
+            "Couldn't open browser automatically. The 'open' package may not be installed."
+          );
           console.log(`Please open http://${host}:${port} in your browser manually.`);
         }
       }

@@ -15,7 +15,7 @@ export enum ErrorCode {
   // General errors
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
-  
+
   // File system errors
   FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   FILE_READ_ERROR = 'FILE_READ_ERROR',
@@ -26,38 +26,38 @@ export enum ErrorCode {
   DIRECTORY_NOT_FOUND = 'DIRECTORY_NOT_FOUND',
   DIRECTORY_DELETE_ERROR = 'DIRECTORY_DELETE_ERROR',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  
+
   // Plugin errors
   PLUGIN_NOT_FOUND = 'PLUGIN_NOT_FOUND',
   PLUGIN_LOAD_ERROR = 'PLUGIN_LOAD_ERROR',
-  
+
   // Server errors
   SERVER_START_ERROR = 'SERVER_START_ERROR',
   SERVER_STOP_ERROR = 'SERVER_STOP_ERROR',
-  
+
   // Content errors
   CONTENT_PARSE_ERROR = 'CONTENT_PARSE_ERROR',
   CONTENT_RENDER_ERROR = 'CONTENT_RENDER_ERROR',
-  
+
   // CSS processing errors
   CSS_PROCESSING_ERROR = 'CSS_PROCESSING_ERROR',
-  
+
   // Content processing errors (200-299)
   INVALID_MARKDOWN = 200,
   INVALID_FRONTMATTER = 201,
   CONTENT_TRANSFORM_FAILED = 202,
-  
+
   // Theme errors (500-599)
   THEME_LOAD_ERROR = 500,
   THEME_NOT_FOUND = 501,
   LAYOUT_NOT_FOUND = 502,
   COMPONENT_ERROR = 503,
-  
+
   // Configuration errors (600-699)
   CONFIG_VALIDATION_ERROR = 600,
   CONFIG_PARSE_ERROR = 601,
   CONFIG_NOT_FOUND = 602,
-  
+
   // CLI errors (700-799)
   COMMAND_ERROR = 700,
   INVALID_ARGUMENTS = 701,
@@ -77,19 +77,19 @@ function formatValue(value: any): string {
   if (value === undefined) {
     return 'undefined';
   }
-  
+
   if (value === null) {
     return 'null';
   }
-  
+
   if (isStringOrNumber(value)) {
     return String(value);
   }
-  
+
   if (value instanceof Error) {
     return value.message;
   }
-  
+
   try {
     return JSON.stringify(value);
   } catch (error) {
@@ -110,31 +110,31 @@ export interface ErrorContext {
 export class BunPressError extends Error {
   readonly code: ErrorCode;
   readonly context?: ErrorContext;
-  
+
   constructor(code: ErrorCode, message: string, context?: ErrorContext) {
     super(message);
     this.name = 'BunPressError';
     this.code = code;
     this.context = context;
-    
+
     // Ensure proper prototype chain for instanceof checks
     Object.setPrototypeOf(this, BunPressError.prototype);
   }
-  
+
   /**
    * Format error for CLI output
    */
   formatForCli(): string {
     return `Error ${this.code}: ${this.message}${this.formatContext()}`;
   }
-  
+
   /**
    * Format error for logging
    */
   formatForLog(): string {
     return `${this.code}: ${this.message}${this.formatContext()}`;
   }
-  
+
   /**
    * Format context as a string
    */
@@ -142,11 +142,13 @@ export class BunPressError extends Error {
     if (!this.context || Object.keys(this.context).length === 0) {
       return '';
     }
-    
-    return '\nContext: ' + 
+
+    return (
+      '\nContext: ' +
       Object.entries(this.context)
         .map(([key, value]) => `\n  ${key}: ${formatValue(value)}`)
-        .join('');
+        .join('')
+    );
   }
 }
 
@@ -164,11 +166,7 @@ export function createError(
 /**
  * Create and throw a BunPress error
  */
-export function throwError(
-  code: ErrorCode,
-  message: string,
-  context?: ErrorContext
-): never {
+export function throwError(code: ErrorCode, message: string, context?: ErrorContext): never {
   const error = createError(code, message, context);
   throw error;
 }
@@ -261,7 +259,7 @@ export type ErrorHandler = (error: Error | BunPressError) => void;
 /**
  * Global error handler configuration
  */
-let globalErrorHandler: ErrorHandler = (error) => {
+let globalErrorHandler: ErrorHandler = error => {
   if (error instanceof BunPressError) {
     logger.error(error.formatForLog());
   } else {
@@ -301,11 +299,11 @@ export async function tryCatch<T>(
     return await fn();
   } catch (error) {
     handleError(error as Error);
-    
+
     if (onError) {
       return await onError(error as Error);
     }
-    
+
     throw error; // Re-throw if no onError handler
   }
 }
@@ -324,21 +322,17 @@ export async function tryCatchWithCode<T>(
     return await fn();
   } catch (error) {
     const errorStr = error instanceof Error ? error.message : String(error);
-    const bunPressError = new BunPressError(
-      errorCode,
-      `${errorMessage}: ${errorStr}`,
-      {
-        ...context,
-        originalError: errorStr
-      }
-    );
-    
+    const bunPressError = new BunPressError(errorCode, `${errorMessage}: ${errorStr}`, {
+      ...context,
+      originalError: errorStr,
+    });
+
     handleError(bunPressError);
-    
+
     if (onError) {
       return await onError(bunPressError);
     }
-    
+
     throw bunPressError;
   }
 }
@@ -346,19 +340,16 @@ export async function tryCatchWithCode<T>(
 /**
  * Safely execute a function and catch any errors - synchronous version
  */
-export function tryCatchSync<T>(
-  fn: () => T,
-  onError?: (error: Error | BunPressError) => T
-): T {
+export function tryCatchSync<T>(fn: () => T, onError?: (error: Error | BunPressError) => T): T {
   try {
     return fn();
   } catch (error) {
     handleError(error as Error);
-    
+
     if (onError) {
       return onError(error as Error);
     }
-    
+
     throw error; // Re-throw if no onError handler
   }
 }
@@ -377,21 +368,17 @@ export function tryCatchWithCodeSync<T>(
     return fn();
   } catch (error) {
     const errorStr = error instanceof Error ? error.message : String(error);
-    const bunPressError = new BunPressError(
-      errorCode,
-      `${errorMessage}: ${errorStr}`,
-      {
-        ...context,
-        originalError: errorStr
-      }
-    );
-    
+    const bunPressError = new BunPressError(errorCode, `${errorMessage}: ${errorStr}`, {
+      ...context,
+      originalError: errorStr,
+    });
+
     handleError(bunPressError);
-    
+
     if (onError) {
       return onError(bunPressError);
     }
-    
+
     throw bunPressError;
   }
-} 
+}

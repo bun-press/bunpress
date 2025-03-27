@@ -19,7 +19,7 @@ describe('Integrated Rendering', () => {
 
     test('renders paragraphs to HTML', async () => {
       const renderer = await renderContent();
-      
+
       const markdown = `This is a paragraph.
       
 This is another paragraph.`;
@@ -32,7 +32,7 @@ This is another paragraph.`;
 
     test('renders code blocks with syntax highlighting when enabled', async () => {
       const renderer = await renderContent();
-      
+
       const markdown = '```javascript\nconst x = 1;\n```';
 
       const resultWithHighlighting = renderer.render(markdown, { highlightCode: true });
@@ -44,7 +44,7 @@ This is another paragraph.`;
 
     test('extracts frontmatter from markdown', async () => {
       const renderer = await renderContent();
-      
+
       const markdown = `---
 title: Test Document
 description: This is a test
@@ -68,7 +68,7 @@ order: 5
 
     test('extracts TOC from HTML content', async () => {
       const renderer = await renderContent();
-      
+
       const html = `
 <h1 id="first-heading">First Heading</h1>
 <p>Some content</p>

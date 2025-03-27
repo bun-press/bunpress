@@ -3,18 +3,8 @@
  * Helper functions for processing and handling various assets
  */
 
-import { 
-  createDirectory, 
-  fileExists, 
-  readFileAsString, 
-  copyFile 
-} from './fs-utils';
-import { 
-  joinPaths, 
-  getExtname, 
-  getBasename, 
-  resolveRelativePath 
-} from './path-utils';
+import { createDirectory, fileExists, readFileAsString, copyFile } from './fs-utils';
+import { joinPaths, getExtname, getBasename, resolveRelativePath } from './path-utils';
 import { tryCatch } from './error-utils';
 import { getNamespacedLogger } from './logger-utils';
 
@@ -23,7 +13,7 @@ const logger = getNamespacedLogger('asset-utils');
 
 /**
  * Process a URL reference to an asset, hashing the file contents and copying to the output directory
- * 
+ *
  * @param url The original URL reference
  * @param sourcePath The path of the source file containing the URL
  * @param outputDir The output directory where assets should be copied
@@ -44,7 +34,7 @@ export async function processAssetUrl(
   return await tryCatch(
     async () => {
       const sourceDir = resolveRelativePath(sourcePath, '..');
-      
+
       // Resolve the original asset path
       const assetPath = resolveRelativePath(sourceDir, url);
 
@@ -76,7 +66,7 @@ export async function processAssetUrl(
       // Return the new URL
       return `/${assetsSubdir}/${newFilename}`;
     },
-    (error) => {
+    error => {
       logger.warn(`Error processing URL ${url} in ${sourcePath}: ${error}`);
       return url;
     }
@@ -85,7 +75,7 @@ export async function processAssetUrl(
 
 /**
  * Process CSS content to rewrite URLs to assets
- * 
+ *
  * @param css CSS content with asset URLs
  * @param cssPath Path to the original CSS file
  * @param outputDir Output directory where processed assets will be copied
@@ -112,7 +102,7 @@ export async function rewriteCssAssetUrls(
 
     // Process the URL
     const processedUrl = await processAssetUrl(url, cssPath, outputDir);
-    
+
     // Replace the URL in the result
     result += `url('${processedUrl}')`;
   }
@@ -124,7 +114,7 @@ export async function rewriteCssAssetUrls(
 
 /**
  * Generate a hash for a file
- * 
+ *
  * @param filePath Path to the file to hash
  * @returns Hex string hash of the file contents
  */
@@ -140,17 +130,14 @@ export async function generateFileHash(filePath: string): Promise<string> {
 
 /**
  * Creates a content-hashed filename from the original filename
- * 
+ *
  * @param filePath Original file path
  * @param hash Optional hash to use (will be generated if not provided)
  * @returns Filename with hash inserted before extension
  */
-export async function createHashedFilename(
-  filePath: string,
-  hash?: string
-): Promise<string> {
-  const hashToUse = hash || await generateFileHash(filePath);
+export async function createHashedFilename(filePath: string, hash?: string): Promise<string> {
+  const hashToUse = hash || (await generateFileHash(filePath));
   const ext = getExtname(filePath);
   const basename = getBasename(filePath, ext);
   return `${basename}.${hashToUse}${ext}`;
-} 
+}

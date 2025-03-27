@@ -16,7 +16,7 @@ export enum HttpMethod {
   DELETE = 'DELETE',
   PATCH = 'PATCH',
   OPTIONS = 'OPTIONS',
-  HEAD = 'HEAD'
+  HEAD = 'HEAD',
 }
 
 // Define BunRequest type to match Bun's Request interface
@@ -35,7 +35,10 @@ export type RouteHandler = (req: BunRequest) => Promise<Response> | Response;
 /**
  * Middleware handler function type
  */
-export type MiddlewareHandler = (req: BunRequest, next: () => Promise<Response>) => Promise<Response>;
+export type MiddlewareHandler = (
+  req: BunRequest,
+  next: () => Promise<Response>
+) => Promise<Response>;
 
 /**
  * Route definition interface
@@ -45,17 +48,17 @@ export interface Route {
    * Route pattern as RegExp
    */
   pattern: RegExp;
-  
+
   /**
    * Route handler function
    */
   handler: RouteHandler;
-  
+
   /**
    * Route method (GET, POST, etc.)
    */
   method?: string | string[];
-  
+
   /**
    * Route metadata
    */
@@ -70,12 +73,12 @@ export interface RouteGroup {
    * Group prefix
    */
   prefix: string;
-  
+
   /**
    * Routes in this group
    */
   routes: Route[];
-  
+
   /**
    * Middleware for this group
    */
@@ -90,32 +93,32 @@ export interface RouterOptions {
    * Base path for routes
    */
   basePath?: string;
-  
+
   /**
    * Global middleware applied to all routes
    */
   globalMiddleware?: MiddlewareHandler[];
-  
+
   /**
    * Whether to automatically convert string patterns to RegExp
    */
   autoPatternConversion?: boolean;
-  
+
   /**
    * Whether to add trailing slash to routes
    */
   trailingSlash?: boolean;
-  
+
   /**
    * Whether to automatically register files from a directory
    */
   autoRegisterFiles?: boolean;
-  
+
   /**
    * Directory to auto-register routes from
    */
   routesDir?: string;
-  
+
   /**
    * Custom route matcher function
    */
@@ -130,17 +133,17 @@ export class Router {
    * All registered routes
    */
   private routes: Route[] = [];
-  
+
   /**
    * Route groups
    */
   private groups: RouteGroup[] = [];
-  
+
   /**
    * Router options
    */
   private routerConfig: Required<RouterOptions>;
-  
+
   /**
    * Create a new router
    */
@@ -152,15 +155,15 @@ export class Router {
       trailingSlash: routerOptions.trailingSlash || false,
       autoRegisterFiles: routerOptions.autoRegisterFiles || false,
       routesDir: routerOptions.routesDir || 'routes',
-      routeMatcher: routerOptions.routeMatcher || this.defaultRouteMatcher.bind(this)
+      routeMatcher: routerOptions.routeMatcher || this.defaultRouteMatcher.bind(this),
     };
-    
+
     // Auto-register routes if enabled
     if (this.routerConfig.autoRegisterFiles) {
       this.registerRoutesFromDirectory(this.routerConfig.routesDir);
     }
   }
-  
+
   /**
    * Default route matcher function
    */
@@ -172,30 +175,30 @@ export class Router {
         return false;
       }
     }
-    
+
     // Check URL pattern
     const url = new URL(req.url);
     const pathname = this.normalizePath(url.pathname);
-    
+
     return route.pattern.test(pathname);
   }
-  
+
   /**
    * Normalize path according to router options
    */
   private normalizePath(path: string): string {
     let normalizedPath = path;
-    
+
     // Handle base path
     if (this.routerConfig.basePath && normalizedPath.startsWith(this.routerConfig.basePath)) {
       normalizedPath = normalizedPath.slice(this.routerConfig.basePath.length);
     }
-    
+
     // Ensure leading slash
     if (!normalizedPath.startsWith('/')) {
       normalizedPath = '/' + normalizedPath;
     }
-    
+
     // Handle trailing slash
     if (this.routerConfig.trailingSlash) {
       if (!normalizedPath.endsWith('/') && !normalizedPath.includes('.')) {
@@ -206,10 +209,10 @@ export class Router {
         normalizedPath = normalizedPath.slice(0, -1);
       }
     }
-    
+
     return normalizedPath;
   }
-  
+
   /**
    * Convert string pattern to RegExp
    */
@@ -219,18 +222,18 @@ export class Router {
       .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special regex characters
       .replace(/\\\*/g, '.*') // Replace \* with .*
       .replace(/\\:/g, ':'); // Restore :
-    
+
     // Handle path parameters (e.g., :id)
     regexPattern = regexPattern.replace(/:([a-zA-Z0-9_]+)/g, '([^/]+)');
-    
+
     // Handle optional trailing slash
     if (this.routerConfig.trailingSlash) {
       regexPattern = regexPattern.replace(/\/$/, '/?');
     }
-    
+
     return new RegExp(`^${regexPattern}$`);
   }
-  
+
   /**
    * Add a route to the router
    */
@@ -242,78 +245,95 @@ export class Router {
       meta?: Record<string, any>;
     } = {}
   ): Router {
-    const routePattern = typeof pattern === 'string' && this.routerConfig.autoPatternConversion
-      ? this.patternToRegExp(pattern)
-      : pattern instanceof RegExp
-        ? pattern
-        : new RegExp(`^${pattern}$`);
-    
+    const routePattern =
+      typeof pattern === 'string' && this.routerConfig.autoPatternConversion
+        ? this.patternToRegExp(pattern)
+        : pattern instanceof RegExp
+          ? pattern
+          : new RegExp(`^${pattern}$`);
+
     this.routes.push({
       pattern: routePattern,
       handler,
       method: routeOptions.method,
-      meta: routeOptions.meta
+      meta: routeOptions.meta,
     });
-    
+
     return this; // For method chaining
   }
-  
+
   /**
    * Add routes for common HTTP methods
    */
   public get(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
     return this.addRoute(pattern, handler, { method: 'GET', meta });
   }
-  
+
   public post(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
     return this.addRoute(pattern, handler, { method: 'POST', meta });
   }
-  
+
   public put(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
     return this.addRoute(pattern, handler, { method: 'PUT', meta });
   }
-  
-  public delete(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
+
+  public delete(
+    pattern: RegExp | string,
+    handler: RouteHandler,
+    meta?: Record<string, any>
+  ): Router {
     return this.addRoute(pattern, handler, { method: 'DELETE', meta });
   }
-  
-  public patch(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
+
+  public patch(
+    pattern: RegExp | string,
+    handler: RouteHandler,
+    meta?: Record<string, any>
+  ): Router {
     return this.addRoute(pattern, handler, { method: 'PATCH', meta });
   }
-  
-  public options(pattern: RegExp | string, handler: RouteHandler, meta?: Record<string, any>): Router {
+
+  public options(
+    pattern: RegExp | string,
+    handler: RouteHandler,
+    meta?: Record<string, any>
+  ): Router {
     return this.addRoute(pattern, handler, { method: 'OPTIONS', meta });
   }
-  
+
   /**
    * Create a route group with a common prefix
    */
-  public group(prefix: string, callback: (router: Router) => void, middleware?: MiddlewareHandler[]): Router {
+  public group(
+    prefix: string,
+    callback: (router: Router) => void,
+    middleware?: MiddlewareHandler[]
+  ): Router {
     // Create a temporary router for the group
     const groupRouter = new Router({
       ...this.routerConfig,
-      basePath: join(this.routerConfig.basePath, prefix)
+      basePath: join(this.routerConfig.basePath, prefix),
     });
-    
+
     // Define routes on the group router
     callback(groupRouter);
-    
+
     // Add the group
     this.groups.push({
       prefix,
       routes: groupRouter.routes,
-      middleware
+      middleware,
     });
-    
+
     return this;
   }
-  
+
   /**
    * Get all routes (including those in groups)
    */
   public getAllRoutes(): Route[] {
     const allRoutes = [...this.routes];
-    
+
     // Add routes from groups
     for (const group of this.groups) {
       for (const route of group.routes) {
@@ -322,14 +342,14 @@ export class Router {
           // Update pattern to include group prefix
           pattern: new RegExp(
             route.pattern.source.replace(/^\^/, `^${group.prefix.replace(/\//g, '\\/')}`)
-          )
+          ),
         });
       }
     }
-    
+
     return allRoutes;
   }
-  
+
   /**
    * Handle a request using registered routes
    */
@@ -337,30 +357,30 @@ export class Router {
     // Apply global middleware first
     if (this.routerConfig.globalMiddleware.length > 0) {
       let index = 0;
-      
+
       const next = async (): Promise<Response> => {
         if (index < this.routerConfig.globalMiddleware.length) {
           const middleware = this.routerConfig.globalMiddleware[index++];
           return await middleware(req, next);
         }
-        
+
         // After all middleware, process the route
-        return await this.processRoute(req) || new Response('Not Found', { status: 404 });
+        return (await this.processRoute(req)) || new Response('Not Found', { status: 404 });
       };
-      
+
       return await next();
     }
-    
+
     // Process the route directly if no global middleware
     return await this.processRoute(req);
   }
-  
+
   /**
    * Process a request against all routes
    */
   private async processRoute(req: BunRequest): Promise<Response | null> {
     const allRoutes = this.getAllRoutes();
-    
+
     // Find the matching route
     for (const route of allRoutes) {
       if (this.routerConfig.routeMatcher(req, route)) {
@@ -373,10 +393,10 @@ export class Router {
         }
       }
     }
-    
+
     return null; // No matching route
   }
-  
+
   /**
    * Register routes from a directory
    */
@@ -391,60 +411,66 @@ export class Router {
       return this;
     }
   }
-  
+
   /**
    * Static file handler
    */
-  public createStaticFileHandler(staticDir: string, staticFileOptions: {
-    cacheControl?: Record<string, string>;
-    compression?: boolean;
-    index?: string;
-  } = {}): RouteHandler {
+  public createStaticFileHandler(
+    staticDir: string,
+    staticFileOptions: {
+      cacheControl?: Record<string, string>;
+      compression?: boolean;
+      index?: string;
+    } = {}
+  ): RouteHandler {
     return async (req: BunRequest): Promise<Response> => {
       const url = new URL(req.url);
       const pathname = this.normalizePath(url.pathname);
-      
+
       // Default options
       const fileHandlerConfig = {
         cacheControl: staticFileOptions.cacheControl || {},
         compression: staticFileOptions.compression !== false,
-        index: staticFileOptions.index || 'index.html'
+        index: staticFileOptions.index || 'index.html',
       };
-      
+
       // Determine file path
       let filePath = join(staticDir, pathname);
-      
+
       // Check if path exists
       const pathExists = await fileExists(filePath);
-      
+
       // For directories, try to serve index file
       if (pathExists && filePath.endsWith('/')) {
         filePath = join(filePath, fileHandlerConfig.index);
       }
-      
+
       // Serve the file if it exists
       if (await fileExists(filePath)) {
         // Determine content type based on extension
         const ext = extname(filePath).toLowerCase();
         const contentType = getContentTypeFromExtension(ext);
-        
+
         // Set up response headers
         const headers: HeadersInit = {
           'Content-Type': contentType,
         };
-        
+
         // Add cache control headers if configured
         if (fileHandlerConfig.cacheControl) {
-          const cacheControl = getCacheControlForContentType(contentType, fileHandlerConfig.cacheControl);
+          const cacheControl = getCacheControlForContentType(
+            contentType,
+            fileHandlerConfig.cacheControl
+          );
           if (cacheControl) {
             headers['Cache-Control'] = cacheControl;
           }
         }
-        
+
         // Return the file
         return new Response(Bun.file(filePath), { headers });
       }
-      
+
       // File not found
       return new Response('Not Found', { status: 404 });
     };
@@ -479,9 +505,9 @@ export function getContentTypeFromExtension(ext: string): string {
     '.mp4': 'video/mp4',
     '.webm': 'video/webm',
     '.mp3': 'audio/mpeg',
-    '.wav': 'audio/wav'
+    '.wav': 'audio/wav',
   };
-  
+
   return contentTypes[ext] || 'application/octet-stream';
 }
 
@@ -496,7 +522,7 @@ export function getCacheControlForContentType(
   if (cacheControlMap[contentType]) {
     return cacheControlMap[contentType];
   }
-  
+
   // Check pattern matches (e.g., image/*)
   for (const [pattern, value] of Object.entries(cacheControlMap)) {
     if (pattern.includes('*')) {
@@ -506,12 +532,12 @@ export function getCacheControlForContentType(
       }
     }
   }
-  
+
   return null;
 }
 
 /**
- * Create middleware chain for execution 
+ * Create middleware chain for execution
  * with a different name to avoid conflict with server-utils
  */
 export function buildMiddlewareChain(
@@ -520,16 +546,16 @@ export function buildMiddlewareChain(
 ): RouteHandler {
   return async (req: BunRequest): Promise<Response> => {
     let index = 0;
-    
+
     const next = async (): Promise<Response> => {
       if (index < middleware.length) {
         const currentMiddleware = middleware[index++];
         return await currentMiddleware(req, next);
       }
-      
+
       return await finalHandler(req);
     };
-    
+
     return await next();
   };
 }
@@ -539,29 +565,29 @@ export function buildMiddlewareChain(
  */
 export function parseParams(pattern: RegExp, url: string): Record<string, string> {
   const params: Record<string, string> = {};
-  
+
   // Convert regex pattern to string with named capture groups
   const patternStr = pattern.toString();
-  
+
   // Extract parameter names from the pattern string
   const paramNames: string[] = [];
   const paramRegex = /:([a-zA-Z0-9_]+)/g;
   let match;
-  
+
   while ((match = paramRegex.exec(patternStr)) !== null) {
     paramNames.push(match[1]);
   }
-  
+
   // Match the URL against the pattern
   const urlMatch = url.match(pattern);
-  
+
   if (urlMatch && urlMatch.length > 1) {
     // Skip the first element (full match) and map the rest to param names
     for (let i = 0; i < paramNames.length && i + 1 < urlMatch.length; i++) {
       params[paramNames[i]] = urlMatch[i + 1];
     }
   }
-  
+
   return params;
 }
 
@@ -570,4 +596,4 @@ export function parseParams(pattern: RegExp, url: string): Record<string, string
  */
 export function createRouter(options?: RouterOptions): Router {
   return new Router(options);
-} 
+}

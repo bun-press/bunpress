@@ -9,16 +9,9 @@ import chalk from 'chalk';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 
-import {
-  ServerConfig,
-  MiddlewareHandler,
-  handleCORS,
-} from '../lib/server-utils';
+import { ServerConfig, MiddlewareHandler, handleCORS } from '../lib/server-utils';
 
-import {
-  Route,
-  RouteHandler,
-} from '../lib/route-utils';
+import { Route, RouteHandler } from '../lib/route-utils';
 
 // Server options extending the base ServerConfig
 export interface ServerOptions extends ServerConfig {
@@ -30,11 +23,13 @@ export interface ServerOptions extends ServerConfig {
   onError?: (error: Error, req: Request) => Response;
 }
 
-// Interface definition 
+// Interface definition
 export interface IFullstackServer {
   start: (options?: Partial<ServerOptions>) => Promise<{ port: number; host: string }>;
   stop: () => Promise<void>;
-  dev: (options?: Partial<ServerOptions>) => Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }>;
+  dev: (
+    options?: Partial<ServerOptions>
+  ) => Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }>;
   isRunning: () => boolean;
   addRoute: (pattern: RegExp | string, handler: RouteHandler) => void;
   addMiddleware: (handler: MiddlewareHandler) => void;
@@ -77,7 +72,7 @@ export class FullstackServer implements IFullstackServer {
     onError: (error: Error, _req: Request) => {
       console.error('Server error:', error);
       return new Response('Internal Server Error', { status: 500 });
-    }
+    },
   };
   private pluginManager: PluginManager;
   public events: EventEmitter;
@@ -86,7 +81,7 @@ export class FullstackServer implements IFullstackServer {
   constructor(options: { pluginManager: PluginManager; events: EventEmitter; config: any }) {
     this.pluginManager = options.pluginManager;
     this.events = options.events;
-    
+
     // Initialize with config
     if (options.config.devServer) {
       this.options = {
@@ -129,7 +124,9 @@ export class FullstackServer implements IFullstackServer {
   /**
    * Starts the server with provided options
    */
-  public async start(options: Partial<ServerOptions> = {}): Promise<{ port: number; host: string }> {
+  public async start(
+    options: Partial<ServerOptions> = {}
+  ): Promise<{ port: number; host: string }> {
     if (this.server) {
       await this.stop();
     }
@@ -148,12 +145,12 @@ export class FullstackServer implements IFullstackServer {
       // Extract URL and path
       const url = new URL(request.url);
       const reqPath = decodeURIComponent(url.pathname);
-      
+
       // Apply CORS if enabled
       if (this.options.cors && request.method === 'OPTIONS') {
         return this.handleCORS(request);
       }
-      
+
       // Create middleware chain
       const middlewareChain = async (index = 0): Promise<Response> => {
         if (index < this.middleware.length) {
@@ -164,7 +161,7 @@ export class FullstackServer implements IFullstackServer {
           return this.handleRequest(request, reqPath);
         }
       };
-      
+
       try {
         return await middlewareChain();
       } catch (error) {
@@ -202,18 +199,18 @@ export class FullstackServer implements IFullstackServer {
       },
     });
 
-    const info = { 
-      port: this.server?.port || this.options.port || 3000, 
-      host: this.options.hostname || 'localhost' 
+    const info = {
+      port: this.server?.port || this.options.port || 3000,
+      host: this.options.hostname || 'localhost',
     };
-    
+
     this.events.emit('server:start', info);
-    
+
     console.log(chalk.green(`Server running at http://${info.host}:${info.port}`));
-    
+
     return info;
   }
-  
+
   /**
    * Handle CORS preflight requests
    */
@@ -221,7 +218,7 @@ export class FullstackServer implements IFullstackServer {
     // Use the imported handleCORS function to ensure consistent CORS handling
     return handleCORS(req, this.options);
   }
-  
+
   /**
    * Handle individual requests after middleware processing
    */
@@ -232,25 +229,25 @@ export class FullstackServer implements IFullstackServer {
         return await route.handler(req);
       }
     }
-    
+
     // Then check for static files
     if (this.options.staticDir) {
       const staticPath = path.join(process.cwd(), this.options.staticDir, reqPath);
-      
+
       // Check if file exists and serve it
       try {
         const stat = fs.statSync(staticPath);
-        
+
         if (stat.isFile()) {
           // Determine content type based on extension
           const ext = path.extname(staticPath).toLowerCase();
           const contentType = this.getContentType(ext);
-          
+
           // Set up response headers
           const headers: HeadersInit = {
             'Content-Type': contentType,
           };
-          
+
           // Add cache control headers if configured
           if (this.options.cacheControl) {
             const cacheControl = this.getCacheControl(contentType);
@@ -258,16 +255,16 @@ export class FullstackServer implements IFullstackServer {
               headers['Cache-Control'] = cacheControl;
             }
           }
-          
+
           // Add Last-Modified header
           headers['Last-Modified'] = new Date(stat.mtime).toUTCString();
-          
+
           // Check If-Modified-Since header for caching
           const ifModifiedSince = req.headers.get('If-Modified-Since');
           if (ifModifiedSince) {
             const ifModifiedSinceDate = new Date(ifModifiedSince);
             const modifiedDate = new Date(stat.mtime);
-            
+
             if (modifiedDate <= ifModifiedSinceDate) {
               // Return 304 Not Modified if file hasn't changed
               return new Response(null, {
@@ -276,7 +273,7 @@ export class FullstackServer implements IFullstackServer {
               });
             }
           }
-          
+
           // Serve file with appropriate headers
           return new Response(Bun.file(staticPath), {
             headers,
@@ -286,11 +283,11 @@ export class FullstackServer implements IFullstackServer {
         // File doesn't exist or isn't readable
       }
     }
-    
+
     // If we get here, return 404
     return new Response('Not Found', { status: 404 });
   }
-  
+
   /**
    * Get content type based on file extension
    */
@@ -316,31 +313,31 @@ export class FullstackServer implements IFullstackServer {
       '.webp': 'image/webp',
       '.avif': 'image/avif',
     };
-    
+
     return contentTypes[ext] || 'application/octet-stream';
   }
-  
+
   /**
    * Get cache control header based on content type
    */
   private getCacheControl(contentType: string): string | undefined {
     if (!this.options.cacheControl) return undefined;
-    
+
     // Try exact content type match
     if (this.options.cacheControl[contentType]) {
       return this.options.cacheControl[contentType];
     }
-    
+
     // Try wildcard matches
     for (const [pattern, value] of Object.entries(this.options.cacheControl)) {
       if (pattern.includes('*') && this.matchWildcard(contentType, pattern)) {
         return value;
       }
     }
-    
+
     return undefined;
   }
-  
+
   /**
    * Match content type against wildcard pattern
    */
@@ -359,11 +356,11 @@ export class FullstackServer implements IFullstackServer {
         ws.close();
       });
       this.connections.clear();
-      
+
       // Stop server
       this.server.stop();
       this.server = null;
-      
+
       this.events.emit('server:stop');
     }
   }
@@ -371,23 +368,25 @@ export class FullstackServer implements IFullstackServer {
   /**
    * Starts the development server with HMR support
    */
-  public async dev(options: Partial<ServerOptions> = {}): Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }> {
+  public async dev(
+    options: Partial<ServerOptions> = {}
+  ): Promise<{ port: number; host: string; hmrPort?: number; hmrHost?: string }> {
     const developmentOptions = {
       ...options,
       development: true,
     };
-    
+
     const serverInfo = await this.start(developmentOptions);
-    
+
     // Add development specific info
     const info = {
       ...serverInfo,
       hmrPort: this.options.hmrPort,
       hmrHost: this.options.hmrHost,
     };
-    
+
     this.events.emit('server:dev', info);
-    
+
     return info;
   }
 
@@ -409,7 +408,11 @@ export class FullstackServer implements IFullstackServer {
 /**
  * Creates a new Fullstack Server
  */
-export function createFullstackServer(options: { pluginManager: PluginManager; events: EventEmitter; config: any }): IFullstackServer {
+export function createFullstackServer(options: {
+  pluginManager: PluginManager;
+  events: EventEmitter;
+  config: any;
+}): IFullstackServer {
   return new FullstackServer(options);
 }
 

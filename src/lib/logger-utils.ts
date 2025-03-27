@@ -1,6 +1,6 @@
 /**
  * Logger Utilities for BunPress
- * 
+ *
  * This file provides a centralized logging system with configurable log levels,
  * output formatting, and extensibility. It helps reduce duplication of logging
  * code across the codebase and provides consistent logging patterns.
@@ -15,7 +15,7 @@ export enum LogLevel {
   SUCCESS = 2,
   WARN = 3,
   ERROR = 4,
-  SILENT = 5
+  SILENT = 5,
 }
 
 /**
@@ -213,12 +213,12 @@ class LoggerImpl implements Logger {
 
     // Format the message with namespace and timestamp
     let formattedMessage = message;
-    
+
     // Add namespace if configured
     if (this.config.namespace) {
       formattedMessage = `[${this.config.namespace}] ${formattedMessage}`;
     }
-    
+
     // Add timestamp if configured
     if (this.config.timestamps) {
       formattedMessage = `${getTimestamp()} ${formattedMessage}`;
@@ -287,4 +287,4 @@ export function getLogger(): Logger {
  */
 export function getNamespacedLogger(namespace: string): Logger {
   return defaultLogger.createChildLogger(namespace);
-} 
+}

@@ -27,7 +27,7 @@ mock.module('../lib/fs-utils', () => {
         return `<!DOCTYPE html><html><body>Test</body></html>`;
       }
       return '';
-    }
+    },
   };
 });
 
@@ -82,7 +82,7 @@ mock.module('bun', () => {
   return {
     serve: (options: any) => {
       websocketHandler = options.websocket;
-      
+
       const server: {
         port: number;
         hostname: string;
@@ -102,10 +102,10 @@ mock.module('bun', () => {
         hostname: options.hostname || 'localhost',
         url: `http://${options.hostname || 'localhost'}:${options.port || 3000}`,
         development: options.development || false,
-        
+
         // Make sure the fetch function is always defined
         fetch: options.fetch || defaultFetchHandler,
-        
+
         stop: () => Promise.resolve(),
         reload: () => {},
         upgrade: (_req: Request, _options = {}) => {
@@ -140,7 +140,7 @@ mock.module('bun', () => {
             if (index !== -1) {
               connectedClients.splice(index, 1);
             }
-          }
+          },
         },
         pendingWebsockets: [],
         pendingRequests: new Set(),
@@ -154,18 +154,20 @@ mock.module('bun', () => {
         toJSON() {
           const result: any = {};
           for (const key in this) {
-            if (Object.prototype.hasOwnProperty.call(this, key) && 
-                typeof this[key] !== 'function' && 
-                key !== 'pendingRequests' && 
-                key !== 'pendingWebsockets') {
+            if (
+              Object.prototype.hasOwnProperty.call(this, key) &&
+              typeof this[key] !== 'function' &&
+              key !== 'pendingRequests' &&
+              key !== 'pendingWebsockets'
+            ) {
               result[key] = this[key];
             }
           }
           result.fetch = this.fetch;
           return result;
-        }
+        },
       };
-      
+
       return {
         ...server,
         // Explicitly ensure fetch is attached to the returned object
@@ -231,7 +233,7 @@ const jest = {
   },
   requireActual: (moduleName: string) => {
     return require(moduleName);
-  }
+  },
 };
 
 // Mock process
@@ -252,15 +254,15 @@ describe('Dev Server', () => {
   beforeEach(() => {
     // Set test environment
     process.env.NODE_ENV = 'test';
-    
+
     // Create temp directories
     fs.mkdirSync(tmpDir, { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'dist'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, 'pages'), { recursive: true });
-    
+
     // Create content directory to avoid errors
     fs.mkdirSync(path.join(tmpDir, 'content'), { recursive: true });
-    
+
     // Create themes directory
     fs.mkdirSync(path.join(tmpDir, 'themes', 'default'), { recursive: true });
 
@@ -277,7 +279,7 @@ describe('Dev Server', () => {
 
     // Create mock config with unique random ports for HMR to avoid conflicts
     const uniquePort = Math.floor(Math.random() * 10000) + 40000;
-    
+
     mockConfig = {
       title: 'Test Site',
       pagesDir: path.join(tmpDir, 'pages'),
@@ -289,11 +291,11 @@ describe('Dev Server', () => {
         hmr: true,
         open: false,
         hmrPort: uniquePort, // Use a unique port to avoid conflicts
-        hmrHost: 'localhost'
+        hmrHost: 'localhost',
       },
       themeConfig: {
-        name: 'default'
-      }
+        name: 'default',
+      },
     };
   });
 
@@ -303,17 +305,17 @@ describe('Dev Server', () => {
       if (devServer.hmrContext && devServer.hmrContext.close) {
         await devServer.hmrContext.close();
       }
-      
+
       if (devServer.stop) {
         await devServer.stop();
       }
-      
+
       devServer = null;
     }
-    
+
     // Change back to original directory
     process.chdir(originalCwd);
-    
+
     // Clean up temp directory
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -322,7 +324,7 @@ describe('Dev Server', () => {
   test('createDevServer should create a server instance', async () => {
     // Use a more specific spy on logger.info instead of console.log
     const spy = spyOn(console, 'log');
-    
+
     // Create a new config with unique port for this test
     const randomPort = 3000 + Math.floor(Math.random() * 10000);
     const testConfig = {
@@ -330,12 +332,12 @@ describe('Dev Server', () => {
       devServer: {
         ...mockConfig.devServer,
         port: randomPort,
-        hmrPort: Math.floor(Math.random() * 10000) + 40000
-      }
+        hmrPort: Math.floor(Math.random() * 10000) + 40000,
+      },
     };
-    
+
     devServer = await createDevServer(testConfig);
-    
+
     expect(devServer).toBeDefined();
     expect(typeof devServer.fetch).toBe('function');
     // Looser expectation since we're mocking the console
@@ -351,12 +353,12 @@ describe('Dev Server', () => {
       devServer: {
         ...mockConfig.devServer,
         port: randomPort,
-        hmrPort: Math.floor(Math.random() * 10000) + 40000
-      }
+        hmrPort: Math.floor(Math.random() * 10000) + 40000,
+      },
     };
-    
+
     devServer = await createDevServer(testConfig);
-    
+
     // Since we're mocking the server, we should only check the server exists
     // with the right properties rather than trying to make actual requests
     expect(devServer).toBeDefined();
@@ -373,15 +375,15 @@ describe('Dev Server', () => {
       devServer: {
         ...mockConfig.devServer,
         port: randomPort,
-        hmrPort: Math.floor(Math.random() * 10000) + 40000
-      }
+        hmrPort: Math.floor(Math.random() * 10000) + 40000,
+      },
     };
-    
+
     devServer = await createDevServer(testConfig);
-    
+
     // Call setupHMR with no parameters
     setupHMR();
-    
+
     // In tests, we're mocking the websocket so this may be undefined
     // Just verify that the setup doesn't throw errors
     expect(true).toBe(true);
@@ -396,19 +398,19 @@ describe('Dev Server', () => {
       devServer: {
         ...mockConfig.devServer,
         port: randomPort,
-        hmrPort: Math.floor(Math.random() * 10000) + 40000
-      }
+        hmrPort: Math.floor(Math.random() * 10000) + 40000,
+      },
     };
-    
+
     devServer = await createDevServer(testConfig);
-    
+
     // Call setupHMR with no parameters
     setupHMR();
-    
+
     // Skip websocket test - challenging to mock properly
     // Just verify reloadPage exists
     expect(typeof devServer.reloadPage).toBe('function');
-    
+
     // Trigger reload by calling the function directly
     devServer.reloadPage();
   });

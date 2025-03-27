@@ -31,26 +31,26 @@ export interface ContentFile {
 
 /**
  * Read and parse a markdown file
- * 
+ *
  * @param filePath Path to the markdown file
  * @returns Object containing the parsed frontmatter and content
  */
-export async function readMarkdownFile(filePath: string): Promise<{ 
-  frontmatter: Record<string, any>; 
-  content: string; 
+export async function readMarkdownFile(filePath: string): Promise<{
+  frontmatter: Record<string, any>;
+  content: string;
 }> {
   // Read file content
   const fileContent = await readFileAsString(filePath);
-  
+
   // Parse frontmatter
   const { data: frontmatter, content } = matter(fileContent);
-  
+
   return { frontmatter, content };
 }
 
 /**
  * Convert markdown content to HTML
- * 
+ *
  * @param markdown Markdown content to convert
  * @param options Custom options for markdown conversion
  * @returns Converted HTML string
@@ -70,7 +70,7 @@ export function markdownToHtml(
     [key: string]: any;
   } = {
     gfm: options.gfm !== undefined ? options.gfm : true,
-    breaks: options.breaks !== undefined ? options.breaks : false
+    breaks: options.breaks !== undefined ? options.breaks : false,
   };
 
   // Apply headerIds option explicitly
@@ -86,14 +86,14 @@ export function markdownToHtml(
 
 /**
  * Extract table of contents items from HTML content
- * 
+ *
  * @param html HTML content to extract TOC from
  * @param minLevel Minimum heading level to include (default: 2)
  * @param maxLevel Maximum heading level to include (default: 4)
  * @returns Array of TOC items
  */
 export function extractTocItems(
-  html: string, 
+  html: string,
   minLevel: number = 2,
   maxLevel: number = 4
 ): TocItem[] {
@@ -103,12 +103,12 @@ export function extractTocItems(
 
   while ((match = headingRegex.exec(html)) !== null) {
     const level = parseInt(match[1], 10);
-    
+
     // Skip headings outside the requested range
     if (level < minLevel || level > maxLevel) {
       continue;
     }
-    
+
     const id = match[2];
     // Simple HTML tag stripping for the text
     const text = match[3].replace(/<[^>]*>/g, '');
@@ -121,7 +121,7 @@ export function extractTocItems(
 
 /**
  * Generate a URL route from a file path
- * 
+ *
  * @param filePath Path to the content file
  * @param rootDir Root directory for relative path calculation
  * @returns URL route for the content
@@ -133,12 +133,12 @@ export function generateRoute(filePath: string, rootDir: string): string {
 
   // Convert to URL path (handle index files specially)
   let route = normalizePath(withoutExtension);
-  
+
   // Special handling for index files
   if (route.endsWith('/index')) {
     route = route.replace(/\/index$/, '');
   }
-  
+
   // Special handling for root index
   if (route === 'index') {
     route = '/';
@@ -151,46 +151,46 @@ export function generateRoute(filePath: string, rootDir: string): string {
 
 /**
  * Process a markdown file into a ContentFile
- * 
+ *
  * @param filePath Path to the markdown file
  * @param rootDir Root directory for relative path calculation
  * @param extractToc Whether to extract table of contents (default: true)
  * @returns Processed ContentFile object
  */
 export async function processMarkdownFileSync(
-  filePath: string, 
+  filePath: string,
   rootDir: string,
   extractToc: boolean = true
 ): Promise<ContentFile> {
   // Read and parse the markdown file
   const { frontmatter, content } = await readMarkdownFile(filePath);
-  
+
   // Convert to HTML
   const html = markdownToHtml(content);
-  
+
   // Generate route
   const route = generateRoute(filePath, rootDir);
-  
+
   // Create the content file object
   const contentFile: ContentFile = {
     path: filePath,
     route,
     content,
     frontmatter,
-    html
+    html,
   };
-  
+
   // Extract TOC if requested
   if (extractToc) {
     contentFile.toc = extractTocItems(html);
   }
-  
+
   return contentFile;
 }
 
 /**
  * Process a markdown string into a ContentFile
- * 
+ *
  * @param markdown Markdown string to process
  * @param filePath Virtual path for the content (used for route generation)
  * @param rootDir Root directory for relative path calculation
@@ -205,26 +205,26 @@ export function processMarkdownString(
 ): ContentFile {
   // Parse frontmatter
   const { data: frontmatter, content } = matter(markdown);
-  
+
   // Convert to HTML
   const html = markdownToHtml(content);
-  
+
   // Generate route
   const route = generateRoute(filePath, rootDir);
-  
+
   // Create the content file object
   const contentFile: ContentFile = {
     path: filePath,
     route,
     content,
     frontmatter,
-    html
+    html,
   };
-  
+
   // Extract TOC if requested
   if (extractToc) {
     contentFile.toc = extractTocItems(html);
   }
-  
+
   return contentFile;
-} 
+}

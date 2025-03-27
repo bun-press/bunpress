@@ -28,7 +28,7 @@ export function getAbsolutePath(filepath: string, base?: string): string {
   if (path.isAbsolute(filepath)) {
     return normalizePath(filepath);
   }
-  
+
   const baseDir = base || process.cwd();
   return normalizePath(path.resolve(baseDir, filepath));
 }
@@ -61,20 +61,20 @@ export function resolvePath(...segments: string[]): string {
 export function getUrlPath(filepath: string): string {
   // Remove file extension
   const withoutExt = filepath.replace(/\.[^.]+$/, '');
-  
+
   // Convert to URL path
   let urlPath = withoutExt.replace(/\\/g, '/');
-  
+
   // Ensure starts with /
   if (!urlPath.startsWith('/')) {
     urlPath = '/' + urlPath;
   }
-  
+
   // Handle index files
   if (urlPath.endsWith('/index')) {
     urlPath = urlPath.replace(/\/index$/, '/');
   }
-  
+
   return urlPath;
 }
 
@@ -84,7 +84,7 @@ export function getUrlPath(filepath: string): string {
 export function isPathInside(filepath: string, directory: string): boolean {
   const normalizedFile = normalizePath(path.resolve(filepath));
   const normalizedDir = normalizePath(path.resolve(directory));
-  
+
   return normalizedFile.startsWith(normalizedDir + '/') || normalizedFile === normalizedDir;
 }
 
@@ -92,35 +92,35 @@ export function isPathInside(filepath: string, directory: string): boolean {
  * Convert a file path to its corresponding route path
  */
 export function filePathToRoutePath(
-  filepath: string, 
-  basePath: string, 
+  filepath: string,
+  basePath: string,
   extensions: string[] = ['.md', '.mdx', '.html']
 ): string {
   // Get relative path from base directory
   const relativePath = getRelativePath(filepath, basePath);
-  
+
   // Remove file extension
   let routePath = relativePath;
   const ext = path.extname(routePath).toLowerCase();
-  
+
   if (extensions.includes(ext)) {
     routePath = routePath.slice(0, -ext.length);
   }
-  
+
   // Handle index files
   if (routePath.endsWith('index')) {
     routePath = routePath.slice(0, -5);
   }
-  
+
   // Ensure proper URL format
   routePath = '/' + routePath.replace(/\\/g, '/');
-  
+
   // Clean up double slashes and trailing slash
   routePath = routePath.replace(/\/+/g, '/');
   if (routePath !== '/' && routePath.endsWith('/')) {
     routePath = routePath.slice(0, -1);
   }
-  
+
   return routePath;
 }
 
@@ -141,11 +141,11 @@ export function toSafePath(value: string): string {
  */
 export function getTempDir(subdir?: string): string {
   const tmpBaseDir = path.join(process.cwd(), 'tmp');
-  
+
   if (!subdir) {
     return tmpBaseDir;
   }
-  
+
   return path.join(tmpBaseDir, subdir);
 }
 
@@ -162,7 +162,7 @@ export function getHomeDir(): string {
 export function getCacheDir(appName: string = 'bunpress'): string {
   const homeDir = getHomeDir();
   const platform = process.platform;
-  
+
   if (platform === 'win32') {
     return path.join(homeDir, 'AppData', 'Local', appName, 'Cache');
   } else if (platform === 'darwin') {
@@ -178,7 +178,7 @@ export function getCacheDir(appName: string = 'bunpress'): string {
 export function getConfigDir(appName: string = 'bunpress'): string {
   const homeDir = getHomeDir();
   const platform = process.platform;
-  
+
   if (platform === 'win32') {
     return path.join(homeDir, 'AppData', 'Roaming', appName);
   } else if (platform === 'darwin') {
@@ -214,4 +214,4 @@ export function getExtname(filepath: string): string {
  */
 export function resolveRelativePath(baseDir: string, relativePath: string): string {
   return normalizePath(path.resolve(baseDir, relativePath));
-} 
+}

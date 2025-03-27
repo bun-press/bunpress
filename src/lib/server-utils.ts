@@ -20,14 +20,16 @@ export interface ServerConfig {
   development?: boolean;
   hmrPort?: number;
   hmrHost?: string;
-  cors?: {
-    origin?: string | string[];
-    methods?: string[];
-    allowedHeaders?: string[];
-    exposedHeaders?: string[];
-    credentials?: boolean;
-    maxAge?: number;
-  } | boolean;
+  cors?:
+    | {
+        origin?: string | string[];
+        methods?: string[];
+        allowedHeaders?: string[];
+        exposedHeaders?: string[];
+        credentials?: boolean;
+        maxAge?: number;
+      }
+    | boolean;
   open?: boolean;
   middleware?: MiddlewareHandler[];
 }
@@ -62,10 +64,10 @@ export function handleCORS(req: Request, options: ServerConfig): Response {
 
   // Use provided CORS settings or defaults
   const corsOptions = typeof options.cors === 'object' ? options.cors : defaultCors;
-  
+
   // Build headers
   const headers = new Headers();
-  
+
   // Set origin
   if (typeof corsOptions.origin === 'string') {
     headers.set('Access-Control-Allow-Origin', corsOptions.origin);
@@ -77,37 +79,44 @@ export function handleCORS(req: Request, options: ServerConfig): Response {
   } else {
     headers.set('Access-Control-Allow-Origin', '*');
   }
-  
+
   // Set other CORS headers
   if (corsOptions.methods) {
-    headers.set('Access-Control-Allow-Methods', Array.isArray(corsOptions.methods) 
-      ? corsOptions.methods.join(', ') 
-      : corsOptions.methods);
+    headers.set(
+      'Access-Control-Allow-Methods',
+      Array.isArray(corsOptions.methods) ? corsOptions.methods.join(', ') : corsOptions.methods
+    );
   }
-  
+
   if (corsOptions.allowedHeaders) {
-    headers.set('Access-Control-Allow-Headers', Array.isArray(corsOptions.allowedHeaders) 
-      ? corsOptions.allowedHeaders.join(', ') 
-      : corsOptions.allowedHeaders);
+    headers.set(
+      'Access-Control-Allow-Headers',
+      Array.isArray(corsOptions.allowedHeaders)
+        ? corsOptions.allowedHeaders.join(', ')
+        : corsOptions.allowedHeaders
+    );
   }
-  
+
   if (corsOptions.exposedHeaders) {
-    headers.set('Access-Control-Expose-Headers', Array.isArray(corsOptions.exposedHeaders) 
-      ? corsOptions.exposedHeaders.join(', ') 
-      : corsOptions.exposedHeaders);
+    headers.set(
+      'Access-Control-Expose-Headers',
+      Array.isArray(corsOptions.exposedHeaders)
+        ? corsOptions.exposedHeaders.join(', ')
+        : corsOptions.exposedHeaders
+    );
   }
-  
+
   if (corsOptions.credentials) {
     headers.set('Access-Control-Allow-Credentials', 'true');
   }
-  
+
   if (corsOptions.maxAge) {
     headers.set('Access-Control-Max-Age', corsOptions.maxAge.toString());
   }
-  
-  return new Response(null, { 
-    status: 204, 
-    headers
+
+  return new Response(null, {
+    status: 204,
+    headers,
   });
 }
 
@@ -141,14 +150,17 @@ export function getContentType(ext: string): string {
     '.mp3': 'audio/mpeg',
     '.wav': 'audio/wav',
   };
-  
+
   return contentTypes[ext.toLowerCase()] || 'application/octet-stream';
 }
 
 /**
  * Get cache control header value based on content type
  */
-export function getCacheControl(contentType: string, cacheControlMap: Record<string, string> = {}): string | undefined {
+export function getCacheControl(
+  contentType: string,
+  cacheControlMap: Record<string, string> = {}
+): string | undefined {
   // Default cache control settings if none provided
   const defaultCacheControl: Record<string, string> = {
     'image/*': 'public, max-age=86400',
@@ -156,21 +168,21 @@ export function getCacheControl(contentType: string, cacheControlMap: Record<str
     'application/javascript': 'public, max-age=86400',
     'text/html': 'no-cache',
   };
-  
+
   const cacheMap = Object.keys(cacheControlMap).length ? cacheControlMap : defaultCacheControl;
-  
+
   // Look for exact match
   if (cacheMap[contentType]) {
     return cacheMap[contentType];
   }
-  
+
   // Look for wildcard match
   for (const pattern in cacheMap) {
     if (pattern.includes('*') && matchWildcard(contentType, pattern)) {
       return cacheMap[pattern];
     }
   }
-  
+
   return undefined;
 }
 
@@ -206,15 +218,15 @@ export function shouldIgnorePath(filepath: string, ignoredPatterns: string[] = [
     '**/build/**',
     '**/.cache/**',
   ];
-  
+
   const patterns = [...defaultIgnored, ...ignoredPatterns];
-  
+
   for (const pattern of patterns) {
     if (minimatch(filepath, pattern)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -229,7 +241,7 @@ export function minimatch(filepath: string, pattern: string): boolean {
     .replace(/\*/g, '[^/]*')
     .replace(/\?/g, '[^/]')
     .replace(/{{GLOBSTAR}}/g, '.*');
-  
+
   // Make sure pattern matches the entire string
   if (!regexPattern.startsWith('^')) {
     regexPattern = '^' + regexPattern;
@@ -237,7 +249,7 @@ export function minimatch(filepath: string, pattern: string): boolean {
   if (!regexPattern.endsWith('$')) {
     regexPattern = regexPattern + '$';
   }
-  
+
   // Test the filepath against the pattern
   return new RegExp(regexPattern).test(filepath);
 }
@@ -259,7 +271,7 @@ export function createMiddlewareChain(
         return finalHandler(req);
       }
     };
-    
+
     return executeChain();
   };
 }
@@ -297,7 +309,7 @@ export function createServer(
     port: config.port,
     hostname: config.hostname,
     development: config.development ?? process.env.NODE_ENV !== 'production',
-    
+
     // Handle CORS preflight requests
     async fetch(req: Request) {
       // Handle CORS preflight
@@ -314,21 +326,21 @@ export function createServer(
       // Otherwise, just call the request handler
       return await requestHandler(req);
     },
-    
+
     // Handle server errors
     error(error) {
       logger.error('Server error:', error);
       return new Response(`Server error: ${error.message}`, { status: 500 });
-    }
+    },
   });
 
   logger.info(`Server started at http://${config.hostname}:${config.port}`);
-  
+
   // Open browser if configured
   if (config.open) {
     openBrowser(`http://${config.hostname}:${config.port}`);
   }
-  
+
   return server;
 }
 
@@ -338,32 +350,38 @@ export function createServer(
  * @param cacheControlMap Optional cache control map
  * @returns Response with file contents and appropriate headers
  */
-export function handleStaticFileRequest(filePath: string, cacheControlMap?: Record<string, string>): Response {
+export function handleStaticFileRequest(
+  filePath: string,
+  cacheControlMap?: Record<string, string>
+): Response {
   try {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       return new Response('File not found', { status: 404 });
     }
-    
+
     // Get file info
     const ext = path.extname(filePath);
     const contentType = getContentType(ext);
     const cacheControl = getCacheControl(contentType, cacheControlMap);
-    
+
     // Set up headers
     const headers: Record<string, string> = {
-      'Content-Type': contentType
+      'Content-Type': contentType,
     };
-    
+
     // Add cache control if available
     if (cacheControl) {
       headers['Cache-Control'] = cacheControl;
     }
-    
+
     // Return file as response
     return new Response(Bun.file(filePath), { headers });
   } catch (error) {
     logger.error(`Error serving static file ${filePath}:`, error as Record<string, any>);
-    return new Response(`Error serving file: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
+    return new Response(
+      `Error serving file: ${error instanceof Error ? error.message : String(error)}`,
+      { status: 500 }
+    );
   }
-} 
+}
